@@ -6,9 +6,9 @@ namespace QuizArena.Data.Repositories;
 
 public class EventRepository : IEventRepository
 {
-    private readonly NotificationContext _db;
+    private readonly QuizArenaContext _db;
 
-    public EventRepository(NotificationContext db) => _db = db;
+    public EventRepository(QuizArenaContext db) => _db = db;
 
     public async Task<EventLog> AddAsync(EventLog ev)
     {

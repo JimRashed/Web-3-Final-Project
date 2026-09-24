@@ -6,9 +6,9 @@ namespace QuizArena.Data.Repositories;
 
 public class StatisticsRepository : IStatisticsRepository
 {
-    private readonly StatisticsContext _context;
+    private readonly QuizArenaContext _context;
 
-    public StatisticsRepository(StatisticsContext context)
+    public StatisticsRepository(QuizArenaContext context)
     {
         _context = context;
     }

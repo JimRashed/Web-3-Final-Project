@@ -11,35 +11,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Lobby + Question Bank
 builder.Services.AddDbContext<QuizArenaContext>(options =>
-    options.UseInMemoryDatabase("QuizArena"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<ILobbyRepository, LobbyRepository>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<ILobbyService, LobbyService>();
 
-// Identity
-builder.Services.AddDbContext<IdentityContext>(options =>
-    options.UseInMemoryDatabase("Identity"));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// Statistics
-builder.Services.AddDbContext<StatisticsContext>(options =>
-    options.UseInMemoryDatabase("Statistics"));
 builder.Services.AddScoped<IStatisticsRepository, StatisticsRepository>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// Gameplay + Notification
-builder.Services.AddDbContext<GameplayContext>(opt =>
-    opt.UseInMemoryDatabase("gameplay_db"));
-
-builder.Services.AddDbContext<NotificationContext>(opt =>
-    opt.UseInMemoryDatabase("notification_db"));
 
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();

@@ -6,9 +6,9 @@ namespace QuizArena.Data.Repositories;
 
 public class UserRepository : IUserRepository
 {
-    private readonly IdentityContext _context;
+    private readonly QuizArenaContext _context;
 
-    public UserRepository(IdentityContext context)
+    public UserRepository(QuizArenaContext context)
     {
         _context = context;
     }

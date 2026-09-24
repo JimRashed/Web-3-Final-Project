@@ -6,9 +6,9 @@ namespace QuizArena.Data.Repositories;
 
 public class MatchRepository : IMatchRepository
 {
-    private readonly GameplayContext _db;
+    private readonly QuizArenaContext _db;
 
-    public MatchRepository(GameplayContext db) => _db = db;
+    public MatchRepository(QuizArenaContext db) => _db = db;
 
     public async Task<ActiveMatch> CreateAsync(ActiveMatch match)
     {
