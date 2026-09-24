@@ -34,6 +34,18 @@ builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Gameplay + Notification
+builder.Services.AddDbContext<GameplayContext>(opt =>
+    opt.UseInMemoryDatabase("gameplay_db"));
+
+builder.Services.AddDbContext<NotificationContext>(opt =>
+    opt.UseInMemoryDatabase("notification_db"));
+
+builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<IGameplayService, GameplayService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
