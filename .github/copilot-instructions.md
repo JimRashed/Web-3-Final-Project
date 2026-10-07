@@ -1,13 +1,13 @@
-# Repository Instructions
+# Copilot Instructions
 
-## Overview
+## Repository Instructions
 
+### Overview
 - **Language & Runtime:** C# targeting .NET 10 with nullable reference types enabled (`<Nullable>enable</Nullable>`) and treat warnings as errors where applicable.
 - **Frameworks:** ASP.NET Core Web API, Entity Framework Core, and modern testing frameworks (xUnit/NUnit/MSTest).
 - **Architecture:** Service-oriented architecture adhering to clean separation of concerns: API/Host -> Application/Domain -> Infrastructure/Persistence.
 
-## Project layout
-
+### Project layout
 - `src/`
   - `.Api/`: Web API entry point, controllers/minimal API endpoints, filters, middleware, and dependency registration.
   - `.Domain/`: Domain entities, business interfaces, validation logic, domain exceptions, and service implementations.
@@ -18,8 +18,7 @@
 - `docs/`: Setup instructions, architectural decision records (ADRs), and database schema diagrams.
 - `.github/workflows/`: CI pipeline configurations for build, test, and lint validation.
 
-## Development rules
-
+### Development rules
 - **Endpoint Responsibility:** Keep API controllers or minimal endpoints thin. They should handle HTTP mapping, request validation, calling application services, and returning standard HTTP status codes.
 - **Business Logic:** Place domain validation and business rules strictly inside application services or domain models, never inside controllers, EF Core configurations, or database triggers.
 - **Dependency Injection:** Use constructor-based dependency injection exclusively. Register services with appropriate lifetimes (`Scoped` for DbContext and business services, `Transient` for lightweight stateless helpers, `Singleton` for caches or configuration).
@@ -35,8 +34,7 @@
   - `I` prefix for interfaces (`IQuizService`, `IUserRepository`).
   - `Async` suffix for asynchronous methods returning `Task` or `ValueTask`.
 
-## Build and tests
-
+### Build and tests
 - Run commands from the repository root:
   1. **Restore:** `dotnet restore`
   2. **Build:** `dotnet build --no-restore`
@@ -44,23 +42,21 @@
   4. **Run Tests:** `dotnet test --no-build --verbosity normal`
 - **Testing Standard:** Add or update unit tests for any changed business rules. Integration tests should accompany new or modified HTTP endpoints. Ensure tests are deterministic and independent of execution order.
 
-## Security
-
+### Security
 - **Secrets Management:** Never commit raw API keys, production tokens, connection strings, or environment-specific credentials. Use `dotnet user-secrets` for local development and environment variables or Azure Key Vault/GitHub Secrets in CI/CD.
 - **Access Control:** Do not bypass, disable, or comment out `[Authorize]` attributes, policy handlers, or role requirements to fix failing endpoints or tests.
 - **Input & Persistence:**
   - Parameterize all database queries (standard EF Core LINQ avoids SQL injection; avoid raw interpolated strings in `FromSqlRaw`).
   - Sanitize and validate request payloads at the API boundary before passing them to application services.
 
-# Agent Workflow: R-PIV Protocol
+### Agent Workflow: R-PIV Protocol
 Whenever assigned a task or GitHub issue:
 1. **Research:** Inspect existing code, verify dependencies, and restate requirements. Do not write code yet.
-2. **Plan:** Produce a clear, file-by-file implementation plan and wait for confirmation.
+2. **Plan:** Produce a clear, file-by-file implementation plan and wait for confirmation. Save scoped follow-up plans in separate, clearly named files under specs.
 3. **Implement:** Execute the plan iteratively in small, verifiable check-ins.
 4. **Validate:** Execute the repository test suite and verify edge cases before concluding.
 
-## Change checklist
-
+### Change checklist
 - [ ] Code compiles without warnings (`dotnet build`).
 - [ ] Code conforms to format guidelines (`dotnet format`).
 - [ ] All new and existing unit and integration tests pass (`dotnet test`).

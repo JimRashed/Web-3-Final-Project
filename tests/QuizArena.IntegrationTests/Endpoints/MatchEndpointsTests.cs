@@ -7,12 +7,16 @@ using QuizArena.IntegrationTests.Infrastructure;
 namespace QuizArena.IntegrationTests.Endpoints;
 
 [Collection(IntegrationTestCollection.Name)]
-public sealed class MatchEndpointsTests(QuizArenaWebApplicationFactory factory)
+public sealed class MatchEndpointsTests : IntegrationTestBase
 {
+    public MatchEndpointsTests(QuizArenaWebApplicationFactory factory) : base(factory)
+    {
+    }
+
     [Fact]
     public async Task Match_lifecycle_returns_created_and_persisted_state()
     {
-        using var client = factory.CreateClient();
+        using var client = Factory.CreateClient();
         var response = await client.PostAsJsonAsync("/matches", new CreateMatchRequest($"match-{Guid.NewGuid():N}", "a", "b"));
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var match = await response.Content.ReadFromJsonAsync<MatchResponse>();
@@ -25,7 +29,7 @@ public sealed class MatchEndpointsTests(QuizArenaWebApplicationFactory factory)
     [Fact]
     public async Task Missing_match_returns_not_found()
     {
-        using var client = factory.CreateClient();
+        using var client = Factory.CreateClient();
         (await client.GetAsync("/matches/missing")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

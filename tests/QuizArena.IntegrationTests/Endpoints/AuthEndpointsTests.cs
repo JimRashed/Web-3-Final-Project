@@ -7,12 +7,16 @@ using QuizArena.IntegrationTests.Infrastructure;
 namespace QuizArena.IntegrationTests.Endpoints;
 
 [Collection(IntegrationTestCollection.Name)]
-public sealed class AuthEndpointsTests(QuizArenaWebApplicationFactory factory)
+public sealed class AuthEndpointsTests : IntegrationTestBase
 {
+    public AuthEndpointsTests(QuizArenaWebApplicationFactory factory) : base(factory)
+    {
+    }
+
     [Fact]
     public async Task Register_login_and_get_user_work_without_authentication()
     {
-        using var client = factory.CreateClient();
+        using var client = Factory.CreateClient();
         var username = $"user-{Guid.NewGuid():N}";
         var register = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(username, "password"));
         register.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -27,10 +31,19 @@ public sealed class AuthEndpointsTests(QuizArenaWebApplicationFactory factory)
     [Fact]
     public async Task Duplicate_registration_and_invalid_login_return_conflicts()
     {
-        using var client = factory.CreateClient();
+        using var client = Factory.CreateClient();
         var request = new RegisterRequest($"duplicate-{Guid.NewGuid():N}", "password");
         await client.PostAsJsonAsync("/api/auth/register", request);
         (await client.PostAsJsonAsync("/api/auth/register", request)).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("missing", "password"))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Missing_user_returns_not_found()
+    {
+        using var client = Factory.CreateClient();
+
+        (await client.GetAsync($"/api/users/{Guid.NewGuid()}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

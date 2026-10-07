@@ -33,4 +33,26 @@ public sealed class NotificationServiceTests
         result.Should().Be(new UserPrefDto("u1", false, true));
         repository.Verify(x => x.UpsertPrefAsync(It.Is<UserPref>(p => p.UserId == "u1" && !p.EmailEnabled && p.PushEnabled)), Times.Once);
     }
+
+    [Fact]
+    public async Task GetUserEventsAsync_returns_empty_for_unknown_user()
+    {
+        var repository = new Mock<IEventRepository>();
+        repository.Setup(x => x.GetByUserAsync("missing")).ReturnsAsync(new List<EventLog>());
+
+        (await new NotificationService(repository.Object).GetUserEventsAsync("missing")).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task LogEventAsync_propagates_repository_failure()
+    {
+        var repository = new Mock<IEventRepository>();
+        repository.Setup(x => x.AddAsync(It.IsAny<EventLog>()))
+            .ThrowsAsync(new InvalidOperationException("event store unavailable"));
+
+        var action = () => new NotificationService(repository.Object)
+            .LogEventAsync(new CreateEventRequest("TEST", "u1", "{}"));
+
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("event store unavailable");
+    }
 }

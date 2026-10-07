@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using QuizArena.Api.Services;
 using QuizArena.Data.Repositories;
+using QuizArena.Domain.Contracts;
 using QuizArena.Domain.Statistics.Entities;
 using QuizArena.Statistics.Api.Services;
 
@@ -32,5 +33,38 @@ public sealed class StatisticsServiceTests
         var result = await new StatisticsService(repository.Object).GetLeaderboardAsync(1);
 
         result.Should().ContainSingle().Which.Should().BeEquivalentTo(new { UserId = first, TotalScore = 5, Wins = 1 });
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_returns_zeroes_for_empty_results()
+    {
+        var user = Guid.NewGuid();
+        var repository = new Mock<IStatisticsRepository>();
+        repository.Setup(x => x.GetByUserAsync(user)).ReturnsAsync(new List<MatchResult>());
+
+        (await new StatisticsService(repository.Object).GetStatsAsync(user))
+            .Should().Be(new PlayerStatsDto(user, 0, 0, 0));
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_returns_empty_for_empty_results()
+    {
+        var user = Guid.NewGuid();
+        var repository = new Mock<IStatisticsRepository>();
+        repository.Setup(x => x.GetByUserAsync(user)).ReturnsAsync(new List<MatchResult>());
+
+        (await new StatisticsService(repository.Object).GetHistoryAsync(user)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetLeaderboardAsync_returns_empty_for_zero_limit()
+    {
+        var repository = new Mock<IStatisticsRepository>();
+        repository.Setup(x => x.GetAllAsync()).ReturnsAsync(new List<MatchResult>
+        {
+            new() { UserId = Guid.NewGuid(), Score = 10 }
+        });
+
+        (await new StatisticsService(repository.Object).GetLeaderboardAsync(0)).Should().BeEmpty();
     }
 }

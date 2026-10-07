@@ -31,4 +31,18 @@ public sealed class LobbyServiceTests
         (await new LobbyService(repository.Object).LockAsync("missing")).Should().BeNull();
         repository.Verify(x => x.SaveAsync(It.IsAny<ActiveLobby>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task LockAsync_forwards_cancellation_and_propagates_repository_failure()
+    {
+        var cancellation = new CancellationTokenSource().Token;
+        var repository = new Mock<ILobbyRepository>();
+        repository.Setup(x => x.GetByJoinCodeAsync("ABC", cancellation))
+            .ThrowsAsync(new InvalidOperationException("lobby store unavailable"));
+
+        var action = () => new LobbyService(repository.Object).LockAsync("ABC", cancellation);
+
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("lobby store unavailable");
+        repository.Verify(x => x.GetByJoinCodeAsync("ABC", cancellation), Times.Once);
+    }
 }

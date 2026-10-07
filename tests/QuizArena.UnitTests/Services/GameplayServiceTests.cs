@@ -51,4 +51,24 @@ public sealed class GameplayServiceTests
 
         await action.Should().ThrowAsync<Exception>().WithMessage("Match not found");
     }
+
+    [Fact]
+    public async Task SubmitAnswerAsync_finishes_match_after_five_questions()
+    {
+        var match = new ActiveMatch { MatchId = "m1", PlayerAId = "a", PlayerBId = "b" };
+        var repository = new Mock<IMatchRepository>();
+        repository.Setup(x => x.GetAsync("m1")).ReturnsAsync(match);
+        repository.Setup(x => x.UpdateAsync(match)).ReturnsAsync(match);
+        var notifications = new Mock<INotificationService>();
+        var service = new GameplayService(repository.Object, notifications.Object);
+
+        for (var question = 0; question < 5; question++)
+        {
+            await service.SubmitAnswerAsync("m1", new SubmitAnswerRequest("a", "q-1", "H2O"));
+        }
+
+        match.Status.Should().Be("FINISHED");
+        match.CurrentQuestionIndex.Should().Be(5);
+        notifications.Verify(x => x.LogEventAsync(It.Is<CreateEventRequest>(e => e.Type == "MATCH_COMPLETED")), Times.Exactly(2));
+    }
 }

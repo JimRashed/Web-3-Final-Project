@@ -23,4 +23,25 @@ public sealed class QuestionServiceTests
         result.Should().ContainSingle().Which.Should().Match<QuestionDto>(dto => dto.Id == question.Id && dto.Prompt == "Water?" && dto.Category == "Science");
         repository.Verify(x => x.GetRandomAsync(2, cancellation), Times.Once);
     }
+
+    [Fact]
+    public async Task GenerateAsync_returns_empty_when_repository_has_no_questions()
+    {
+        var repository = new Mock<IQuestionRepository>();
+        repository.Setup(x => x.GetRandomAsync(3, It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<Question>());
+
+        (await new QuestionService(repository.Object).GenerateAsync(3)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GenerateAsync_propagates_repository_failure()
+    {
+        var repository = new Mock<IQuestionRepository>();
+        repository.Setup(x => x.GetRandomAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("question store unavailable"));
+
+        var action = () => new QuestionService(repository.Object).GenerateAsync(1);
+
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("question store unavailable");
+    }
 }
