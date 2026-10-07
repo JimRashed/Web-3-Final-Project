@@ -52,6 +52,13 @@
   - Parameterize all database queries (standard EF Core LINQ avoids SQL injection; avoid raw interpolated strings in `FromSqlRaw`).
   - Sanitize and validate request payloads at the API boundary before passing them to application services.
 
+# Agent Workflow: R-PIV Protocol
+Whenever assigned a task or GitHub issue:
+1. **Research:** Inspect existing code, verify dependencies, and restate requirements. Do not write code yet.
+2. **Plan:** Produce a clear, file-by-file implementation plan and wait for confirmation.
+3. **Implement:** Execute the plan iteratively in small, verifiable check-ins.
+4. **Validate:** Execute the repository test suite and verify edge cases before concluding.
+
 ## Change checklist
 
 - [ ] Code compiles without warnings (`dotnet build`).
