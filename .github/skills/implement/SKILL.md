@@ -1,22 +1,13 @@
 ---
 name: implement
-description: Executes an approved implementation plan incrementally in a fresh session, adhering to repository testing conventions.
+description: Execute an issue-scoped researched plan or dispatcher repair request without an intermediate approval gate.
 ---
 
-# Implementation Execution Workflow
-
-Use this skill in a fresh agent session with an approved plan artifact.
-
-## 1. Context Loading
-1. Load `specs/implementation-plan.md` as the single source of truth.
-2. Verify the project build status using `dotnet build` before making changes.
-
-## 2. Incremental Execution
-Follow the task sequence step-by-step:
-1. Implement the domain/service logic changes first.
-2. Add or update unit tests following the AAA pattern in `.github/skills/testing/SKILL.md`.
-3. Add integration tests using `WebApplicationFactory`.
-4. Keep changes focused strictly on the files identified in the plan. Avoid speculative refactoring.
-
-## 3. Intermediate Verification
-After each meaningful step, confirm the code compiles and tests pass before continuing to the next step.
+# Implementation
+1. Load repository conventions, the issue and its exact `specs/issue-<number>-plan.md` supplied by Dispatcher. Do not default to an unrelated historical plan. Read relevant prior reports and repair feedback.
+2. Run a baseline build and relevant baseline tests; record existing failures separately from new regressions. Fix in-scope environment problems, or return a concrete BLOCKED result.
+3. Implement the plan incrementally: pure rules, persistence, application/API and client changes as applicable. Keep files/scope aligned with the plan and explain necessary adjustments.
+4. Add/update meaningful tests using `.github/skills/testing/SKILL.md`; use existing test projects/locations with descriptive names rather than a dispatcher-specific folder.
+5. Run focused checks after meaningful changes. Never skip/delete tests, weaken authorization, fabricate results or expand scope to force green.
+6. Return PASS/BLOCKED with changed paths, behavior, actual check evidence, risks and plan adjustments. Hand off automatically to Dispatcher for Testing/Validate.
+7. Workers do not commit, push, create PRs, approve or merge. Dispatcher owns final publication after validation/review. Human review happens at the draft PR, not between stages.

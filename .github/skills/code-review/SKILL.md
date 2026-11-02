@@ -41,3 +41,6 @@ Always conclude the review with a Markdown table using this schema:
 ### Action Status Guidelines
 * **Fixed:** Resolved directly in the PR before merge. Include a one-line note on the fix.
 * **Deferred:** Out-of-scope for the milestone or low-impact. Provide a concrete justification why it is acceptable to defer (e.g., tracked in a future backlog item).
+
+## Read-only review and dispatcher handoff
+Inspect only; never edit source/tests, execute mutating commands, create comments/approvals or merge. Mark a finding Fixed only when the supplied diff/evidence verifies an implemented correction; suggestions remain unresolved/Deferred with justification. Return PASS/FAIL/BLOCKED and the required findings table directly to Dispatcher. Unresolved critical/high issues or unmet acceptance criteria prevent PASS. Dispatcher sends actionable findings to Implement, then repeats validation and review within its shared repair budget. Do not ask the user to approve patches or manually invoke the next stage; the human gate is the final draft PR. Automated review is not human signoff.

@@ -1,0 +1,1363 @@
+{
+  "repository": "JimRashed/Web-3-Final-Project",
+  "milestone": "Milestone 3 — Layered Service Development",
+  "snapshot": "864d70bd67b2b2b30c170f422c30c5c1c8fe3b11",
+  "confirmedUsers": [
+    "JimRashed",
+    "CarterBeasse",
+    "SuSu-Lisu"
+  ],
+  "counts": {
+    "epics": 1,
+    "features": 8,
+    "tasks": 54,
+    "total": 63
+  },
+  "features": [
+    {
+      "id": "F00",
+      "title": "Establish contracts, architecture, security, frontend foundations and agent workflow",
+      "owner": "JimRashed",
+      "story": "As a team, we can develop independently against agreed secure contracts and consistent tools.",
+      "ac": "All P01–P10 tasks are accepted; six hosts and one React client scaffold exist, contracts are approved, real bearer tests and CI work; foundations enable parallel service ownership."
+    },
+    {
+      "id": "F01",
+      "title": "Deliver the independently runnable Identity service and connected React views",
+      "owner": "CarterBeasse",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. Identity runs independently and uses no other service assemblies or tables. GET /api/users/me => 200 profile, profiles.read; PUT /api/users/me => 200 profile, profiles.write, request {displayName:string}. Retire POST /api/auth/register and /api/auth/login with 410 ProblemDetails and documented OIDC redirect guidance; do not accept password payloads or mint tokens. GET /api/users/{id} is replaced by /me and returns 410 during documented transition. Frontend: ProfilePage.tsx: provider sign-in/sign-out buttons, current profile, display-name edit form; show 401 sign-in action, 403 permission message, field validation and saving state. No QuizArena password form."
+    },
+    {
+      "id": "F02",
+      "title": "Deliver the independently runnable Statistics service and connected React views",
+      "owner": "CarterBeasse",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. Statistics runs independently and uses no other service assemblies or tables. POST /api/results => 200 empty on first or identical retry, results.write service-only; conflicting duplicate =>409. GET /api/players/{userId}/stats =>200, stats.read and self; GET /api/players/{userId}/matches?page=1&pageSize=20 =>200, stats.read and self; invalid page/pageSize (1..100)=>400. GET /api/leaderboard?top=10 =>200, leaderboard.read, all signed-in players. Other user's self-only stats/history=>403. Frontend: StatisticsPage.tsx and LeaderboardPage.tsx: current player's totals, paged newest-first history, leaderboard top selector; empty-state text, loading/error/retry, no result-submission form."
+    },
+    {
+      "id": "F03",
+      "title": "Deliver the independently runnable QuestionBank service and connected React views",
+      "owner": "JimRashed",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. QuestionBank runs independently and uses no other service assemblies or tables. GET /api/questions/generate?count=10 =>200, questions.read; count outside 1..50=>400; empty catalog=>200 []. POST /internal/question-sets {count:5} =>200 exact immutable snapshot, questions.play service-only; insufficient valid catalog=>409. No public DTO or Swagger browser sample exposes correct answers. Frontend: QuestionBankPage.tsx: question-count selector, generated question preview with options/category, regenerate button, empty/loading/error/validation states; never render correct answers or call /internal/question-sets."
+    },
+    {
+      "id": "F04",
+      "title": "Deliver the independently runnable Lobby service and connected React views",
+      "owner": "JimRashed",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. Lobby runs independently and uses no other service assemblies or tables. POST /api/lobbies {} =>201, lobbies.write, Location points to GET; GET /api/lobbies/{joinCode} =>200, lobbies.read, sanitized join preview; POST /api/lobbies/{joinCode}/join {} =>200, lobbies.write; POST /api/lobbies/{joinCode}/lock =>200, lobbies.write plus host rule. Missing=>404; invalid joinCode=>400; invalid state/capacity=>409; nonhost lock=>403. GET /internal/lobbies/{joinCode} =>200, lobbies.verify service-only. Frontend: LobbyPage.tsx: create/join forms, join code display/copy, host/player membership and lock state; host-only lock/start controls, polling and cleanup; Start invokes Gameplay create after lock, displays navigation to returned match."
+    },
+    {
+      "id": "F05",
+      "title": "Deliver the independently runnable Gameplay service and connected React views",
+      "owner": "SuSu-Lisu",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. Gameplay runs independently and uses no other service assemblies or tables. POST /matches {joinCode} =>201, matches.write and lobby host; repeat same lobby=>200 same match. GET /matches/{matchId} =>200, matches.read and participant; GET /matches/{matchId}/next-question =>200 public question, matches.read and participant; finished=>409. POST /matches/{matchId}/answers {questionId:Guid,answer:string} =>200 {correct,playerAScore,playerBScore,roundComplete,finished}, matches.write and participant. Missing=>404; invalid input=>400; replay/stale/finished=>409; dependency unavailable before creation=>503 without partial match. Frontend: MatchPage.tsx: current public question/options, answer submit once, waiting-for-opponent display with polling, live scores, final winner/draw and links to stats/events. Hide answer key; disable duplicate submission and handle 409 refresh, 401/403 and network retry."
+    },
+    {
+      "id": "F06",
+      "title": "Deliver the independently runnable Notification service and connected React views",
+      "owner": "SuSu-Lisu",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "ac": "Six layer tasks completed with Domain/Data/Api separation, all specified REST and UI behavior, real OAuth bearer policies, persistence and negative tests. Notification runs independently and uses no other service assemblies or tables. POST /events {eventId:Guid,type,userId,payload:{matchId,winnerUserId?,draw?}} =>202 persisted EventResponse, events.write service-only; exact retry same response, conflict409. GET /events?page=1&pageSize=20 =>200 self events, events.read; legacy userId query if supplied must equal caller or403. GET /users/{userId}/preferences =>200 defaults/stored, preferences.read and self; PUT same route {emailEnabled,pushEnabled} =>200, preferences.write and self. Invalid payload/page=>400; cross-user=>403. Frontend: NotificationsPage.tsx: self event timeline with pagination/empty state and PreferencesPage.tsx with email/push toggles, save feedback and failures; explain that external delivery is not implemented, show only actual event records."
+    },
+    {
+      "id": "F07",
+      "title": "Integrate, validate, document and submit the reviewed GitHub milestone",
+      "owner": "JimRashed",
+      "story": "As the team, we can demonstrate and submit a working, secure, tested multi-service product with real review evidence.",
+      "ac": "D01–D08 accepted: clean startup, safe data cutover, complete browser E2E, 2–3-page reflection, traceable published board, actual peer signoff, merged milestone GitHub PR and retained milestone branch."
+    }
+  ],
+  "issues": [
+    {
+      "id": "P01",
+      "title": "Publish the milestone board, ownership map and GitHub delivery rules",
+      "owner": "JimRashed",
+      "deps": [],
+      "feature": "F00",
+      "layer": "process",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a team, we need accountable work tracking and a safe milestone integration path before production implementation.",
+      "files": "docs/milestone3/work-allocation.md; docs/milestone3/workflow.md; .github/pull_request_template.md; GitHub Project and milestone metadata",
+      "steps": [
+        "Verify collaborator logins/permissions, existing issues/PRs/milestones and main as the integration branch; link/reuse matching work items.",
+        "Record Jim=QuestionBank/Lobby, Carter=Identity/Statistics, Suheng=Gameplay/Notification with peer-review rotation; publish the board and dependency map.",
+        "Document milestone branch, task branch/PR targets, retained milestone branch, issue references, three human gates and GitHub submission URLs."
+      ],
+      "ac": "Board includes epic, all features/tasks, owners, milestones and dependencies; each member owns two runnable services and related UI. Current feature/milestone-3-layered-service-development already exists locally and on origin and currently matches main; verify ancestry before reuse, never recreate/reset it. New work only enters main through reviewed milestone PR. Source rubric mentions Azure DevOps/Lea; user explicitly selected GitHub, so use GitHub equivalents and record this override rather than provisioning Azure DevOps.",
+      "verify": "Inspect board URLs, owner fields, hierarchy, branch ancestry, template and traceability rules. Do not claim peer approval before a real human review."
+    },
+    {
+      "id": "P02",
+      "title": "Approve service boundaries, public contracts, identity mapping and security policies",
+      "owner": "JimRashed",
+      "deps": [
+        "P01"
+      ],
+      "feature": "F00",
+      "layer": "architecture",
+      "priority": "P0",
+      "size": "L",
+      "story": "As parallel implementers, we need committed contracts and explicit behavior so service and frontend changes agree.",
+      "files": "docs/milestone3/architecture-decisions.md; docs/milestone3/api-contracts.md; docs/milestone3/authorization-matrix.md; docs/milestone3/identity-migration.md; contracts/openapi/*.yaml",
+      "steps": [
+        "Review and approve every proposed architecture/product decision in this prompt, especially Keycloak, opaque subject/string match IDs, two-player/five-round rules and added endpoint scope.",
+        "Commit schemas, endpoint/status/policy matrix, service/client base URLs, error schema, pagination and idempotency rules before implementation fans out.",
+        "Define account mapping from legacy Guid IDs to (issuer,subject), machine identities, allowed scopes/audiences, match/event delivery contracts and version transition; collect all three members' approval."
+      ],
+      "ac": "Six owners' service contracts (two per member) and frontend routes are explicit; no public answer keys or client-selected current-user IDs. API DTOs and application interfaces live in each Api; Domain contains pure entities/rules. No service shares another service's assemblies or database tables. Changes to existing endpoints/IDs and account/password migration are documented. Architecture decisions are proposals until Gate 1 approval; issue creation itself does not approve them.",
+      "verify": "Contract review with all three members; compare OpenAPI with all leaf issue scopes, including positive/negative examples; every route has public/protected status and required named policy."
+    },
+    {
+      "id": "P03",
+      "title": "Scaffold six independently runnable layered services and migrate the solution graph",
+      "owner": "JimRashed",
+      "deps": [
+        "P02"
+      ],
+      "feature": "F00",
+      "layer": "architecture",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a developer, I need independent service hosts and enforced project boundaries.",
+      "files": "QuizArena.sln; src/QuizArena.{Identity,Statistics,QuestionBank,Lobby,Gameplay,Notification}.{Domain,Data,Api}/*.csproj; each Api/Program.cs and Properties/launchSettings.json; tests/QuizArena.ArchitectureTests/",
+      "steps": [
+        "Create 18 net10.0 backend projects and six pairs of per-service test projects; add to solution with unique host entrypoint types/namespaces.",
+        "Create composition roots, configurable ports and unauthenticated GET /health endpoints; migrate code incrementally into the owned projects without duplicating runtime ownership.",
+        "Add architecture tests for Domain with zero NuGet/outer/web dependencies, Data->own Domain only, Api->own Data/Domain only, no cross-service project references; coordinate removal of obsolete aggregate projects in D02."
+      ],
+      "ac": "All six hosts build and each launches with its own configuration/port even when peers are down; /health verifies liveness, not downstream dependencies. Dedicated Domain/Data/Api projects exist for every service; a mere namespace split or six contexts in one API is insufficient. Pure services do not depend on HTTP DTOs. No frontend backend-assembly references. Architecture tests fail for prohibited references.",
+      "verify": "dotnet build QuizArena.sln --no-restore -warnaserror; run architecture tests; launch each Api and request /health with other APIs stopped."
+    },
+    {
+      "id": "P04",
+      "title": "Establish service-owned EF configuration, migrations and safe database boundaries",
+      "owner": "JimRashed",
+      "deps": [
+        "P02",
+        "P03"
+      ],
+      "feature": "F00",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a service owner, I need independently managed persistence without accidental cross-module table access.",
+      "files": "each src/QuizArena.<Service>.Data/{Context,Configurations,Migrations}/; each Api connection-string configuration; docs/milestone3/database-operations.md; .config/dotnet-tools.json",
+      "steps": [
+        "Use SQL Server provider with six development databases QuizArena_<Service>; each service connects only to its own database and owns its migrations/history.",
+        "Extract unified context mappings into owned IEntityTypeConfiguration classes; preserve documented indexes, required columns and intradomain cascade/restrict rules; add design-time factories.",
+        "Document explicit per-context migrate commands, startup/readiness, unique test databases, credentials from environment/secrets and non-destructive old-database retention. Leave actual data transfer to D02."
+      ],
+      "ac": "No cross-service foreign keys, navigation properties or shared context survive final cutover; legacy QuizArenaDb is preserved during migration. Six migration lineages apply to empty databases. No schema is initialized in production with EnsureCreated. Connection credentials are never committed. Service-specific schema constraints are completed by the corresponding data task.",
+      "verify": "For each service: dotnet ef database update --project src/QuizArena.<Service>.Data --startup-project src/QuizArena.<Service>.Api --context <Service>DbContext; inspect owned tables and relational constraints."
+    },
+    {
+      "id": "P05",
+      "title": "Configure a reproducible OIDC provider and client/service identities",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P02"
+      ],
+      "feature": "F00",
+      "layer": "security",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a user and service caller, I need standard OAuth/OIDC tokens with intentional access grants.",
+      "files": "infra/oidc/; infra/compose.yaml; docs/milestone3/authentication.md; .env.example; src/QuizArena.Client/src/auth/",
+      "steps": [
+        "After approval of Keycloak in P02, configure realm quizarena, public quizarena-client using authorization code + PKCE S256 and exact redirect/logout origins.",
+        "Register resource audiences and least-privilege service identities/scopes from the matrix; configure player scope grants without exposing internal scopes.",
+        "Provide reproducible local startup/realm setup, provision users/secrets outside Git, disable password grant/implicit flow and document client/resource owner/authorization server/resource servers."
+      ],
+      "ac": "Browser has no client secret and never sends an IdP password to QuizArena. Gameplay confidential client may request lobbies.verify/questions.play/results.write/events.write with only corresponding audiences; browser gets none. Test fixture keys are ephemeral; production signing credentials absent. Approved issuer/audience/HTTPS settings vary by environment; development HTTP relaxation limited to Development.",
+      "verify": "Manually demonstrate provider login/PKCE redirect, minted access-token audience/scopes and negative insufficient-grant cases; document metadata/JWKS locations and setup without recording tokens or secrets."
+    },
+    {
+      "id": "P06",
+      "title": "Apply real JWT validation and reusable scope policies to all six APIs",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P03",
+        "P05"
+      ],
+      "feature": "F00",
+      "layer": "security",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a resource owner, I need every API to validate tokens and enforce least privilege independently.",
+      "files": "each Api/{Program.cs,Security/,appsettings.json}; docs/milestone3/authorization-matrix.md; each IntegrationTests/Security/",
+      "steps": [
+        "Use Microsoft.AspNetCore.Authentication.JwtBearer with configured authority/audience; validate signature, issuer, audience, lifetime and signing keys; UseAuthentication before UseAuthorization.",
+        "Implement exact scope membership for space-delimited scope and supported scp claims; apply explicit named policies and service-principal requirements. Use validated sub/iss for user ownership.",
+        "Set authenticated fallback policy; explicitly allow /health and Development-only documentation; configure scoped CORS for approved frontend origin and safe ProblemDetails responses."
+      ],
+      "ac": "Each host rejects missing/invalid/expired/wrong-issuer/wrong-audience tokens with401, valid insufficient/wrong scope with403, valid required scope succeeds; ID tokens are not accepted as access tokens. Browser tokens cannot call internal ingestion even if a test token includes a scope without service identity. Scope substring matches never authorize. Public /health works without token. Ownership checks supplement scopes. No mock auth replaces real bearer validation in the security suite.",
+      "verify": "Per-service parameterized security matrix using ephemeral signing keys and local metadata fixture, including bad signature, expired token, unknown key, wrong issuer/audience, absent/wrong scope, authorized scope, public route and spoofed identity."
+    },
+    {
+      "id": "P07",
+      "title": "Build the shared React frontend shell, OIDC session and HTTP clients",
+      "owner": "JimRashed",
+      "deps": [
+        "P02",
+        "P05"
+      ],
+      "feature": "F00",
+      "layer": "frontend",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I need one connected browser client for all six services.",
+      "files": "src/QuizArena.Client/{package.json,package-lock.json,vite.config.ts,src/app/,src/auth/,src/api/,src/components/}; docs/milestone3/frontend-setup.md",
+      "steps": [
+        "Scaffold React+TypeScript with Node/npm tooling, routing and navigation for profile, questions, lobby, match, statistics, leaderboard, events and preferences.",
+        "Implement PKCE provider login/logout/session refresh and bearer HTTP clients with independently configurable base URLs for six APIs; memory-only tokens, no browser client secret.",
+        "Provide reusable field validation, loading/empty/error/retry/401/403 displays, abortable requests and component test setup. Screens themselves belong to feature frontend tasks."
+      ],
+      "ac": "Use React from the requested MERN-style stack; .NET APIs own all persistence, no MongoDB is required. Node/npm supplies frontend tooling; no second Express business API or direct SQL access. Browser communicates only by REST and public DTOs. Distinct service ports work with CORS. Logout clears client state. Refresh failure returns user to sign-in without infinite retry.",
+      "verify": "npm ci; npm run typecheck; npm run lint; npm run build; npm run test -- --run in src/QuizArena.Client; test auth redirect, bearer attachment, refresh failure and common error components."
+    },
+    {
+      "id": "P08",
+      "title": "Add constrained layer agents and reconcile the repository skills with Milestone 3",
+      "owner": "JimRashed",
+      "deps": [
+        "P02"
+      ],
+      "feature": "F00",
+      "layer": "agents",
+      "priority": "P1",
+      "size": "M",
+      "story": "As an AI-assisted developer, I need agents that respect service/layer boundaries and human gates.",
+      "files": ".github/agents/{domain-dev,data-persistence,api-service,frontend-dev,testing,code-review}.agent.md; .github/skills/{domain-dev,data-persistence,api-service,frontend-dev,testing,code-review,prime,plan,implement,validate}/SKILL.md; .github/copilot-instructions.md",
+      "steps": [
+        "Create valid agent frontmatter, real supported tool allowlists, user-invocable names and service-scoped context; Domain/Data/Api/Client writing boundaries are explicit.",
+        "Update tests to per-service paths and Moq/xUnit/FluentAssertions; relational persistence coverage uses isolated SQL Server, not EF InMemory as constraint evidence.",
+        "Make review agent read-only; remove nonexistent skill tool names, stale aggregate layout and instruction to patch during read-only review; use specs/milestone3/<issue>-plan.md and three real human gates."
+      ],
+      "ac": "All four layer agents plus testing/review agents exist with linked readable skills; at least two layer agents and one testing/review skill satisfy the rubric. Domain agent cannot add EF/Web dependencies; Data cannot reference Api; frontend cannot reference backend assemblies; testing agent runs baseline before changes and edits tests only. Cross-layer changes are handed to the appropriate agent. Review reports severity but cannot edit/approve/merge. Existing useful workflow is retained with consistent paths.",
+      "verify": "Inspect frontmatter/tool validity and dry-run one bounded research/plan example per role; verify file access constraints and absence of contradictory test paths/providers."
+    },
+    {
+      "id": "P09",
+      "title": "Create isolated per-service test hosts and a real bearer-token test fixture",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P03",
+        "P04",
+        "P06"
+      ],
+      "feature": "F00",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a developer, I need deterministic tests that catch relational and security regressions.",
+      "files": "tests/QuizArena.<Service>.{UnitTests,IntegrationTests}/; tests/QuizArena.TestSupport/; tests/QuizArena.ArchitectureTests/; docs/milestone3/testing.md",
+      "steps": [
+        "Migrate current service tests to their owned projects, preserve scenario coverage and record an actual baseline rather than copying historical 35-test results.",
+        "Build service-specific WebApplicationFactory hosts, unique SQL Server databases, per-test reset/seeding and reliable cleanup; mock outbound HTTP for focused integration tests.",
+        "Generate ephemeral signed test JWTs and local discovery/JWKS metadata for real JwtBearer; support service/user identities and negative token permutations without bypassing production policies."
+      ],
+      "ac": "Unit tests use Moq and no actual database; relational tests use the SQL Server provider and verify constraints. No test touches developer databases or depends on order. Existing fixture hidden DisposeAsync concern is resolved using deliberate lifecycle ownership. Framework InMemory tests are moved/reclassified when they exercise repositories. Every service has separate test results; new feature tests are added in feature test tasks.",
+      "verify": "Run all six unit/integration projects independently and together; verify repeated execution starts clean; run security fixture negative controls; cleanup removes only generated test databases."
+    },
+    {
+      "id": "P10",
+      "title": "Add CI gates for architecture, backend, frontend and security tests",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P03",
+        "P07",
+        "P09"
+      ],
+      "feature": "F00",
+      "layer": "ci",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a reviewer, I need reproducible automated evidence before accepting any milestone PR.",
+      "files": ".github/workflows/milestone3.yml; .gitignore; docs/milestone3/ci.md",
+      "steps": [
+        "Provision a documented Windows SQL Server LocalDB environment or explicit SQL Server test instance; verify prerequisite availability and fail clearly rather than skip tests.",
+        "Restore/build with warnings treated as errors, verify formatting, run every test project and publish generated reports as CI artifacts.",
+        "Run locked frontend dependency install, typecheck/lint/tests/build, architecture tests and auth suites; configure required checks and keep secrets/build/coverage output untracked."
+      ],
+      "ac": "CI covers all six APIs and frontend; no silent skipped integration/auth tests, no production secret files, zero warnings/errors/failing tests required. Runtime/dependency/tool versions are pinned to supported compatible versions and lockfiles committed. Required-check names match branch protection. Test reports and redacted diagnostics are downloadable.",
+      "verify": "A real PR pipeline passes; deliberate architecture or test failure blocks merge. Commands match the shared validation contract and successful run URL is recorded."
+    },
+    {
+      "id": "S01-T01",
+      "title": "Implement Identity domain models and pure business rules",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F01",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "src/QuizArena.Identity.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.Identity.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Model a player profile with internal Guid Id, required issuer and opaque subject, and display username; enforce nonblank subject/issuer and bounded display fields. Remove credential verification/token issuance from the profile capability; the external OIDC provider owns login. Keep legacy password hashes only in the migration archive, never public contracts.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S01-T02",
+      "title": "Implement Identity EF mappings, migrations and repositories",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S01-T01",
+        "P04"
+      ],
+      "feature": "F01",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "src/QuizArena.Identity.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.Identity.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "IdentityDbContext owns UserProfiles, with unique (Issuer, Subject); profile provisioning is idempotent under concurrent calls. Migrate existing Users through the approved subject mapping; unmapped legacy accounts remain archived and inaccessible via a guessed identity.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S01-T03",
+      "title": "Implement Identity API DTOs and application orchestration",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S01-T01",
+        "S01-T02",
+        "P02"
+      ],
+      "feature": "F01",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "src/QuizArena.Identity.Api/{Contracts,Services,Clients}/; tests/QuizArena.Identity.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Replace IAuthService with IProfileService in Api/Services. Resolve current issuer/subject from the validated principal through an API abstraction; provision/update profile from trusted claims, return UserProfileResponse {userId:string, username:string, displayName:string}. Remove runtime local password hashing and hand-built HMAC token code.",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S01-T04",
+      "title": "Expose and secure Identity REST endpoints with OpenAPI",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S01-T03",
+        "P06"
+      ],
+      "feature": "F01",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "src/QuizArena.Identity.Api/{Controllers,Security,Program.cs}; contracts/openapi/identity.yaml; tests/QuizArena.Identity.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "GET /api/users/me => 200 profile, profiles.read; PUT /api/users/me => 200 profile, profiles.write, request {displayName:string}. Retire POST /api/auth/register and /api/auth/login with 410 ProblemDetails and documented OIDC redirect guidance; do not accept password payloads or mint tokens. GET /api/users/{id} is replaced by /me and returns 410 during documented transition.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S01-T05",
+      "title": "Build Identity React screens and REST integration",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F01",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "src/QuizArena.Client/src/features/identity/; src/QuizArena.Client/src/api/identity.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "ProfilePage.tsx: provider sign-in/sign-out buttons, current profile, display-name edit form; show 401 sign-in action, 403 permission message, field validation and saving state. No QuizArena password form.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S01-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S01-T06",
+      "title": "Complete Identity vertical-slice, authorization and regression coverage",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S01-T04",
+        "S01-T05",
+        "P09"
+      ],
+      "feature": "F01",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a signed-in player, I can see my own provider-backed profile without giving my identity-provider password to QuizArena.",
+      "files": "tests/QuizArena.Identity.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/identity/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Unit-test trusted subject resolution, required fields, idempotent provisioning, duplicate mapping and missing claims. HTTP-test /me read/update, all bearer rejection cases, cross-user impersonation attempts, and 410 legacy endpoints. UI-test sign-in redirect invocation, profile rendering/edit success and validation/error states.",
+      "verify": "Run all Identity unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "AuthController.cs, AuthService.cs, IUserRepository.cs, UserRepository.cs; User currently sits in Domain/Lobby/Entities/User.cs despite its Identity namespace.",
+      "service": "Identity"
+    },
+    {
+      "id": "S02-T01",
+      "title": "Implement Statistics domain models and pure business rules",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F02",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "src/QuizArena.Statistics.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.Statistics.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Use opaque string UserId and string MatchId consistently with Gameplay; scores are nonnegative, IDs nonblank, PlayedAt UTC. Pure aggregation calculates games, wins and total score; draws count as games but not wins; leaderboard order is TotalScore descending, Wins descending, UserId ordinal as deterministic tie-break.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S02-T02",
+      "title": "Implement Statistics EF mappings, migrations and repositories",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S02-T01",
+        "P04"
+      ],
+      "feature": "F02",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "src/QuizArena.Statistics.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.Statistics.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "StatisticsDbContext owns MatchResults; preserve unique (MatchId, UserId), UserId index and timestamp. Upsert delivery semantics: identical existing result succeeds without duplication; conflicting same-key score/outcome => domain conflict. Support paged history and bounded leaderboard queries with AsNoTracking.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S02-T03",
+      "title": "Implement Statistics API DTOs and application orchestration",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S02-T01",
+        "S02-T02",
+        "P02"
+      ],
+      "feature": "F02",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "src/QuizArena.Statistics.Api/{Contracts,Services,Clients}/; tests/QuizArena.Statistics.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Move DTOs/interfaces into Api; RecordResult application service accepts trusted internal delivery only and applies idempotency. Self history/stats derive subject from claims; top must be 1..100, default 10. Empty stats => zero totals; empty history/leaderboard => [].",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S02-T04",
+      "title": "Expose and secure Statistics REST endpoints with OpenAPI",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S02-T03",
+        "P06"
+      ],
+      "feature": "F02",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "src/QuizArena.Statistics.Api/{Controllers,Security,Program.cs}; contracts/openapi/statistics.yaml; tests/QuizArena.Statistics.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "POST /api/results => 200 empty on first or identical retry, results.write service-only; conflicting duplicate =>409. GET /api/players/{userId}/stats =>200, stats.read and self; GET /api/players/{userId}/matches?page=1&pageSize=20 =>200, stats.read and self; invalid page/pageSize (1..100)=>400. GET /api/leaderboard?top=10 =>200, leaderboard.read, all signed-in players. Other user's self-only stats/history=>403.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S02-T05",
+      "title": "Build Statistics React screens and REST integration",
+      "owner": "CarterBeasse",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F02",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "src/QuizArena.Client/src/features/statistics/; src/QuizArena.Client/src/api/statistics.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "StatisticsPage.tsx and LeaderboardPage.tsx: current player's totals, paged newest-first history, leaderboard top selector; empty-state text, loading/error/retry, no result-submission form.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S02-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S02-T06",
+      "title": "Complete Statistics vertical-slice, authorization and regression coverage",
+      "owner": "CarterBeasse",
+      "deps": [
+        "S02-T04",
+        "S02-T05",
+        "P09"
+      ],
+      "feature": "F02",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can view my match history, totals and leaderboard, and only trusted gameplay can submit results.",
+      "files": "tests/QuizArena.Statistics.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/statistics/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Unit-test aggregation, draws, stable ties, top/page bounds and duplicate semantics. HTTP-test self/other-user rules, service-only ingestion, exact retry/conflict, empty collections and persistence from a fresh context. UI-test totals/history, pagination, empty/error states and leaderboard rendering.",
+      "verify": "Run all Statistics unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "StatisticsController.cs, StatisticsService.cs, IStatisticsRepository.cs, StatisticsRepository.cs; MatchResult currently sits in Domain/Lobby/Entities/MatchResult.cs despite its Statistics namespace.",
+      "service": "Statistics"
+    },
+    {
+      "id": "S03-T01",
+      "title": "Implement QuestionBank domain models and pure business rules",
+      "owner": "JimRashed",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F03",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "src/QuizArena.QuestionBank.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.QuestionBank.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Question has Guid Id, nonblank prompt/category, exactly four distinct nonblank options, and one correct answer matching exactly one option. Pure selection rules require count 1..50. Categories and catalog content belong only to QuestionBank. Internal immutable match snapshots prevent catalog changes from changing an in-progress match.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S03-T02",
+      "title": "Implement QuestionBank EF mappings, migrations and repositories",
+      "owner": "JimRashed",
+      "deps": [
+        "S03-T01",
+        "P04"
+      ],
+      "feature": "F03",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "src/QuizArena.QuestionBank.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.QuestionBank.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "QuestionBankDbContext owns Questions, Categories and question options; separate IEntityTypeConfiguration classes preserve restricted category deletion and required fields. Add a deterministic catalog with at least five valid questions. Random selection uses no replacement; count above available content =>409 for internal exact-count sessions, public generate returns up to count.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S03-T03",
+      "title": "Implement QuestionBank API DTOs and application orchestration",
+      "owner": "JimRashed",
+      "deps": [
+        "S03-T01",
+        "S03-T02",
+        "P02"
+      ],
+      "feature": "F03",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "src/QuizArena.QuestionBank.Api/{Contracts,Services,Clients}/; tests/QuizArena.QuestionBank.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Public QuestionResponse {id:Guid,prompt,category,options:string[]} excludes correctAnswer. Internal QuestionSetResponse includes answer material only for service callers. Create IQuestionCatalogService in Api, invoke Domain validation and repository abstraction; forward cancellation throughout.",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S03-T04",
+      "title": "Expose and secure QuestionBank REST endpoints with OpenAPI",
+      "owner": "JimRashed",
+      "deps": [
+        "S03-T03",
+        "P06"
+      ],
+      "feature": "F03",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "src/QuizArena.QuestionBank.Api/{Controllers,Security,Program.cs}; contracts/openapi/questionbank.yaml; tests/QuizArena.QuestionBank.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "GET /api/questions/generate?count=10 =>200, questions.read; count outside 1..50=>400; empty catalog=>200 []. POST /internal/question-sets {count:5} =>200 exact immutable snapshot, questions.play service-only; insufficient valid catalog=>409. No public DTO or Swagger browser sample exposes correct answers.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S03-T05",
+      "title": "Build QuestionBank React screens and REST integration",
+      "owner": "JimRashed",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F03",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "src/QuizArena.Client/src/features/questionbank/; src/QuizArena.Client/src/api/questionbank.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "QuestionBankPage.tsx: question-count selector, generated question preview with options/category, regenerate button, empty/loading/error/validation states; never render correct answers or call /internal/question-sets.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S03-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S03-T06",
+      "title": "Complete QuestionBank vertical-slice, authorization and regression coverage",
+      "owner": "JimRashed",
+      "deps": [
+        "S03-T04",
+        "S03-T05",
+        "P09"
+      ],
+      "feature": "F03",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can browse available quiz content, while Gameplay securely obtains the answer material needed for a real persisted match.",
+      "files": "tests/QuizArena.QuestionBank.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/questionbank/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Unit-test option/answer invariants, count bounds, no duplicate selection and answer-free DTO mapping. HTTP-test both endpoints, exact-count shortage, service-only answer access and absence of correctAnswer in public JSON. UI-test generation, input bounds, errors and answer secrecy.",
+      "verify": "Run all QuestionBank unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "QuestionsController.cs, QuestionService.cs, IQuestionRepository.cs, QuestionRepository.cs, Question and Category entities.",
+      "service": "QuestionBank"
+    },
+    {
+      "id": "S04-T01",
+      "title": "Implement Lobby domain models and pure business rules",
+      "owner": "JimRashed",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F04",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "src/QuizArena.Lobby.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.Lobby.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Lobby capacity is exactly two distinct subjects including host; states Open -> Locked. Join allowed only while Open; repeat join by same subject is idempotent; third player or join to Locked =>409. Only host locks, and only with exactly two players; lock repeat returns existing locked state. Generate normalized uppercase six-character alphanumeric join codes.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S04-T02",
+      "title": "Implement Lobby EF mappings, migrations and repositories",
+      "owner": "JimRashed",
+      "deps": [
+        "S04-T01",
+        "P04"
+      ],
+      "feature": "F04",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "src/QuizArena.Lobby.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.Lobby.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "LobbyDbContext owns ActiveLobbies/LobbyPlayers; preserve unique JoinCode, add unique (LobbyId,PlayerId), cascade player deletion, row-version concurrency. Add create/get/join/save operations, handle code collisions with bounded retry, concurrent last-slot join cannot exceed capacity.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S04-T03",
+      "title": "Implement Lobby API DTOs and application orchestration",
+      "owner": "JimRashed",
+      "deps": [
+        "S04-T01",
+        "S04-T02",
+        "P02"
+      ],
+      "feature": "F04",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "src/QuizArena.Lobby.Api/{Contracts,Services,Clients}/; tests/QuizArena.Lobby.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Api contracts derive host/joining subject from trusted principal; clients never choose HostId or PlayerId for themselves. Create/get/join/lock workflows call Domain invariants. Internal locked-lobby lookup returns host, two subjects and state to Gameplay. Lobby does not create matches or touch Gameplay tables.",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S04-T04",
+      "title": "Expose and secure Lobby REST endpoints with OpenAPI",
+      "owner": "JimRashed",
+      "deps": [
+        "S04-T03",
+        "P06"
+      ],
+      "feature": "F04",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "src/QuizArena.Lobby.Api/{Controllers,Security,Program.cs}; contracts/openapi/lobby.yaml; tests/QuizArena.Lobby.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "POST /api/lobbies {} =>201, lobbies.write, Location points to GET; GET /api/lobbies/{joinCode} =>200, lobbies.read, sanitized join preview; POST /api/lobbies/{joinCode}/join {} =>200, lobbies.write; POST /api/lobbies/{joinCode}/lock =>200, lobbies.write plus host rule. Missing=>404; invalid joinCode=>400; invalid state/capacity=>409; nonhost lock=>403. GET /internal/lobbies/{joinCode} =>200, lobbies.verify service-only.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S04-T05",
+      "title": "Build Lobby React screens and REST integration",
+      "owner": "JimRashed",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F04",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "src/QuizArena.Client/src/features/lobby/; src/QuizArena.Client/src/api/lobby.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "LobbyPage.tsx: create/join forms, join code display/copy, host/player membership and lock state; host-only lock/start controls, polling and cleanup; Start invokes Gameplay create after lock, displays navigation to returned match.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S04-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S04-T06",
+      "title": "Complete Lobby vertical-slice, authorization and regression coverage",
+      "owner": "JimRashed",
+      "deps": [
+        "S04-T04",
+        "S04-T05",
+        "P09"
+      ],
+      "feature": "F04",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can create or join a two-player lobby and, as its host, lock it before starting a match.",
+      "files": "tests/QuizArena.Lobby.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/lobby/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Unit-test create/join/duplicate/full/locked/host transitions. Relational-test code uniqueness, membership uniqueness and concurrent capacity. HTTP-test create/get/join/lock/internal lookup, spoofed host, 403/404/409, persisted lock. UI-test two-player create/join/lock/start, errors and disabled nonhost controls.",
+      "verify": "Run all Lobby unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "LobbiesController.cs, LobbyService.cs, ILobbyRepository.cs, LobbyRepository.cs, ActiveLobby and LobbyPlayer; LobbyCreateRequest exists but no create endpoint exists.",
+      "service": "Lobby"
+    },
+    {
+      "id": "S05-T01",
+      "title": "Implement Gameplay domain models and pure business rules",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F05",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "src/QuizArena.Gameplay.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.Gameplay.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Five rounds, each player answers each round once; advance only after both answers; correct answer earns one point. Match membership required, current snapshot question must match, finished match immutable. Duplicate/wrong-current question =>409, outsider=>403. Persist answers, question snapshots and scores; winner is higher score, tie=>draw with no winner. GET never advances state.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S05-T02",
+      "title": "Implement Gameplay EF mappings, migrations and repositories",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S05-T01",
+        "P04"
+      ],
+      "feature": "F05",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "src/QuizArena.Gameplay.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.Gameplay.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "GameplayDbContext owns matches, player states, snapshots, answers, and PendingDeliveries. Unique (MatchId,QuestionIndex,UserId), row-version or optimistic concurrency prevents double scoring. Match completion plus pending result/event deliveries commit atomically in this database. Persist deterministic delivery IDs so retries/restarts cannot duplicate downstream effects.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S05-T03",
+      "title": "Implement Gameplay API DTOs and application orchestration",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S05-T01",
+        "S05-T02",
+        "P02",
+        "S03-T04",
+        "S04-T04"
+      ],
+      "feature": "F05",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "src/QuizArena.Gameplay.Api/{Contracts,Services,Clients}/; tests/QuizArena.Gameplay.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Api orchestration creates match from {joinCode}; verifies locked lobby/host via Lobby HTTP and obtains exactly five internal QuestionBank snapshots using service token. Generate matchId server-side and allow one match per lobby; duplicate start returns existing match. Use typed HttpClient adapters; no references to other Api/Domain/Data assemblies. Derive answering subject from bearer token. Dispatch two result records and lifecycle events through HTTP; bounded retry/backoff, persisted pending state and redrive worker survive restart.",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S05-T04",
+      "title": "Expose and secure Gameplay REST endpoints with OpenAPI",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S05-T03",
+        "P06"
+      ],
+      "feature": "F05",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "src/QuizArena.Gameplay.Api/{Controllers,Security,Program.cs}; contracts/openapi/gameplay.yaml; tests/QuizArena.Gameplay.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "POST /matches {joinCode} =>201, matches.write and lobby host; repeat same lobby=>200 same match. GET /matches/{matchId} =>200, matches.read and participant; GET /matches/{matchId}/next-question =>200 public question, matches.read and participant; finished=>409. POST /matches/{matchId}/answers {questionId:Guid,answer:string} =>200 {correct,playerAScore,playerBScore,roundComplete,finished}, matches.write and participant. Missing=>404; invalid input=>400; replay/stale/finished=>409; dependency unavailable before creation=>503 without partial match.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S05-T05",
+      "title": "Build Gameplay React screens and REST integration",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F05",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "src/QuizArena.Client/src/features/gameplay/; src/QuizArena.Client/src/api/gameplay.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "MatchPage.tsx: current public question/options, answer submit once, waiting-for-opponent display with polling, live scores, final winner/draw and links to stats/events. Hide answer key; disable duplicate submission and handle 409 refresh, 401/403 and network retry. Live Start from Lobby must wait for S05-T04.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S05-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S05-T06",
+      "title": "Complete Gameplay vertical-slice, authorization and regression coverage",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S05-T04",
+        "S05-T05",
+        "P09"
+      ],
+      "feature": "F05",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As one of two lobby players, I can complete a fair five-round persisted quiz match and see a result that reaches Statistics and Notifications.",
+      "files": "tests/QuizArena.Gameplay.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/gameplay/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Pure tests for both players, wrong/current/replayed answers, outsiders, draw, round advance and immutability. Relational tests for concurrency and atomic completion/pending delivery. HTTP tests mock external servers to verify credentials, failures, token policies and participant checks. UI-test both-player flow and completed/draw/error states; restart/retry delivery verified in cross-service E2E.",
+      "verify": "Run all Gameplay unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "MatchesController.cs, GameplayService.cs, IMatchRepository.cs, MatchRepository.cs, ActiveMatch/PlayerState. Current mock questions, direct INotificationService call, unchecked submissions and no automatic Statistics ingestion need replacement.",
+      "service": "Gameplay"
+    },
+    {
+      "id": "S06-T01",
+      "title": "Implement Notification domain models and pure business rules",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P03"
+      ],
+      "feature": "F06",
+      "layer": "domain",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "src/QuizArena.Notification.Domain/{Entities,Enums,Exceptions,Services}/; tests/QuizArena.Notification.UnitTests/Domain/",
+      "steps": [
+        "Move owned entities into the correct service Domain project and remove misplaced namespace/folder ownership.",
+        "Implement the explicitly specified invariants and typed domain exceptions as pure in-memory operations.",
+        "Add focused domain unit tests for successful transitions and every specified boundary; verify zero external package or outer-layer references."
+      ],
+      "ac": "Allow MATCH_CREATED and MATCH_COMPLETED events with valid typed match payload; immutable eventId for delivery deduplication. Store opaque user subject and string matchId; required IDs nonblank. Preferences default emailEnabled=false and pushEnabled=false when absent. Preferences describe future delivery choices; this milestone records events without sending email/push.",
+      "verify": "Run this service's domain unit tests and architecture tests; invalid states are rejected before persistence.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "S06-T02",
+      "title": "Implement Notification EF mappings, migrations and repositories",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S06-T01",
+        "P04"
+      ],
+      "feature": "F06",
+      "layer": "data",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "src/QuizArena.Notification.Data/{Context,Configurations,Repositories,Migrations}/; tests/QuizArena.Notification.IntegrationTests/Persistence/",
+      "steps": [
+        "Implement service-owned DbContext and separate entity configurations using the approved schema and preserved constraints.",
+        "Implement repository interfaces/implementations, cancellation and AsNoTracking on read-only queries; separate persistence from domain decisions.",
+        "Generate owned migrations and add relational persistence, uniqueness/concurrency and fresh-context verification tests against disposable SQL Server."
+      ],
+      "ac": "NotificationDbContext owns EventLogs/UserPrefs; unique EventId, unique preference UserId and user/time event index. Identical eventId/payload retry returns same event; conflicting retry=>409. Preference upsert returns actual persisted record; no duplicate rows under concurrency. Read history newest-first with stable Id tie-break and pagination.",
+      "verify": "Apply migrations to a fresh disposable service database, run relational tests and verify reads after new context/restart; no access to other service tables.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "S06-T03",
+      "title": "Implement Notification API DTOs and application orchestration",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S06-T01",
+        "S06-T02",
+        "P02"
+      ],
+      "feature": "F06",
+      "layer": "api",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "src/QuizArena.Notification.Api/{Contracts,Services,Clients}/; tests/QuizArena.Notification.UnitTests/Services/",
+      "steps": [
+        "Create approved request/response DTOs and application interfaces inside Api; remove HTTP DTO dependencies from Domain.",
+        "Implement orchestration through own repositories/domain rules and, when specified, typed HTTP adapters; use constructor injection and cancellation end to end.",
+        "Test mappings, dependency failures, trusted identity use, idempotency and specified validation with mocks; never serialize EF entities."
+      ],
+      "ac": "Api contracts/interfaces own request/response DTOs. Event ingestion restricted to service principal; self event/preferences operations use validated subject. Get missing preferences returns defaults without implicit write; PUT idempotently persists preferences. Keep JSON payload serialization typed and safe; do not interpolate unescaped subject/match strings.",
+      "verify": "Run service application unit tests and architecture checks; assert DTO shapes and no cross-service project references.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "S06-T04",
+      "title": "Expose and secure Notification REST endpoints with OpenAPI",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S06-T03",
+        "P06"
+      ],
+      "feature": "F06",
+      "layer": "api",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "src/QuizArena.Notification.Api/{Controllers,Security,Program.cs}; contracts/openapi/notification.yaml; tests/QuizArena.Notification.IntegrationTests/Endpoints/",
+      "steps": [
+        "Implement the exact routes/status codes and thin controller mappings; map domain exceptions to safe ProblemDetails.",
+        "Apply named scope/service/ownership policies from the matrix, expose only public DTOs and publish OpenAPI request/response/error/security definitions.",
+        "Test success/error HTTP paths using the real bearer host; update contract snapshots and verify Location headers where relevant."
+      ],
+      "ac": "POST /events {eventId:Guid,type,userId,payload:{matchId,winnerUserId?,draw?}} =>202 persisted EventResponse, events.write service-only; exact retry same response, conflict409. GET /events?page=1&pageSize=20 =>200 self events, events.read; legacy userId query if supplied must equal caller or403. GET /users/{userId}/preferences =>200 defaults/stored, preferences.read and self; PUT same route {emailEnabled,pushEnabled} =>200, preferences.write and self. Invalid payload/page=>400; cross-user=>403.",
+      "verify": "Run endpoint and security tests; compare OpenAPI to P02 contract and exercise /health without authentication.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "S06-T05",
+      "title": "Build Notification React screens and REST integration",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "P07",
+        "P02"
+      ],
+      "feature": "F06",
+      "layer": "frontend",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "src/QuizArena.Client/src/features/notification/; src/QuizArena.Client/src/api/notification.ts; corresponding component tests",
+      "steps": [
+        "Implement the specified screen(s), forms/navigation and feature-local API module against committed public contracts; use mock REST until live endpoints exist.",
+        "Add loading, empty, field validation, submit state, cancellation and user-friendly 400/401/403/404/409/503 responses as applicable.",
+        "Test component behavior and connect to the real owned API before closure; use only session subject/public DTOs and no internal secrets or database dependencies."
+      ],
+      "ac": "NotificationsPage.tsx: self event timeline with pagination/empty state and PreferencesPage.tsx with email/push toggles, save feedback and failures; explain that external delivery is not implemented, show only actual event records.",
+      "verify": "Run frontend typecheck/lint/component tests/build; manually exercise the screen against S06-T04. Live acceptance is blocked until that issue finishes, but UI implementation may start after P02/P07.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "S06-T06",
+      "title": "Complete Notification vertical-slice, authorization and regression coverage",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "S06-T04",
+        "S06-T05",
+        "P09"
+      ],
+      "feature": "F06",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a player, I can read my match events and manage my notification preferences without exposing another player's data.",
+      "files": "tests/QuizArena.Notification.{UnitTests,IntegrationTests}/; src/QuizArena.Client/src/features/notification/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Audit tests already written with each layer task; add missing business, repository, endpoint and UI cases specified here.",
+        "Run the complete positive/negative token and scope matrix plus self/participant/service-principal isolation applicable to this service.",
+        "Verify persisted outcomes through a fresh context, deterministic test isolation and live frontend/backend acceptance; record actual commands/results without skipping failures."
+      ],
+      "ac": "Unit-test typed payload validation, defaults, mapping and preference update. Relational-test event/preference uniqueness, retry conflict and persisted upsert values. HTTP-test ingestion credentials, self filtering/403, defaults and pagination. UI-test timeline, preference load/save, empty/error states and no cross-user requests.",
+      "verify": "Run all Notification unit/integration tests and frontend feature tests, then solution regression and architecture checks; record failures/remediation and real human Gate 2 evidence.",
+      "source": "EventsController.cs, PrefsController.cs, NotificationService.cs, IEventRepository.cs, EventRepository.cs, EventLog/UserPref entities. Currently no preference GET route and service interfaces contain UserPrefDto.",
+      "service": "Notification"
+    },
+    {
+      "id": "D01",
+      "title": "Run the six-service application and frontend from a documented local environment",
+      "owner": "JimRashed",
+      "deps": [
+        "P04",
+        "P05",
+        "P07",
+        "S01-T04",
+        "S02-T04",
+        "S03-T04",
+        "S04-T04",
+        "S05-T04",
+        "S06-T04"
+      ],
+      "feature": "F07",
+      "layer": "operations",
+      "priority": "P1",
+      "size": "M",
+      "story": "As a teammate or reviewer, I can start the complete system from a clean checkout.",
+      "files": "scripts/start-milestone3.ps1; scripts/stop-milestone3.ps1; infra/compose.yaml; .env.example; docs/milestone3/runbook.md",
+      "steps": [
+        "Provide a documented startup sequence for SQL Server prerequisites, Keycloak, database migrations, six .NET APIs and React client.",
+        "Configure ports, CORS, authorities/audiences, service base URLs and machine secrets through environment; local Node frontend only serves client assets.",
+        "Provide health/readiness diagnostics, safe shutdown and demo-user provisioning instructions; do not include token/password values in source."
+      ],
+      "ac": "Clean-checkout setup reaches every public /health and renders frontend; services start independently, only Gameplay workflow requires peers. Database/IdP version prerequisites and troubleshooting are explicit. Restart preserves application data, with no automatic destructive reset.",
+      "verify": "Have another member follow the runbook from a clean environment and record commands, ports and redacted health results."
+    },
+    {
+      "id": "D02",
+      "title": "Migrate legacy data safely and retire the aggregate host and shared context",
+      "owner": "JimRashed",
+      "deps": [
+        "P04",
+        "S01-T02",
+        "S02-T02",
+        "S03-T02",
+        "S04-T02",
+        "S05-T02",
+        "S06-T02",
+        "S01-T04",
+        "S02-T04",
+        "S03-T04",
+        "S04-T04",
+        "S05-T04",
+        "S06-T04"
+      ],
+      "feature": "F07",
+      "layer": "data",
+      "priority": "P1",
+      "size": "L",
+      "story": "As an existing developer with QuizArenaDb data, I need a safe transition to service-owned databases.",
+      "files": "scripts/migrate-legacy-data/; docs/milestone3/data-cutover.md; QuizArena.sln; legacy src/QuizArena.{Api,Data,Domain}/; legacy tests/",
+      "steps": [
+        "Back up/export legacy data; dry-run field/ID mappings and collision/unmapped-subject report without changing source database.",
+        "Import owned data idempotently with explicit legacy-Guid-to-provider-subject mapping, string match IDs and safe handling of old mock-question matches; quarantine invalid/incomplete historical records with audit counts.",
+        "Verify row counts/invariants, retain source for rollback, then remove aggregate runtime/projects/context from solution and fix documentation/test references; retain historical docs marked as historical."
+      ],
+      "ac": "No silent dropped data, coerced identities, invented provider subjects or password migration into IdP. Invalid mock matches remain archived rather than offered as playable real matches. Rerun import creates no duplicates. Six contexts enforce only their owned schemas; no runtime repository references QuizArenaContext. Backup/rollback is documented and source data deletion needs separate explicit approval.",
+      "verify": "Dry-run plus disposable-database rehearsal, before/after table counts, idempotent second run and rollback rehearsal; search source/solution for obsolete project/context references."
+    },
+    {
+      "id": "D03",
+      "title": "Verify the complete secured two-player journey and delivery retries",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "D01",
+        "D02",
+        "P10",
+        "S01-T06",
+        "S02-T06",
+        "S03-T06",
+        "S04-T06",
+        "S05-T06",
+        "S06-T06"
+      ],
+      "feature": "F07",
+      "layer": "testing",
+      "priority": "P0",
+      "size": "L",
+      "story": "As a reviewer, I need evidence that the six independently running services work together through the browser.",
+      "files": "tests/QuizArena.EndToEndTests/; src/QuizArena.Client/e2e/; docs/milestone3/validation-results.md",
+      "steps": [
+        "Use Playwright with two authenticated player contexts and real running services/provider to create/join/lock lobby, play five rounds, and view history/leaderboard/events/preferences.",
+        "Exercise bad/expired tokens, wrong scopes, user spoofing, unauthorized internal endpoints and answer-key leakage; confirm calls use HTTP instead of shared assemblies.",
+        "Interrupt downstream Statistics/Notification delivery, restart Gameplay, restore peers and verify pending retries produce exactly one result per player and one event per lifecycle recipient; test simultaneous submissions and draw."
+      ],
+      "ac": "One complete win and one draw journey pass; both players answer once per round, scores persist after restart, unauthorized caller cannot affect another player. Completion data eventually reaches both downstream services, duplicates do not accumulate. No browser internal credentials or answer keys. Record actual test counts, durations, run URLs and failures/remediation.",
+      "verify": "Run npm run test:e2e with isolated environment and dotnet test QuizArena.sln; archive redacted results/screenshots as generated CI artifacts."
+    },
+    {
+      "id": "D04",
+      "title": "Write the Milestone 3 architecture, security and reflection report",
+      "owner": "CarterBeasse",
+      "deps": [
+        "D03",
+        "P08"
+      ],
+      "feature": "F07",
+      "layer": "documentation",
+      "priority": "P1",
+      "size": "M",
+      "story": "As an assessor, I can verify the architecture, work allocation and human/AI collaboration evidence.",
+      "files": "docs/milestone3/architecture-and-reflection.md; docs/{architecture-notes,api-service-contracts,database-schema}.md; docs/milestone3/{authentication,authorization-matrix,work-allocation,validation-results}.md",
+      "steps": [
+        "Update current architecture/service/data/API docs while marking Milestone2 plans/review counts as historical; link independently runnable projects and React integration.",
+        "Write a concise 2–3-page equivalent report covering layering, frontend choices, two services/member, agent assistance/manual corrections and defects caught by human gates.",
+        "Include OAuth actors/PKCE flow, redacted token settings, full endpoint-policy mapping, actual security tests, board/PR/plan/review links and GitHub-over-Azure submission decision."
+      ],
+      "ac": "Report is in the existing lowercase docs folder, linked from root README rather than creating a competing Docs tree; its rendered length is checked for 2–3 pages. Evidence is real, no fabricated AI corrections or signoffs. SQL ownership, no direct frontend storage and no cross-service assembly references are accurate. All required deliverable URLs are collected.",
+      "verify": "Peer-read report against rubric; validate links, endpoint names and current solution. Render/check page count or document the Markdown-to-PDF rendering settings used."
+    },
+    {
+      "id": "D05",
+      "title": "Audit issue traceability, acceptance evidence and board completeness",
+      "owner": "JimRashed",
+      "deps": [
+        "D03",
+        "D04"
+      ],
+      "feature": "F07",
+      "layer": "process",
+      "priority": "P1",
+      "size": "S",
+      "story": "As the milestone owner, I need every requirement traceable to completed, reviewed work.",
+      "files": "docs/milestone3/requirements-traceability.md; GitHub Project; epic/feature/task issues",
+      "steps": [
+        "Map every numbered rubric section and deliverable to actual feature/task numbers, PRs, tests and docs.",
+        "Audit each member's two complete vertical slices, all frontend tasks, dependencies and issue/PR references.",
+        "Publish board export or durable evidence and reconcile statuses with actual human-gate completion, leaving pending items open."
+      ],
+      "ac": "No orphan task, missing owner, missing frontend/test task or false Done status. Every required deliverable has a real URL. Blocked/remaining work is named explicitly; completion requires both acceptance and human gates.",
+      "verify": "Machine-readable issue map/export counts match epic/feature checklists; manually follow one full trace per member."
+    },
+    {
+      "id": "D06",
+      "title": "Complete read-only review and human signoff for the milestone candidate",
+      "owner": "SuSu-Lisu",
+      "deps": [
+        "D03",
+        "D04",
+        "D05"
+      ],
+      "feature": "F07",
+      "layer": "review",
+      "priority": "P0",
+      "size": "M",
+      "story": "As a peer reviewer, I need confidence in security, layering and test quality before merging.",
+      "files": "docs/milestone3/review-findings.md; milestone PR checklist/signoff log",
+      "steps": [
+        "Run the constrained Code Review agent read-only over the complete milestone diff; capture category/severity/file/action in the established format.",
+        "Owners resolve all critical/high findings through linked issues/PRs and rerun affected checks; justify any lower-risk deferral with a concrete follow-up issue.",
+        "Have at least one other human member review each PR, verify all three gates/security checklist and record dated signoff with identity and CI evidence."
+      ],
+      "ac": "Automated review does not count as human approval. No unresolved critical/high findings; missing real approval remains blocked. Every service/feature has owner plan approval, post-implementation inspection and independent pre-merge review. Review agent modifies no files.",
+      "verify": "Inspect review records, latest successful CI and actual GitHub approvals; reviewer must differ from author; remediate stale approvals after substantive changes."
+    },
+    {
+      "id": "D07",
+      "title": "Merge the retained milestone branch through a reviewed GitHub milestone PR",
+      "owner": "JimRashed",
+      "deps": [
+        "D06"
+      ],
+      "feature": "F07",
+      "layer": "release",
+      "priority": "P0",
+      "size": "M",
+      "story": "As the milestone owner, I need one reviewed submission PR covering all Milestone 3 work.",
+      "files": "GitHub milestone-level PR; docs/milestone3/submission.md",
+      "steps": [
+        "Verify all milestone changes are on feature/milestone-3-layered-service-development; update from main without destructive reset and resolve conflicts through review.",
+        "On first push only use git push -u origin feature/milestone-3-layered-service-development; open GitHub PR to main with epic/feature/task links, Milestone 3 title, summary, test results and human signoff log.",
+        "Obtain real peer approval and passing checks, merge according to repository rules, disable automatic deletion for this branch and verify the milestone branch remains after merge."
+      ],
+      "ac": "No direct push to main, no fabricated approvals, no premature merge. One milestone-level GitHub PR exists even when task PRs already exist. Source instructions' Azure DevOps destination is overridden by explicit user choice. Retain branch after merge and preserve all traceability links.",
+      "verify": "Record PR URL, base/head, merged commit, latest CI and independent approval; verify remote milestone branch still exists."
+    },
+    {
+      "id": "D08",
+      "title": "Publish the final GitHub milestone submission bundle and board export",
+      "owner": "JimRashed",
+      "deps": [
+        "D07"
+      ],
+      "feature": "F07",
+      "layer": "documentation",
+      "priority": "P1",
+      "size": "S",
+      "story": "As the submitter, I need the exact final evidence links ready for course submission.",
+      "files": "docs/milestone3/submission.md; GitHub Project export/evidence; epic completion comment",
+      "steps": [
+        "Collect repository URL, board URL/export, merged task/milestone GitHub PRs, architecture/reflection report and validation/security evidence.",
+        "Confirm every feature/task meets closure criteria and update epic checklists/statuses truthfully.",
+        "Prepare the merged GitHub milestone PR URL for Lea submission; the human submitter performs course-system submission unless separately authorized."
+      ],
+      "ac": "Bundle contains all rubric deliverables using GitHub equivalents. No Azure DevOps setup task is created. Board/issue states reflect real completion; retained branch and milestone PR are verifiable. Lea submission is not falsely claimed.",
+      "verify": "Open every final link as a reviewer and verify report/board evidence remain accessible; owner acknowledges submission bundle."
+    }
+  ]
+}
