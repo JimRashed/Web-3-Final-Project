@@ -106,8 +106,58 @@ Per the matrix: user policies require `azp=quizarena-client` and `qa_actor=user`
 
 After `docker compose restart` the realm import is skipped, demo users persist and the checks still pass 24/24.
 
+## API token validation (P06, #21)
+
+Every service Api has an identical `Security/` folder (no shared assembly, per ADR-01) wired in `Program.cs`:
+
+```csharp
+builder.Services.AddProblemDetails();
+builder.Services.AddControllers();
+builder.Services.AddQuizArenaSecurity(builder.Configuration);
+// ...
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+app.UseQuizArenaSecurity();   // CORS -> authentication -> authorization
+app.MapGet("/health", ...).AllowAnonymous();
+app.MapControllers();
+```
+
+| Piece | Behavior |
+|---|---|
+| JwtBearer | Discovery/JWKS from `Authentication:Authority`; validates RS256 signature, exact issuer, own audience, lifetime (exp required, 30 s skew); `MapInboundClaims=false` so `sub`, `scope`, `azp` keep their names. Rejects any token whose `typ` is not `Bearer` (ID/refresh tokens) |
+| Fallback policy | Every endpoint requires an authenticated user unless marked `AllowAnonymous` (only `/health`) |
+| Named policies | `<Service>Policies` constants equal the scope strings in the matrix. Each requires the exact scope (space-delimited `scope` or `scp` array, ordinal, never substring) **and** the actor: user = `azp=quizarena-client` + `qa_actor=user`; machine = `azp=quizarena-gameplay` + `qa_actor=machine` |
+| Actor | `User.GetAuthenticatedActor()` returns `(Issuer, Subject, Kind)` from validated claims only. Endpoints use it for ownership checks; never take the acting user from body, query or headers |
+| Errors | 401 `application/problem+json` with `WWW-Authenticate: Bearer`; 403 problem for missing scope/actor; both include `traceId` |
+| CORS | Policy `frontend` from `Cors:AllowedOrigins` (Development: `http://localhost:5173`); preflight succeeds without a token |
+| Startup | Fails fast if `Authentication:Authority` (absolute URI), `Audience`, `BrowserClientId` or `MachineClientId` is missing. `appsettings.json` leaves Authority blank; `appsettings.Development.json` points at local Keycloak with `RequireHttpsMetadata=false` |
+
+Usage in a future endpoint task (e.g. #35):
+
+```csharp
+[HttpGet("api/players/{userId}/stats")]
+[Authorize(Policy = StatisticsPolicies.StatsRead)]
+public async Task<IActionResult> GetStats(string userId, CancellationToken ct)
+{
+    var actor = User.GetAuthenticatedActor();
+    if (!string.Equals(actor.Subject, userId, StringComparison.Ordinal)) return Forbid();
+    ...
+}
+```
+
+### Security test matrix
+
+`tests/QuizArena.<Service>.IntegrationTests/Security/` runs the real pipeline and real JwtBearer handler through `SecuredApiFactory`, which only swaps Keycloak discovery for local metadata holding an ephemeral RSA key, and adds a test-only probe controller with one endpoint per policy. For **every policy** of the service:
+
+- 200 with the required scope and actor (space-delimited `scope` and `scp` array);
+- 401 + problem + `WWW-Authenticate: Bearer` for: missing, malformed, bad signature, unknown key, expired, no `exp`, wrong issuer, wrong audience, `typ=ID`;
+- 403 + problem for: no scope, unrelated scope, scope with suffix, scope prefix, wrong `qa_actor`, wrong `azp`, the other actor's token carrying the scope.
+
+Plus: the response subject comes from the token even with spoofed `?userId=` and `X-User-Id`; unattributed endpoints need a token (fallback policy); `/health` returns 200 even with a junk bearer header; CORS preflight is allowed for `http://localhost:5173` and not for other origins.
+
+Results on 2026-11-03: Identity 43, Statistics 61, QuestionBank 43, Lobby 61, Gameplay 43, Notification 79 tests passed. Mutation check on Identity: substring scope matching, disabled audience validation and accepting `typ=ID` each made tests fail. Live check against Keycloak 26.7.5 with the Statistics API: real `quizarena-statistics` token authenticated (404, no business route yet), `quizarena-lobby` token 401, tampered signature 401, `/health` 200.
+
 ## Not in this issue
 
-- API JWT validation, policies and CORS: P06 (#21).
 - React sign-in/sign-out, in-memory token storage and refresh handling (`src/QuizArena.Client/src/auth/`): P07 (#22). The client project does not exist yet; use `VITE_OIDC_AUTHORITY=http://localhost:8080/realms/quizarena` and `VITE_OIDC_CLIENT_ID=quizarena-client`.
 - Legacy account mapping to Keycloak subjects: D02 (#63), per [identity-migration.md](identity-migration.md).
