@@ -6,6 +6,8 @@ namespace QuizArena.Statistics.Domain.Services;
 
 /// <summary>
 /// Pure, in-memory Statistics rules: totals, leaderboard ranking, history ordering and replay decisions.
+/// Aggregation groups by <see cref="MatchResult.UserId"/> alone because each deployment trusts exactly one
+/// issuer (ADR-05); callers pass results for the configured issuer only.
 /// </summary>
 public static class StatisticsCalculator
 {
