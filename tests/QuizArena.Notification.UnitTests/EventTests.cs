@@ -10,131 +10,178 @@ namespace QuizArena.Notification.UnitTests;
 public sealed class EventTests
 {
     private static readonly DateTime CreatedAt = new(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
-    private const string ValidPayload = """{"matchId":"26c94137-d660-4397-a731-050c2bb07001","draw":false}""";
+    private static readonly Guid EventId = Guid.Parse("26c94137-d660-4397-a731-050c2bb07004");
+    private const string Issuer = "http://localhost:8080/realms/quizarena";
+    private const string PlayerA = "player-a";
+    private const string MatchId = "match-1";
+
+    private static Event Created() =>
+        Event.CreateMatchCreated(EventId, Issuer, PlayerA, MatchId, CreatedAt);
+
+    private static Event Completed(string? winner = PlayerA, bool draw = false) =>
+        Event.CreateMatchCompleted(EventId, Issuer, PlayerA, MatchId, winner, draw, CreatedAt);
 
     [Fact]
-    public void Create_WithValidData_StoresNormalisedEvent()
+    public void CreateMatchCreated_WithValidData_StoresTypedPayload()
     {
-        // Arrange
-        var eventId = Guid.NewGuid();
-
         // Act
-        var created = Event.Create("MATCH_COMPLETED", "player-a", ValidPayload, CreatedAt, eventId);
+        var created = Created();
 
         // Assert
-        created.EventId.Should().Be(eventId);
-        created.Type.Should().Be("MATCH_COMPLETED");
-        created.UserId.Should().Be("player-a");
-        created.PayloadJson.Should().Be(ValidPayload);
+        created.EventId.Should().Be(EventId);
+        created.Type.Should().Be(EventType.MatchCreated);
+        created.Issuer.Should().Be(Issuer);
+        created.UserId.Should().Be(PlayerA);
+        created.MatchId.Should().Be(MatchId);
+        created.WinnerUserId.Should().BeNull();
+        created.Draw.Should().BeFalse();
         created.CreatedAt.Should().Be(CreatedAt);
     }
 
     [Fact]
-    public void Create_WithoutEventId_GeneratesIdentifier()
+    public void CreateMatchCreated_WithEmptyEventId_ThrowsInvalidEventException()
     {
         // Act
-        var created = Event.Create("MATCH_COMPLETED", "player-a", ValidPayload, CreatedAt);
-
-        // Assert
-        created.EventId.Should().NotBe(Guid.Empty);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Create_WithBlankType_ThrowsInvalidEventException(string type)
-    {
-        // Act
-        var act = () => Event.Create(type, "player-a", ValidPayload, CreatedAt);
-
-        // Assert
-        act.Should().Throw<InvalidEventException>();
-    }
-
-    [Fact]
-    public void Create_WithLowerCaseType_ThrowsInvalidEventException()
-    {
-        // Act
-        var act = () => Event.Create("match_completed", "player-a", ValidPayload, CreatedAt);
-
-        // Assert
-        act.Should().Throw<InvalidEventException>();
-    }
-
-    [Fact]
-    public void Create_WithBlankUser_ThrowsInvalidEventException()
-    {
-        // Act
-        var act = () => Event.Create("MATCH_COMPLETED", " ", ValidPayload, CreatedAt);
+        var act = () => Event.CreateMatchCreated(Guid.Empty, Issuer, PlayerA, MatchId, CreatedAt);
 
         // Assert
         act.Should().Throw<InvalidEventException>();
     }
 
     [Theory]
-    [InlineData("not-json")]
-    [InlineData("[1,2,3]")]
-    [InlineData("")]
-    public void Create_WithInvalidOrNonObjectPayload_ThrowsInvalidEventException(string payload)
+    [InlineData(" player-a")]
+    [InlineData("player-a ")]
+    public void CreateMatchCreated_WithPaddedSubject_ThrowsInvalidEventException(string subject)
     {
         // Act
-        var act = () => Event.Create("MATCH_COMPLETED", "player-a", payload, CreatedAt);
+        var act = () => Event.CreateMatchCreated(EventId, Issuer, subject, MatchId, CreatedAt);
 
         // Assert
         act.Should().Throw<InvalidEventException>();
     }
 
     [Fact]
-    public void Create_WithLocalTime_ThrowsInvalidEventException()
+    public void CreateMatchCreated_WithBlankMatchId_ThrowsInvalidEventException()
+    {
+        // Act
+        var act = () => Event.CreateMatchCreated(EventId, Issuer, PlayerA, "   ", CreatedAt);
+
+        // Assert
+        act.Should().Throw<InvalidEventException>();
+    }
+
+    [Fact]
+    public void CreateMatchCreated_WithLocalTime_ThrowsInvalidEventException()
     {
         // Arrange
         var local = new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Local);
 
         // Act
-        var act = () => Event.Create("MATCH_COMPLETED", "player-a", ValidPayload, local);
+        var act = () => Event.CreateMatchCreated(EventId, Issuer, PlayerA, MatchId, local);
 
         // Assert
         act.Should().Throw<InvalidEventException>();
     }
 
     [Fact]
-    public void Create_WithDifferentWhitespace_CanonicalisesPayload()
+    public void CreateMatchCreated_WithDefaultTime_ThrowsInvalidEventException()
     {
         // Act
-        var compact = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt);
-        var spaced = Event.Create("MATCH_COMPLETED", "player-a", """{ "a" : 1 }""", CreatedAt);
+        var act = () => Event.CreateMatchCreated(EventId, Issuer, PlayerA, MatchId, default);
 
         // Assert
-        compact.PayloadJson.Should().Be("""{"a":1}""");
-        spaced.PayloadJson.Should().Be(compact.PayloadJson);
-        compact.HasSamePayload(spaced).Should().BeTrue();
+        act.Should().Throw<InvalidEventException>();
     }
 
     [Fact]
-    public void HasSamePayload_WithDifferentValues_ReturnsFalse()
+    public void CreateMatchCompleted_WithDraw_SetsDrawAndNoWinner()
     {
-        // Arrange
-        var first = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt);
-        var second = Event.Create("MATCH_COMPLETED", "player-a", """{"a":2}""", CreatedAt);
-
         // Act
-        var result = first.HasSamePayload(second);
+        var completed = Completed(winner: null, draw: true);
 
         // Assert
-        result.Should().BeFalse();
+        completed.Type.Should().Be(EventType.MatchCompleted);
+        completed.Draw.Should().BeTrue();
+        completed.WinnerUserId.Should().BeNull();
     }
 
     [Fact]
-    public void HasSamePayload_WithNull_ReturnsFalse()
+    public void CreateMatchCompleted_WithWinner_SetsWinnerAndNoDraw()
     {
-        // Arrange
-        var created = Event.Create("MATCH_COMPLETED", "player-a", ValidPayload, CreatedAt);
-
         // Act
-        var result = created.HasSamePayload(null);
+        var completed = Completed(winner: PlayerA, draw: false);
 
         // Assert
-        result.Should().BeFalse();
+        completed.Draw.Should().BeFalse();
+        completed.WinnerUserId.Should().Be(PlayerA);
+    }
+
+    [Fact]
+    public void CreateMatchCompleted_WithDrawAndWinner_ThrowsInvalidEventException()
+    {
+        // Act
+        var act = () => Event.CreateMatchCompleted(EventId, Issuer, PlayerA, MatchId, PlayerA, draw: true, CreatedAt);
+
+        // Assert
+        act.Should().Throw<InvalidEventException>();
+    }
+
+    [Fact]
+    public void CreateMatchCompleted_WithoutDrawOrWinner_ThrowsInvalidEventException()
+    {
+        // Act
+        var act = () => Event.CreateMatchCompleted(EventId, Issuer, PlayerA, MatchId, null, draw: false, CreatedAt);
+
+        // Assert
+        act.Should().Throw<InvalidEventException>();
+    }
+
+    [Fact]
+    public void HasSameContent_WithIdenticalPayload_ReturnsTrue()
+    {
+        // Act & Assert
+        Created().HasSameContent(Created()).Should().BeTrue();
+        Completed().HasSameContent(Completed()).Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasSameContent_WithDifferentRecipient_ReturnsFalse()
+    {
+        // Arrange
+        var first = Created();
+        var second = Event.CreateMatchCreated(EventId, Issuer, "player-b", MatchId, CreatedAt);
+
+        // Act & Assert
+        first.HasSameContent(second).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasSameContent_WithDifferentType_ReturnsFalse()
+    {
+        // Arrange
+        var created = Created();
+        var completed = Completed(winner: PlayerA, draw: false);
+
+        // Act & Assert
+        created.HasSameContent(completed).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasSameContent_WithDifferentOutcome_ReturnsFalse()
+    {
+        // Arrange
+        var won = Completed(winner: PlayerA, draw: false);
+        var drawn = Completed(winner: null, draw: true);
+
+        // Act & Assert
+        won.HasSameContent(drawn).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasSameContent_WithNull_ReturnsFalse()
+    {
+        // Act & Assert
+        Created().HasSameContent(null).Should().BeFalse();
     }
 }
 
@@ -142,26 +189,27 @@ public sealed class EventReplayPolicyTests
 {
     private static readonly DateTime CreatedAt = new(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
     private static readonly Guid SharedId = Guid.Parse("26c94137-d660-4397-a731-050c2bb07004");
+    private const string Issuer = "http://localhost:8080/realms/quizarena";
+
+    private static Event Created(string subject = "player-a") =>
+        Event.CreateMatchCreated(SharedId, Issuer, subject, "match-1", CreatedAt);
 
     [Fact]
     public void Classify_WhenNothingStored_ReturnsNew()
     {
-        // Arrange
-        var incoming = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt, SharedId);
-
         // Act
-        var decision = EventReplayPolicy.Classify(null, incoming);
+        var decision = EventReplayPolicy.Classify(null, Created());
 
         // Assert
         decision.Should().Be(ReplayDecision.New);
     }
 
     [Fact]
-    public void Classify_WithIdenticalPayload_ReturnsIdempotentReplay()
+    public void Classify_WithIdenticalContent_ReturnsIdempotentReplay()
     {
         // Arrange
-        var stored = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt, SharedId);
-        var incoming = Event.Create("MATCH_COMPLETED", "player-a", """{ "a" : 1 }""", CreatedAt.AddMinutes(5), SharedId);
+        var stored = Created();
+        var incoming = Event.CreateMatchCreated(SharedId, Issuer, "player-a", "match-1", CreatedAt.AddMinutes(5));
 
         // Act
         var decision = EventReplayPolicy.Classify(stored, incoming);
@@ -171,11 +219,25 @@ public sealed class EventReplayPolicyTests
     }
 
     [Fact]
-    public void Classify_WithDifferentPayload_ReturnsConflict()
+    public void Classify_WithDifferentRecipient_ReturnsConflict()
     {
         // Arrange
-        var stored = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt, SharedId);
-        var incoming = Event.Create("MATCH_COMPLETED", "player-a", """{"a":2}""", CreatedAt, SharedId);
+        var stored = Created("player-a");
+        var incoming = Created("player-b");
+
+        // Act
+        var decision = EventReplayPolicy.Classify(stored, incoming);
+
+        // Assert
+        decision.Should().Be(ReplayDecision.Conflict);
+    }
+
+    [Fact]
+    public void Classify_WithDifferentOutcome_ReturnsConflict()
+    {
+        // Arrange
+        var stored = Event.CreateMatchCompleted(SharedId, Issuer, "player-a", "match-1", "player-a", false, CreatedAt);
+        var incoming = Event.CreateMatchCompleted(SharedId, Issuer, "player-a", "match-1", null, true, CreatedAt);
 
         // Act
         var decision = EventReplayPolicy.Classify(stored, incoming);
@@ -188,8 +250,8 @@ public sealed class EventReplayPolicyTests
     public void Resolve_WithConflict_ThrowsEventConflictException()
     {
         // Arrange
-        var stored = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt, SharedId);
-        var incoming = Event.Create("MATCH_COMPLETED", "player-a", """{"a":2}""", CreatedAt, SharedId);
+        var stored = Created("player-a");
+        var incoming = Created("player-b");
 
         // Act
         var act = () => EventReplayPolicy.Resolve(stored, incoming);
@@ -202,8 +264,8 @@ public sealed class EventReplayPolicyTests
     public void Resolve_WithIdempotentReplay_ReturnsStoredEvent()
     {
         // Arrange
-        var stored = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt, SharedId);
-        var incoming = Event.Create("MATCH_COMPLETED", "player-a", """{"a":1}""", CreatedAt.AddHours(1), SharedId);
+        var stored = Created();
+        var incoming = Event.CreateMatchCreated(SharedId, Issuer, "player-a", "match-1", CreatedAt.AddHours(1));
 
         // Act
         var resolved = EventReplayPolicy.Resolve(stored, incoming);

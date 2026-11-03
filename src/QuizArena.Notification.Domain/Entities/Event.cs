@@ -1,144 +1,163 @@
-using System.Text.Json;
+using QuizArena.Notification.Domain.Enums;
 using QuizArena.Notification.Domain.Exceptions;
 
 namespace QuizArena.Notification.Domain.Entities;
 
 /// <summary>
-/// An immutable notification event owned by a single player.
-/// Events are append-only: once stored, neither the payload nor the creation time changes.
+/// An immutable notification event delivered by the Gameplay service to one recipient.
+/// The payload is typed: <see cref="EventType.MatchCreated"/> carries only the match id and
+/// <see cref="EventType.MatchCompleted"/> carries the match outcome.
 /// </summary>
 public sealed class Event
 {
-    public const int MaxTypeLength = 64;
-    public const int MaxUserIdLength = 256;
-    public const int MaxPayloadLength = 16 * 1024;
+    public const int MaxIssuerLength = 256;
+    public const int MaxSubjectLength = 200;
+    public const int MaxMatchIdLength = 100;
 
-    private Event(Guid eventId, string type, string userId, string payloadJson, DateTime createdAt)
+    private Event(
+        Guid eventId,
+        string issuer,
+        EventType type,
+        string userId,
+        string matchId,
+        string? winnerUserId,
+        bool draw,
+        DateTime createdAt)
     {
         EventId = eventId;
+        Issuer = issuer;
         Type = type;
         UserId = userId;
-        PayloadJson = payloadJson;
+        MatchId = matchId;
+        WinnerUserId = winnerUserId;
+        Draw = draw;
         CreatedAt = createdAt;
     }
 
-    /// <summary>Producer-supplied identifier, unique within the issuer.</summary>
+    /// <summary>Gameplay-generated identifier and idempotency key.</summary>
     public Guid EventId { get; }
 
-    /// <summary>Event discriminator such as <c>MATCH_COMPLETED</c>.</summary>
-    public string Type { get; }
+    /// <summary>Trusted issuer context the recipient subject belongs to.</summary>
+    public string Issuer { get; }
 
-    /// <summary>Opaque subject taken from the validated token; never a request-body value.</summary>
+    public EventType Type { get; }
+
+    /// <summary>Recipient subject, taken from the validated machine token only.</summary>
     public string UserId { get; }
 
-    /// <summary>Canonical JSON object payload. Immutable once the event is stored.</summary>
-    public string PayloadJson { get; }
+    /// <summary>Match the event refers to; the only payload field a created event carries.</summary>
+    public string MatchId { get; }
 
-    /// <summary>UTC instant at which the event was accepted.</summary>
+    /// <summary>Winner subject for a completed match; null for a draw or for a created match.</summary>
+    public string? WinnerUserId { get; }
+
+    /// <summary>True only for a completed match without a winner.</summary>
+    public bool Draw { get; }
+
     public DateTime CreatedAt { get; }
 
-    public static Event Create(
-        string type,
-        string userId,
-        string payloadJson,
-        DateTime createdAt,
-        Guid? eventId = null)
+    public static Event CreateMatchCreated(
+        Guid eventId,
+        string issuer,
+        string recipientSubject,
+        string matchId,
+        DateTime createdAt)
     {
-        var normalizedType = ValidateType(type);
-        var normalizedUser = ValidateUser(userId);
-        var canonicalPayload = NormalizePayload(payloadJson);
-        EnsureUtc(createdAt);
+        var validCreatedAt = ValidateTimestamp(createdAt);
 
-        return new Event(eventId ?? Guid.NewGuid(), normalizedType, normalizedUser, canonicalPayload, createdAt);
+        return new Event(
+            ValidateEventId(eventId),
+            ValidateOpaque(issuer, "issuer", MaxIssuerLength),
+            EventType.MatchCreated,
+            ValidateOpaque(recipientSubject, "recipient subject", MaxSubjectLength),
+            ValidateOpaque(matchId, "match id", MaxMatchIdLength),
+            null,
+            false,
+            validCreatedAt);
+    }
+
+    public static Event CreateMatchCompleted(
+        Guid eventId,
+        string issuer,
+        string recipientSubject,
+        string matchId,
+        string? winnerUserId,
+        bool draw,
+        DateTime createdAt)
+    {
+        if (draw && winnerUserId is not null)
+        {
+            throw new InvalidEventException("A drawn match must not name a winner.");
+        }
+
+        if (!draw && winnerUserId is null)
+        {
+            throw new InvalidEventException("A completed match without a draw requires a winner.");
+        }
+
+        var validCreatedAt = ValidateTimestamp(createdAt);
+
+        return new Event(
+            ValidateEventId(eventId),
+            ValidateOpaque(issuer, "issuer", MaxIssuerLength),
+            EventType.MatchCompleted,
+            ValidateOpaque(recipientSubject, "recipient subject", MaxSubjectLength),
+            ValidateOpaque(matchId, "match id", MaxMatchIdLength),
+            winnerUserId is null ? null : ValidateOpaque(winnerUserId, "winner subject", MaxSubjectLength),
+            draw,
+            validCreatedAt);
     }
 
     /// <summary>
-    /// True when both events carry the same canonical payload, i.e. the replay is idempotent.
+    /// Typed equality of the immutable payload: type, recipient, match and outcome.
+    /// Member order and whitespace cannot influence the comparison.
     /// </summary>
-    public bool HasSamePayload(Event? other) =>
-        other is not null && string.Equals(PayloadJson, other.PayloadJson, StringComparison.Ordinal);
+    public bool HasSameContent(Event? other) =>
+        other is not null
+        && Type == other.Type
+        && string.Equals(UserId, other.UserId, StringComparison.Ordinal)
+        && string.Equals(MatchId, other.MatchId, StringComparison.Ordinal)
+        && string.Equals(WinnerUserId, other.WinnerUserId, StringComparison.Ordinal)
+        && Draw == other.Draw;
 
-    private static string ValidateType(string type)
+    private static Guid ValidateEventId(Guid eventId)
     {
-        if (string.IsNullOrWhiteSpace(type))
+        if (eventId == Guid.Empty)
         {
-            throw new InvalidEventException("Event type is required.");
+            throw new InvalidEventException("Event id is required.");
         }
 
-        var trimmed = type.Trim();
-        if (trimmed.Length > MaxTypeLength)
-        {
-            throw new InvalidEventException($"Event type must be at most {MaxTypeLength} characters.");
-        }
-
-        foreach (var character in trimmed)
-        {
-            var allowed = char.IsAsciiLetterUpper(character) || char.IsAsciiDigit(character) || character == '_';
-            if (!allowed)
-            {
-                throw new InvalidEventException(
-                    $"Event type '{trimmed}' must use upper-case letters, digits or underscores.");
-            }
-        }
-
-        return trimmed;
+        return eventId;
     }
 
-    private static string ValidateUser(string userId)
+    // Identifiers and subjects are opaque and compared exactly: padded values are rejected, never trimmed.
+    private static string ValidateOpaque(string value, string field, int maxLength)
     {
-        if (string.IsNullOrWhiteSpace(userId))
+        if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidEventException("Event user is required.");
+            throw new InvalidEventException($"The {field} is required.");
         }
 
-        var trimmed = userId.Trim();
-        if (trimmed.Length > MaxUserIdLength)
+        if (value.Length > maxLength)
         {
-            throw new InvalidEventException($"Event user must be at most {MaxUserIdLength} characters.");
+            throw new InvalidEventException($"The {field} must be at most {maxLength} characters.");
         }
 
-        return trimmed;
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new InvalidEventException($"The {field} must not have leading or trailing whitespace.");
+        }
+
+        return value;
     }
 
-    private static string NormalizePayload(string payloadJson)
+    private static DateTime ValidateTimestamp(DateTime createdAt)
     {
-        if (string.IsNullOrWhiteSpace(payloadJson))
+        if (createdAt == default || createdAt.Kind != DateTimeKind.Utc)
         {
-            throw new InvalidEventException("Event payload is required.");
+            throw new InvalidEventException("Event creation time must be a non-default UTC timestamp.");
         }
 
-        if (payloadJson.Length > MaxPayloadLength)
-        {
-            throw new InvalidEventException($"Event payload must be at most {MaxPayloadLength} characters.");
-        }
-
-        JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(payloadJson);
-        }
-        catch (JsonException)
-        {
-            throw new InvalidEventException("Event payload must be valid JSON.");
-        }
-
-        using (document)
-        {
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                throw new InvalidEventException("Event payload must be a JSON object.");
-            }
-
-            // Canonicalise so that replays compare on content, not on formatting or whitespace.
-            return JsonSerializer.Serialize(document.RootElement);
-        }
-    }
-
-    private static void EnsureUtc(DateTime createdAt)
-    {
-        if (createdAt.Kind != DateTimeKind.Utc)
-        {
-            throw new InvalidEventException("Event creation time must be expressed in UTC.");
-        }
+        return createdAt;
     }
 }

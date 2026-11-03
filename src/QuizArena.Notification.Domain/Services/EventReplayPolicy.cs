@@ -6,6 +6,7 @@ namespace QuizArena.Notification.Domain.Services;
 
 /// <summary>
 /// Pure rule deciding what to do when an event id is offered for storage a second time.
+/// Equality is typed (type, recipient, match, outcome); serialization details never influence it.
 /// </summary>
 public static class EventReplayPolicy
 {
@@ -23,7 +24,7 @@ public static class EventReplayPolicy
             throw new ArgumentException("Stored and incoming events must share the same event id.", nameof(incoming));
         }
 
-        return stored.HasSamePayload(incoming)
+        return stored.HasSameContent(incoming)
             ? ReplayDecision.IdempotentReplay
             : ReplayDecision.Conflict;
     }

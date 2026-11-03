@@ -4,12 +4,12 @@ namespace QuizArena.Notification.Domain.Entities;
 
 /// <summary>
 /// A player's notification channel preferences, keyed by issuer and opaque subject.
-/// A player without a stored row is treated as opted in to both channels.
+/// A player without a stored row is treated as opted out of both channels, matching the contract default.
 /// </summary>
 public sealed class UserPreference
 {
     public const int MaxIssuerLength = 256;
-    public const int MaxSubjectLength = 256;
+    public const int MaxSubjectLength = 200;
 
     private UserPreference(string issuer, string subject, bool emailEnabled, bool pushEnabled)
     {
@@ -27,13 +27,17 @@ public sealed class UserPreference
 
     public bool PushEnabled { get; private set; }
 
-    /// <summary>Preferences used when the player has never saved any: both channels enabled.</summary>
+    /// <summary>Preferences used when the player has never saved any: both channels disabled.</summary>
     public static UserPreference CreateDefault(string issuer, string subject) =>
-        new(ValidateIdentity(issuer, nameof(issuer)), ValidateIdentity(subject, nameof(subject)), true, true);
+        new(ValidateOpaque(issuer, "issuer", MaxIssuerLength), ValidateOpaque(subject, "subject", MaxSubjectLength), false, false);
 
     /// <summary>Rehydrates a stored preference row without re-applying defaults.</summary>
     public static UserPreference Rehydrate(string issuer, string subject, bool emailEnabled, bool pushEnabled) =>
-        new(ValidateIdentity(issuer, nameof(issuer)), ValidateIdentity(subject, nameof(subject)), emailEnabled, pushEnabled);
+        new(
+            ValidateOpaque(issuer, "issuer", MaxIssuerLength),
+            ValidateOpaque(subject, "subject", MaxSubjectLength),
+            emailEnabled,
+            pushEnabled);
 
     public void Update(bool emailEnabled, bool pushEnabled)
     {
@@ -41,19 +45,24 @@ public sealed class UserPreference
         PushEnabled = pushEnabled;
     }
 
-    private static string ValidateIdentity(string value, string name)
+    // The subject is opaque and compared exactly, so padded values are rejected rather than trimmed.
+    private static string ValidateOpaque(string value, string field, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new NotificationDomainException($"Preference {name} is required.");
+            throw new NotificationDomainException($"Preference {field} is required.");
         }
 
-        var trimmed = value.Trim();
-        if (trimmed.Length > MaxSubjectLength)
+        if (value.Length > maxLength)
         {
-            throw new NotificationDomainException($"Preference {name} must be at most {MaxSubjectLength} characters.");
+            throw new NotificationDomainException($"Preference {field} must be at most {maxLength} characters.");
         }
 
-        return trimmed;
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new NotificationDomainException($"Preference {field} must not have leading or trailing whitespace.");
+        }
+
+        return value;
     }
 }
