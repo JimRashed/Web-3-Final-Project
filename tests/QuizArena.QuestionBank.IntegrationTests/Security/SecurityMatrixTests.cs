@@ -2,7 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using QuizArena.QuestionBank.Api.Security;
 using Xunit;
 
@@ -112,7 +113,8 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        response.Headers.WwwAuthenticate.Should().Contain(header => header.Scheme == "Bearer");
+        var challenge = response.Headers.WwwAuthenticate.Should().ContainSingle(header => header.Scheme == "Bearer").Subject;
+        challenge.Parameter.Should().Be(kind == "missing" ? null : "error=\"invalid_token\"");
         await AssertProblemAsync(response, 401);
     }
 
@@ -162,6 +164,24 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
         var expected = actor == ActorKind.User ? TestTokens.UserSubject : TestTokens.MachineSubject;
         body.RootElement.GetProperty("subject").GetString().Should().Be(expected);
         body.RootElement.GetProperty("issuer").GetString().Should().Be(TestTokens.Issuer);
+    }
+
+    [Fact]
+    public async Task PolicyEndpoint_WithAuthorityTrailingSlash_StillAcceptsRealmIssuer()
+    {
+        // Arrange
+        var (policy, actor) = QuestionBankPolicies.All.First();
+        using var factory = _factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["Authentication:Authority"] = TestTokens.Issuer + "/" })));
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/__security-probe/{policy}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", TestTokens.Create(actor, policy));
+
+        // Act
+        using var response = await client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

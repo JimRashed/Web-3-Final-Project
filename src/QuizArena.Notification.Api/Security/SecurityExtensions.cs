@@ -66,7 +66,8 @@ public static class SecurityExtensions
         jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = settings.Authority,
+            // Keycloak's iss has no trailing slash; tolerate one in configuration.
+            ValidIssuer = settings.Authority.TrimEnd('/'),
             ValidateAudience = true,
             ValidAudience = settings.Audience,
             ValidateLifetime = true,
@@ -92,7 +93,10 @@ public static class SecurityExtensions
             OnChallenge = async context =>
             {
                 context.HandleResponse();
-                context.Response.Headers.WWWAuthenticate = "Bearer";
+                // RFC 6750: tell clients whether the token was missing or rejected.
+                context.Response.Headers.WWWAuthenticate = context.AuthenticateFailure is null
+                    ? "Bearer"
+                    : "Bearer error=\"invalid_token\"";
                 await WriteProblemAsync(context.HttpContext, StatusCodes.Status401Unauthorized, "Missing or invalid bearer token");
             },
             OnForbidden = context =>
