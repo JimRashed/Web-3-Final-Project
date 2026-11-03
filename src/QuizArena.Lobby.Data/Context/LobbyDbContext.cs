@@ -1,0 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace QuizArena.Lobby.Data.Context;
+
+/// <summary>
+/// Owns the Lobby service's own SQL Server database (QuizArenaLobbyDb); no other service reads or writes it.
+/// Entity sets and IEntityTypeConfiguration classes in this assembly are applied automatically.
+/// </summary>
+public sealed class LobbyDbContext(DbContextOptions<LobbyDbContext> options) : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(LobbyDbContext).Assembly);
+    }
+}

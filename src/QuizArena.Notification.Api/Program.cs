@@ -1,4 +1,5 @@
 using QuizArena.Notification.Api.Security;
+using QuizArena.Notification.Data;
 
 namespace QuizArena.Notification.Api;
 
@@ -10,6 +11,7 @@ public sealed class Program
         builder.Services.AddProblemDetails();
         builder.Services.AddControllers();
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
+        builder.Services.AddNotificationPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));
 
         var app = builder.Build();
         app.UseExceptionHandler();
