@@ -1,0 +1,1069 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuizArena gameplay API — proposed P02",
+    "version": "1.0.0",
+    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5105",
+      "description": "Development only; configure HTTPS for deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "gameplay"
+    }
+  ],
+  "paths": {
+    "/matches": {
+      "post": {
+        "operationId": "createMatch",
+        "tags": [
+          "gameplay"
+        ],
+        "summary": "createMatch",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "matches.write"
+            ]
+          }
+        ],
+        "x-policy": "matches.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-gameplay",
+        "x-ownership": "verified locked lobby host",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Existing match for the same lobby; authorization rechecked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                },
+                "example": {
+                  "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                  "playerAId": "player-a",
+                  "playerBId": "player-b",
+                  "status": "ACTIVE",
+                  "playerAScore": 0,
+                  "playerBScore": 0,
+                  "currentQuestionIndex": 0,
+                  "winnerUserId": null,
+                  "draw": false,
+                  "completedAt": null
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                },
+                "example": {
+                  "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                  "playerAId": "player-a",
+                  "playerBId": "player-b",
+                  "status": "ACTIVE",
+                  "playerAScore": 0,
+                  "playerBScore": 0,
+                  "currentQuestionIndex": 0,
+                  "winnerUserId": null,
+                  "draw": false,
+                  "completedAt": null
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "Relative URL of created resource",
+                "schema": {
+                  "type": "string"
+                },
+                "example": "/matches/26c94137-d660-4397-a731-050c2bb07001"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMatch"
+              },
+              "example": {
+                "joinCode": "ABC123"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{matchId}": {
+      "get": {
+        "operationId": "getMatch",
+        "tags": [
+          "gameplay"
+        ],
+        "summary": "getMatch",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "matches.read"
+            ]
+          }
+        ],
+        "x-policy": "matches.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-gameplay",
+        "x-ownership": "match participant",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MatchId"
+            },
+            "example": "26c94137-d660-4397-a731-050c2bb07001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                },
+                "example": {
+                  "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                  "playerAId": "player-a",
+                  "playerBId": "player-b",
+                  "status": "ACTIVE",
+                  "playerAScore": 0,
+                  "playerBScore": 0,
+                  "currentQuestionIndex": 0,
+                  "winnerUserId": null,
+                  "draw": false,
+                  "completedAt": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{matchId}/next-question": {
+      "get": {
+        "operationId": "getCurrentQuestion",
+        "tags": [
+          "gameplay"
+        ],
+        "summary": "getCurrentQuestion",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "matches.read"
+            ]
+          }
+        ],
+        "x-policy": "matches.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-gameplay",
+        "x-ownership": "match participant",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MatchId"
+            },
+            "example": "26c94137-d660-4397-a731-050c2bb07001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentQuestion"
+                },
+                "example": {
+                  "questionId": "26c94137-d660-4397-a731-050c2bb07002",
+                  "text": "Which planet is known as the Red Planet?",
+                  "options": [
+                    "Mars",
+                    "Venus",
+                    "Earth",
+                    "Jupiter"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{matchId}/answers": {
+      "post": {
+        "operationId": "submitAnswer",
+        "tags": [
+          "gameplay"
+        ],
+        "summary": "submitAnswer",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "matches.write"
+            ]
+          }
+        ],
+        "x-policy": "matches.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-gameplay",
+        "x-ownership": "match participant",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MatchId"
+            },
+            "example": "26c94137-d660-4397-a731-050c2bb07001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerOutcome"
+                },
+                "example": {
+                  "correct": true,
+                  "playerAScore": 1,
+                  "playerBScore": 0,
+                  "roundComplete": false,
+                  "finished": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAnswer"
+              },
+              "example": {
+                "questionId": "26c94137-d660-4397-a731-050c2bb07002",
+                "answer": "Mars"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "gameplayHealth",
+        "tags": [
+          "gameplay"
+        ],
+        "summary": "gameplayHealth",
+        "description": "Liveness only; no credentials, topology, connection strings or dependency details.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "matches.read": "matches.read",
+              "matches.write": "matches.write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Subject": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "\\S"
+      },
+      "MatchId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "\\S"
+      },
+      "JoinCode": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{6}$",
+        "minLength": 6,
+        "maxLength": 6
+      },
+      "CreateMatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "joinCode"
+        ],
+        "properties": {
+          "joinCode": {
+            "$ref": "#/components/schemas/JoinCode"
+          }
+        }
+      },
+      "Match": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "matchId",
+          "playerAId",
+          "playerBId",
+          "status",
+          "playerAScore",
+          "playerBScore",
+          "currentQuestionIndex",
+          "winnerUserId",
+          "draw",
+          "completedAt"
+        ],
+        "properties": {
+          "matchId": {
+            "$ref": "#/components/schemas/MatchId"
+          },
+          "playerAId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "playerBId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "FINISHED"
+            ]
+          },
+          "playerAScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "playerBScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "currentQuestionIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "winnerUserId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S",
+            "nullable": true
+          },
+          "draw": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CurrentQuestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "text",
+          "options"
+        ],
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300,
+              "pattern": "\\S"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "uniqueItems": true
+          }
+        }
+      },
+      "SubmitAnswer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "answer"
+        ],
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "AnswerOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "correct",
+          "playerAScore",
+          "playerBScore",
+          "roundComplete",
+          "finished"
+        ],
+        "properties": {
+          "correct": {
+            "type": "boolean"
+          },
+          "playerAScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "playerBScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "roundComplete": {
+            "type": "boolean"
+          },
+          "finished": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

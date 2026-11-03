@@ -1,0 +1,937 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuizArena notification API — proposed P02",
+    "version": "1.0.0",
+    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5106",
+      "description": "Development only; configure HTTPS for deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "notification"
+    }
+  ],
+  "paths": {
+    "/events": {
+      "post": {
+        "operationId": "createEvent",
+        "tags": [
+          "notification"
+        ],
+        "summary": "createEvent",
+        "description": "Persist before202. EventId unique within issuer; same immutable payload replay returns original Event including createdAt; conflict409. Typed payload invariants in api-contracts.md are required.",
+        "security": [
+          {
+            "oauth2": [
+              "events.write"
+            ]
+          }
+        ],
+        "x-policy": "events.write",
+        "x-actor": "machine",
+        "x-audience": "quizarena-notification",
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Persisted event accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                },
+                "example": {
+                  "eventId": "26c94137-d660-4397-a731-050c2bb07004",
+                  "type": "MATCH_COMPLETED",
+                  "userId": "player-a",
+                  "payload": {
+                    "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                    "winnerUserId": "player-a",
+                    "draw": false
+                  },
+                  "createdAt": "2026-11-03T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEvent"
+              },
+              "example": {
+                "eventId": "26c94137-d660-4397-a731-050c2bb07004",
+                "type": "MATCH_COMPLETED",
+                "userId": "player-a",
+                "payload": {
+                  "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                  "winnerUserId": "player-a",
+                  "draw": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getMyEvents",
+        "tags": [
+          "notification"
+        ],
+        "summary": "getMyEvents",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "events.read"
+            ]
+          }
+        ],
+        "x-policy": "events.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-notification",
+        "x-ownership": "validated subject; optional legacy userId must equal caller",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "example": 20
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            },
+            "example": "player-a"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                },
+                "example": [
+                  {
+                    "eventId": "26c94137-d660-4397-a731-050c2bb07004",
+                    "type": "MATCH_COMPLETED",
+                    "userId": "player-a",
+                    "payload": {
+                      "matchId": "26c94137-d660-4397-a731-050c2bb07001",
+                      "winnerUserId": "player-a",
+                      "draw": false
+                    },
+                    "createdAt": "2026-11-03T12:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/preferences": {
+      "get": {
+        "operationId": "getMyPreferences",
+        "tags": [
+          "notification"
+        ],
+        "summary": "getMyPreferences",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "preferences.read"
+            ]
+          }
+        ],
+        "x-policy": "preferences.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-notification",
+        "x-ownership": "path userId equals validated subject",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            },
+            "example": "player-a"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                },
+                "example": {
+                  "userId": "player-a",
+                  "emailEnabled": false,
+                  "pushEnabled": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateMyPreferences",
+        "tags": [
+          "notification"
+        ],
+        "summary": "updateMyPreferences",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "preferences.write"
+            ]
+          }
+        ],
+        "x-policy": "preferences.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-notification",
+        "x-ownership": "path userId equals validated subject",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            },
+            "example": "player-a"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                },
+                "example": {
+                  "userId": "player-a",
+                  "emailEnabled": true,
+                  "pushEnabled": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePreferences"
+              },
+              "example": {
+                "emailEnabled": true,
+                "pushEnabled": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "notificationHealth",
+        "tags": [
+          "notification"
+        ],
+        "summary": "notificationHealth",
+        "description": "Liveness only; no credentials, topology, connection strings or dependency details.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "events.read": "events.read",
+              "preferences.read": "preferences.read",
+              "preferences.write": "preferences.write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "events.write": "events.write"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Subject": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "\\S"
+      },
+      "MatchId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "\\S"
+      },
+      "JoinCode": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{6}$",
+        "minLength": 6,
+        "maxLength": 6
+      },
+      "CreateEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "type",
+          "userId",
+          "payload"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MATCH_CREATED",
+              "MATCH_COMPLETED"
+            ]
+          },
+          "userId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "matchId"
+            ],
+            "properties": {
+              "matchId": {
+                "$ref": "#/components/schemas/MatchId"
+              },
+              "winnerUserId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "\\S",
+                "nullable": true
+              },
+              "draw": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "type",
+          "userId",
+          "payload",
+          "createdAt"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MATCH_CREATED",
+              "MATCH_COMPLETED"
+            ]
+          },
+          "userId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "matchId"
+            ],
+            "properties": {
+              "matchId": {
+                "$ref": "#/components/schemas/MatchId"
+              },
+              "winnerUserId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "\\S",
+                "nullable": true
+              },
+              "draw": {
+                "type": "boolean"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Preferences": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "emailEnabled",
+          "pushEnabled"
+        ],
+        "properties": {
+          "userId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "emailEnabled": {
+            "type": "boolean"
+          },
+          "pushEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdatePreferences": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "emailEnabled",
+          "pushEnabled"
+        ],
+        "properties": {
+          "emailEnabled": {
+            "type": "boolean"
+          },
+          "pushEnabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

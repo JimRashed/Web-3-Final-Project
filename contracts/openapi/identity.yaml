@@ -1,0 +1,589 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuizArena identity API — proposed P02",
+    "version": "1.0.0",
+    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5101",
+      "description": "Development only; configure HTTPS for deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "identity"
+    }
+  ],
+  "paths": {
+    "/api/users/me": {
+      "get": {
+        "operationId": "getMyProfile",
+        "tags": [
+          "identity"
+        ],
+        "summary": "getMyProfile",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "profiles.read"
+            ]
+          }
+        ],
+        "x-policy": "profiles.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-identity",
+        "x-ownership": "validated issuer/subject",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                },
+                "example": {
+                  "id": "26c94137-d660-4397-a731-050c2bb07002",
+                  "issuer": "http://localhost:8080/realms/quizarena",
+                  "subject": "player-a",
+                  "displayName": "Alex"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateMyProfile",
+        "tags": [
+          "identity"
+        ],
+        "summary": "updateMyProfile",
+        "description": "Idempotent profile upsert for validated issuer/subject. Preserve internal ID on update; no client-selected actor fields.",
+        "security": [
+          {
+            "oauth2": [
+              "profiles.write"
+            ]
+          }
+        ],
+        "x-policy": "profiles.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-identity",
+        "x-ownership": "validated issuer/subject",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                },
+                "example": {
+                  "id": "26c94137-d660-4397-a731-050c2bb07002",
+                  "issuer": "http://localhost:8080/realms/quizarena",
+                  "subject": "player-a",
+                  "displayName": "Alex"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfile"
+              },
+              "example": {
+                "displayName": "Alex"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "retiredRegister",
+        "tags": [
+          "identity"
+        ],
+        "summary": "retiredRegister",
+        "description": "Always 410. Ignore request body; never bind, log, hash, store or validate credentials. No redirect accepting user input.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "410": {
+            "description": "Retired endpoint; use OIDC and /api/users/me",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/retired",
+                  "title": "Endpoint retired",
+                  "status": 410,
+                  "detail": "Use configured OIDC provider sign-in and /api/users/me.",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "retiredLogin",
+        "tags": [
+          "identity"
+        ],
+        "summary": "retiredLogin",
+        "description": "Always 410. Ignore request body; never bind, log, hash, store or validate credentials. No redirect accepting user input.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "410": {
+            "description": "Retired endpoint; use OIDC and /api/users/me",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/retired",
+                  "title": "Endpoint retired",
+                  "status": 410,
+                  "detail": "Use configured OIDC provider sign-in and /api/users/me.",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "operationId": "retiredProfileById",
+        "tags": [
+          "identity"
+        ],
+        "summary": "retiredProfileById",
+        "description": "Always 410. Ignore request body; never bind, log, hash, store or validate credentials. No redirect accepting user input.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "\\S"
+            },
+            "example": "player-a"
+          }
+        ],
+        "responses": {
+          "410": {
+            "description": "Retired endpoint; use OIDC and /api/users/me",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/retired",
+                  "title": "Endpoint retired",
+                  "status": 410,
+                  "detail": "Use configured OIDC provider sign-in and /api/users/me.",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "identityHealth",
+        "tags": [
+          "identity"
+        ],
+        "summary": "identityHealth",
+        "description": "Liveness only; no credentials, topology, connection strings or dependency details.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "profiles.read": "profiles.read",
+              "profiles.write": "profiles.write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Subject": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "\\S"
+      },
+      "MatchId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "\\S"
+      },
+      "JoinCode": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{6}$",
+        "minLength": 6,
+        "maxLength": 6
+      },
+      "Profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "issuer",
+          "subject",
+          "displayName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string",
+            "format": "uri"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "UpdateProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          }
+        }
+      }
+    }
+  }
+}
