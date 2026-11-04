@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "QuizArena lobby API — proposed P02",
+    "title": "QuizArena Lobby API",
     "version": "1.0.0",
-    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+    "description": "Lobby service REST contract. See docs/milestone3/api-contracts.md for lifecycle and authorization rules. JSON-compatible YAML; no credentials in examples."
   },
   "servers": [
     {
