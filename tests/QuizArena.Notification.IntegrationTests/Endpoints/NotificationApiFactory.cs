@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using QuizArena.Notification.Api.Contracts;
 using QuizArena.Notification.Api.Services;
 using QuizArena.TestSupport;
