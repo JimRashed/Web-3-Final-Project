@@ -123,18 +123,30 @@ public sealed class NotificationRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UpsertAsync_WhenAbsent_InsertsAndWhenPresent_Updates()
     {
-        // Arrange
-        await using var context = NewContext();
-        var repository = new UserPreferenceRepository(context);
+        // Arrange — separate contexts, so the insert and the update are independent requests
+        // and the first result cannot be mutated by the second call through the change tracker.
+        await using (var insertContext = NewContext())
+        {
+            var inserted = await new UserPreferenceRepository(insertContext)
+                .UpsertAsync(UserPreference.CreateDefault(Issuer, "player-a"), CancellationToken.None);
+            inserted.EmailEnabled.Should().BeFalse();
+            inserted.PushEnabled.Should().BeFalse();
+        }
 
-        // Act
-        var inserted = await repository.UpsertAsync(UserPreference.CreateDefault(Issuer, "player-a"), CancellationToken.None);
-        var updated = await repository.UpsertAsync(UserPreference.Rehydrate(Issuer, "player-a", true, true), CancellationToken.None);
+        await using (var updateContext = NewContext())
+        {
+            var updated = await new UserPreferenceRepository(updateContext)
+                .UpsertAsync(UserPreference.Rehydrate(Issuer, "player-a", true, true), CancellationToken.None);
+            updated.EmailEnabled.Should().BeTrue();
+            updated.PushEnabled.Should().BeTrue();
+        }
 
-        // Assert
-        inserted.EmailEnabled.Should().BeFalse();
-        updated.EmailEnabled.Should().BeTrue();
-        updated.PushEnabled.Should().BeTrue();
+        // Assert — a fresh read proves the values were actually persisted.
+        await using var fresh = NewContext();
+        var stored = await new UserPreferenceRepository(fresh).FindAsync(Issuer, "player-a", CancellationToken.None);
+        stored.Should().NotBeNull();
+        stored!.EmailEnabled.Should().BeTrue();
+        stored.PushEnabled.Should().BeTrue();
     }
 
     [Fact]
