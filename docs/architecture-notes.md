@@ -1,5 +1,7 @@
 # Architecture Notes
 
+> **Historical (Milestone 2).** This describes the single aggregate host (`QuizArena.Api` + shared `QuizArenaContext`). The current architecture is six independent services. See the [Milestone 3 report](milestone3/architecture-and-reflection.md) and [architecture decisions](milestone3/architecture-decisions.md).
+
 ## 1. Architectural Style
 
 QuizArena is deployed and executed as one ASP.NET Core API, but its source code is organized into explicit business modules. This approach provides the deployment simplicity of a single application while preserving logical boundaries that can evolve independently.

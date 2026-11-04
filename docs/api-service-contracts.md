@@ -1,5 +1,7 @@
 # QuizArena API & Service Contracts
 
+> **Historical (Milestone 2).** This describes the single aggregate host (`QuizArena.Api` + shared `QuizArenaContext`). The current architecture is six independent services. See the [Milestone 3 report](milestone3/architecture-and-reflection.md) and [API contracts](milestone3/api-contracts.md).
+
 This document describes the HTTP API exposed by `QuizArena.Api` and the request/response contracts defined in `QuizArena.Domain`.
 
 The routes and status codes below reflect the current controller implementations. Examples use representative values.
