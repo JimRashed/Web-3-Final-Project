@@ -67,7 +67,7 @@ public sealed class GameplayApplication(
 
         try
         {
-            await matches.SaveAsync(match, cancellationToken);
+            await matches.SaveAsync(match, MatchDeliveries.OnCreated(match), cancellationToken);
         }
         catch (MatchAlreadyStartedException)
         {
@@ -76,7 +76,6 @@ public sealed class GameplayApplication(
                 ?? throw new InvalidOperationException("The lobby's match was reported but could not be loaded.");
             return (ExistingForHost(actor, lobby, winner), false);
         }
-
         return (MatchResponse.FromDomain(match), true);
     }
 
@@ -111,9 +110,14 @@ public sealed class GameplayApplication(
         {
             var match = await LoadForParticipantAsync(actor, matchId, cancellationToken);
             var outcome = match.SubmitAnswer(actor.Subject, request.QuestionId, request.Answer, DateTime.UtcNow);
+
+            // The final answer commits the finished match and its four outbound rows in one
+            // transaction; every other round commits only the match.
+            var deliveries = outcome.Finished ? MatchDeliveries.OnCompleted(match) : [];
+
             try
             {
-                await matches.SaveAsync(match, cancellationToken);
+                await matches.SaveAsync(match, deliveries, cancellationToken);
                 return AnswerOutcomeResponse.FromDomain(outcome);
             }
             catch (MatchConcurrencyException) when (attempt < MaxAnswerAttempts)

@@ -210,6 +210,9 @@ public sealed class GameplayApplicationTests
         private readonly Dictionary<string, Match> _byId = [];
         public List<Match> Saved { get; } = [];
 
+        /// <summary>Deliveries handed over in the same unit of work as a saved match.</summary>
+        public List<MatchDelivery> Enqueued { get; } = [];
+
         // Copies on read and on save, like a database: a failed attempt must not leak into the stored state.
         public Task<Match?> FindAsync(string matchId, CancellationToken cancellationToken) =>
             Task.FromResult(_byId.TryGetValue(matchId, out var stored) ? Copy(stored) : null);
@@ -228,7 +231,7 @@ public sealed class GameplayApplicationTests
         public bool AlwaysConflict { get; set; }
         public int ConflictCount { get; private set; }
 
-        public Task SaveAsync(Match match, CancellationToken cancellationToken)
+        public Task SaveAsync(Match match, IReadOnlyList<MatchDelivery> deliveries, CancellationToken cancellationToken)
         {
             if (AlwaysConflict || FailNextSaveWith is not null)
             {
@@ -240,6 +243,7 @@ public sealed class GameplayApplicationTests
 
             _byId[match.MatchId] = Copy(match);
             Saved.Add(match);
+            Enqueued.AddRange(deliveries);
             return Task.CompletedTask;
         }
     }
