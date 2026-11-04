@@ -24,6 +24,8 @@ public sealed class GameplayExceptionHandler(IProblemDetailsService problems) : 
             GameplayRequestException request => request.StatusCode,
             MatchAccessDeniedException => StatusCodes.Status403Forbidden,
             MatchConflictException => StatusCodes.Status409Conflict,
+            // Retries are exhausted (or the caller did not retry): a retryable conflict, never a 500.
+            MatchConcurrencyException => StatusCodes.Status409Conflict,
             InvalidMatchException => StatusCodes.Status400BadRequest,
             _ => 0,
         };
