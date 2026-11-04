@@ -2,7 +2,7 @@ import type { KeycloakInitOptions, KeycloakLoginOptions, KeycloakLogoutOptions }
 
 export const userScopes = 'openid profile profiles.read profiles.write stats.read leaderboard.read questions.read lobbies.read lobbies.write matches.read matches.write events.read preferences.read preferences.write';
 export type SessionStatus = 'loading' | 'anonymous' | 'authenticated' | 'expired' | 'unavailable';
-export interface SessionSnapshot { status: SessionStatus; displayName?: string }
+export interface SessionSnapshot { status: SessionStatus; displayName?: string; subject?: string }
 export interface OidcAdapter {
   authenticated?: boolean;
   token?: string;
@@ -65,6 +65,7 @@ export class Session {
       this.publish(authenticated ? {
         status: 'authenticated',
         displayName: this.displayName(),
+        subject: this.subject(),
       } : { status: 'anonymous' });
     }).catch(() => {
       if (generation === this.generation) this.invalidate('unavailable');
@@ -88,6 +89,12 @@ export class Session {
     if (url) {
       try { this.navigate(url); } catch { /* local logout is already complete */ }
     }
+  }
+
+  /** The validated token subject; the preferences routes are keyed by it. */
+  private subject(): string | undefined {
+    const value = this.adapter.tokenParsed?.sub;
+    return typeof value === 'string' && value.trim() ? value : undefined;
   }
 
   private displayName(): string {
