@@ -13,7 +13,7 @@ npm run dev
 
 Open `http://localhost:5173`. Vite uses that exact host and strict port because Keycloak redirects and API CORS origins are registered explicitly. The production host must serve `index.html` for application routes, including `/auth/callback`, while serving built assets normally.
 
-The shell contains overview, profile, questions, lobby, match, statistics, leaderboard, events and preferences destinations. It provides sign-in, sign-out, session status and accessible common states. The Lobby feature is implemented as described below; other destinations remain placeholders and show no fabricated service data.
+The shell contains overview, profile, questions, lobby, match, statistics, leaderboard, events and preferences destinations. It provides sign-in, sign-out, session status and accessible common states. Questions, Lobby, Profile, Statistics, Leaderboard, Events and Preferences have feature screens; Match still presents an incomplete shell, and no destination invents service data.
 
 ## Lobby feature (#48)
 
@@ -30,6 +30,21 @@ Returned IDs follow the committed Gameplay contract: nonblank strings of at most
 When the live dependencies are available, verify with two real accounts: host create, guest join by shared code, refreshed two-player state, guest-disabled host controls, host lock, host start, returned-ID navigation/copy, and guest entry through their own delivered notification or host-shared link. Exercise 400/401/403/404/409/503 and teardown while requests are pending. Component/fetch doubles do not satisfy this live checklist.
 
 Implementation checks on 2026-11-04: `npm run typecheck` and `npm run lint` passed; the focused Lobby API/page/lifecycle/App run passed 73 tests across four files. An initial sandbox cache EPERM prevented collection and was rerun outside the sandbox; it was not counted as passing evidence. Full frontend and aggregate regression/build results are recorded by the subsequent validation stage in the parent PR. These checks establish code behavior with doubles, not live acceptance.
+
+## Questions preview (#42)
+
+At /questions, sign in explicitly, choose a whole-number count from 1 through 50 (default 10), then select **Generate questions**. The initial page makes no catalog request. A successful response shows each question's category, prompt and four options; it never shows an answer or scoring feedback. **Regenerate questions** sends another request using the current count. An empty catalog has its own guidance.
+
+The page uses the configured QuestionBank public origin and only GET /api/questions/generate?count=... with the current user bearer token. It validates and copies the public response fields before rendering; unknown fields, including answer material, do not enter preview state. Input errors are associated with the count field. Pending work can be canceled; leaving the page, ending the session or replacing the session aborts requests and discards late results. Errors show safe, user-triggered recovery. A 401 clears local session state and offers explicit sign-in; a 403 preserves the session and explains permission.
+
+Component and HTTP fetch-double tests verify the frontend behavior and public request shape. They do not establish a live authenticated provider/API flow. On 2026-11-04, the local provider discovery endpoint at port 8080 and QuestionBank health at port 5103 each timed out after four seconds, and Docker was unavailable on PATH. Live acceptance remains pending until a normal user login, owned QuestionBank API and provisioned catalog are available. Do not use a machine token to simulate a browser user.
+
+When those prerequisites are ready, open http://localhost:5173/questions in a browser and verify:
+
+1. Sign in as a normal user. Generate the default 10, then counts 1 and 50, and regenerate. Inspect the network panel for only the public QuestionBank request and absence of answer material.
+2. Observe real prompt, category and four-option previews, plus an empty catalog if available. Cancel a pending request and verify no late preview appears.
+3. Exercise available 400/401/403/404/409/503 and network conditions without weakening API authorization; verify safe text, explicit recovery and cleared data after sign-out or expiry.
+4. Link actual browser observations and independent human PR approval before claiming full issue acceptance.
 
 ## Public configuration
 
