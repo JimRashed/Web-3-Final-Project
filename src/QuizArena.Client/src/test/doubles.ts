@@ -4,7 +4,7 @@ import { Session, type OidcAdapter } from '../auth/session';
 export function adapterDouble(authenticated = true): OidcAdapter {
   const adapter: OidcAdapter = {
     authenticated, token: authenticated ? 'access-one' : undefined,
-    tokenParsed: { preferred_username: 'CuriousPlayer' },
+    tokenParsed: { sub: 'player-a', preferred_username: 'CuriousPlayer' },
     init: vi.fn().mockResolvedValue(authenticated), login: vi.fn().mockResolvedValue(undefined),
     createLogoutUrl: vi.fn().mockReturnValue('https://provider.example/logout'),
     updateToken: vi.fn().mockResolvedValue(false),
