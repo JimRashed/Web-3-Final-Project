@@ -1,4 +1,5 @@
 using QuizArena.QuestionBank.Api.Security;
+using QuizArena.QuestionBank.Api.Services;
 using QuizArena.QuestionBank.Data;
 
 namespace QuizArena.QuestionBank.Api;
@@ -12,6 +13,7 @@ public sealed class Program
         builder.Services.AddControllers();
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
         builder.Services.AddQuestionBankPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));
+        builder.Services.AddScoped<IQuestionCatalogService, QuestionCatalogService>();
 
         var app = builder.Build();
         app.UseExceptionHandler();
