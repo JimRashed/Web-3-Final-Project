@@ -13,6 +13,31 @@ public static class StatisticsCalculator
 {
     public const int MaxLeaderboardSize = 100;
     public const int DefaultLeaderboardSize = 10;
+    public const int MaxPageSize = 100;
+    public const int DefaultPageSize = 20;
+
+    /// <summary>History paging rules: page is 1-based; page size is 1..<see cref="MaxPageSize"/>.</summary>
+    public static void ValidatePaging(int page, int pageSize)
+    {
+        if (page < 1)
+        {
+            throw new InvalidMatchResultException(nameof(page), "Page must be 1 or greater.");
+        }
+
+        if (pageSize is < 1 or > MaxPageSize)
+        {
+            throw new InvalidMatchResultException(nameof(pageSize), $"Page size must be between 1 and {MaxPageSize}.");
+        }
+    }
+
+    /// <summary>Leaderboard size rule: 1..<see cref="MaxLeaderboardSize"/>.</summary>
+    public static void ValidateTop(int top)
+    {
+        if (top is < 1 or > MaxLeaderboardSize)
+        {
+            throw new InvalidMatchResultException(nameof(top), $"Top must be between 1 and {MaxLeaderboardSize}.");
+        }
+    }
 
     /// <summary>
     /// Totals for one player. Every result counts as a game; only <see cref="MatchResult.Won"/> counts as a win,
@@ -43,10 +68,7 @@ public static class StatisticsCalculator
     public static IReadOnlyList<LeaderboardEntry> BuildLeaderboard(IEnumerable<MatchResult> results, int top = DefaultLeaderboardSize)
     {
         ArgumentNullException.ThrowIfNull(results);
-        if (top is < 1 or > MaxLeaderboardSize)
-        {
-            throw new InvalidMatchResultException(nameof(top), $"Top must be between 1 and {MaxLeaderboardSize}.");
-        }
+        ValidateTop(top);
 
         return results
             .GroupBy(r => r.UserId, StringComparer.Ordinal)

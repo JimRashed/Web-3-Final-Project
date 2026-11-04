@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuizArena.Statistics.Data.Context;
+using QuizArena.Statistics.Data.Repositories;
+using QuizArena.Statistics.Domain.Repositories;
 
 namespace QuizArena.Statistics.Data;
 
@@ -15,6 +17,7 @@ public static class StatisticsPersistenceExtensions
         }
 
         services.AddDbContext<StatisticsDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddScoped<IMatchResultRepository, MatchResultRepository>();
         return services;
     }
 }
