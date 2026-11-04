@@ -61,6 +61,73 @@ public sealed class Match
     public QuestionSnapshot? CurrentQuestion =>
         Status == MatchStatus.Active ? Questions[CurrentQuestionIndex] : null;
 
+    /// <summary>
+    /// Rebuilds a previously persisted match — including a finished one — without replaying the
+    /// round transitions. Used by the persistence layer only; the state is re-validated.
+    /// </summary>
+    public static Match Rehydrate(
+        string matchId,
+        string lobbyId,
+        string playerAId,
+        string playerBId,
+        MatchStatus status,
+        int playerAScore,
+        int playerBScore,
+        int currentQuestionIndex,
+        string? winnerUserId,
+        bool draw,
+        DateTime createdAt,
+        DateTime? completedAt,
+        IReadOnlyList<QuestionSnapshot> questions,
+        IReadOnlyList<RoundAnswer> answers)
+    {
+        if (questions is null || questions.Count != RequiredQuestionCount)
+        {
+            throw new InvalidMatchException($"A stored match must have exactly {RequiredQuestionCount} question snapshots.");
+        }
+
+        if (currentQuestionIndex < 0 || currentQuestionIndex >= RequiredQuestionCount)
+        {
+            throw new InvalidMatchException("The stored current question index is out of range.");
+        }
+
+        if (playerAScore < 0 || playerBScore < 0 || playerAScore > RequiredQuestionCount || playerBScore > RequiredQuestionCount)
+        {
+            throw new InvalidMatchException("A stored score must be between 0 and the round count.");
+        }
+
+        if (status == MatchStatus.Finished && completedAt is null)
+        {
+            throw new InvalidMatchException("A finished match must have a completion time.");
+        }
+
+        EnsureUtc(createdAt);
+
+        var match = new Match(
+            RequireIdentity(matchId, "match id", 100),
+            RequireIdentity(lobbyId, "lobby id", 100),
+            RequireIdentity(playerAId, "player A", 200),
+            RequireIdentity(playerBId, "player B", 200),
+            [.. questions],
+            createdAt)
+        {
+            Status = status,
+            PlayerAScore = playerAScore,
+            PlayerBScore = playerBScore,
+            CurrentQuestionIndex = currentQuestionIndex,
+            WinnerUserId = winnerUserId,
+            Draw = draw,
+            CompletedAt = completedAt,
+        };
+
+        if (answers is not null)
+        {
+            match._answers.AddRange(answers);
+        }
+
+        return match;
+    }
+
     public static Match Create(
         string matchId,
         string lobbyId,

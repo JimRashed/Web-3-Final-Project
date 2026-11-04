@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuizArena.Gameplay.Data.Records;
 
 namespace QuizArena.Gameplay.Data.Context;
 
@@ -8,6 +9,8 @@ namespace QuizArena.Gameplay.Data.Context;
 /// </summary>
 public sealed class GameplayDbContext(DbContextOptions<GameplayDbContext> options) : DbContext(options)
 {
+    public DbSet<MatchRecord> Matches => Set<MatchRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GameplayDbContext).Assembly);
