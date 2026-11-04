@@ -1,7 +1,6 @@
 using FluentAssertions;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using QuizArena.Lobby.Data.Context;
+using QuizArena.Lobby.Domain.Enums;
 using Xunit;
 
 namespace QuizArena.Lobby.IntegrationTests.Persistence;
@@ -12,34 +11,31 @@ namespace QuizArena.Lobby.IntegrationTests.Persistence;
 /// </summary>
 public sealed class MigrationTests
 {
-    private const string DefaultServer = "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
-
     [Fact]
     public async Task Migrate_OnFreshDatabase_AppliesEveryMigrationAndLeavesNonePending()
     {
         // Arrange
-        await using var context = CreateContext($"QuizArenaLobby_Migration_{Guid.NewGuid():N}");
+        await using var database = await LobbyDatabase.CreateAsync("Migration");
+        await using var context = database.CreateContext();
 
-        try
-        {
-            // Act
-            await context.Database.MigrateAsync();
+        // Act
+        var applied = await context.Database.GetAppliedMigrationsAsync();
 
-            // Assert
-            (await context.Database.GetAppliedMigrationsAsync()).Should().Equal(context.Database.GetMigrations());
-            (await context.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
-        }
-        finally
-        {
-            await context.Database.EnsureDeletedAsync();
-        }
+        // Assert
+        applied.Should().Equal(context.Database.GetMigrations());
+        applied.Should().HaveCount(2);
+        (await context.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
+        context.Model.GetEntityTypes().Select(entity => entity.GetTableName()).Should().BeEquivalentTo("ActiveLobbies", "LobbyPlayers");
+        var tables = await context.Database.SqlQueryRaw<string>("SELECT TABLE_NAME AS [Value] FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'").ToListAsync();
+        tables.Should().BeEquivalentTo("ActiveLobbies", "LobbyPlayers", "__EFMigrationsHistory");
     }
 
     [Fact]
-    public void Model_ComparedWithLatestMigration_HasNoUnmigratedChanges()
+    public async Task Model_ComparedWithLatestMigration_HasNoUnmigratedChanges()
     {
         // Arrange
-        using var context = CreateContext("QuizArenaLobby_ModelCheck");
+        await using var database = await LobbyDatabase.CreateAsync("ModelCheck");
+        await using var context = database.CreateContext();
 
         // Act
         var pending = context.Database.HasPendingModelChanges();
@@ -48,14 +44,23 @@ public sealed class MigrationTests
         pending.Should().BeFalse("every model change needs a migration: dotnet ef migrations add <Name> --project src/QuizArena.Lobby.Data --startup-project src/QuizArena.Lobby.Api --context LobbyDbContext");
     }
 
-    private static LobbyDbContext CreateContext(string database)
+    [Fact]
+    public async Task Persistence_DisposedWriters_NewContextReadsCompleteLockedAggregate()
     {
-        var server = Environment.GetEnvironmentVariable("QUIZARENA_TEST_SQLSERVER");
-        var builder = new SqlConnectionStringBuilder(string.IsNullOrWhiteSpace(server) ? DefaultServer : server)
-        {
-            InitialCatalog = database,
-        };
-        var options = new DbContextOptionsBuilder<LobbyDbContext>().UseSqlServer(builder.ConnectionString).Options;
-        return new LobbyDbContext(options);
+        // Arrange
+        await using var database = await LobbyDatabase.CreateAsync("Restart");
+        var created = await database.Repository(new SequenceCodeSource("ABC123")).CreateAsync("Host");
+        await database.Repository().JoinAsync(created.JoinCode, "host");
+        await database.Repository().SaveAsync(created.JoinCode, lobby => lobby.Lock("Host"));
+
+        // Act
+        var result = await database.Repository().GetByJoinCodeAsync(created.JoinCode);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(created.Id);
+        result.HostId.Should().Be("Host");
+        result.Status.Should().Be(LobbyStatus.Locked);
+        result.Players.Select(player => player.PlayerId).Should().BeEquivalentTo("Host", "host");
     }
 }
