@@ -27,6 +27,15 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         return record is null ? null : ToDomain(record);
     }
 
+    public async Task<Match?> FindByLobbyAsync(string lobbyId, CancellationToken cancellationToken)
+    {
+        var record = await context.Matches
+            .AsNoTracking()
+            .SingleOrDefaultAsync(stored => stored.LobbyId == lobbyId, cancellationToken);
+
+        return record is null ? null : ToDomain(record);
+    }
+
     public async Task SaveAsync(Match match, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(match);
