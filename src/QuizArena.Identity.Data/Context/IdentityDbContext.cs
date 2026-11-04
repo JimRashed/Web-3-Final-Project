@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuizArena.Identity.Domain.Entities;
 
 namespace QuizArena.Identity.Data.Context;
 
@@ -8,6 +9,8 @@ namespace QuizArena.Identity.Data.Context;
 /// </summary>
 public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
 {
+    public DbSet<PlayerProfile> UserProfiles => Set<PlayerProfile>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);

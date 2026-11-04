@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuizArena.Identity.Data.Context;
+using QuizArena.Identity.Data.Repositories;
+using QuizArena.Identity.Domain.Repositories;
 
 namespace QuizArena.Identity.Data;
 
@@ -15,6 +17,7 @@ public static class IdentityPersistenceExtensions
         }
 
         services.AddDbContext<IdentityDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
         return services;
     }
 }
