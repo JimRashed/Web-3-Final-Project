@@ -26,7 +26,10 @@ describe('application shell', () => {
     await mount(item.path, true);
     expect(screen.getByRole('heading', { level: 1, name: item.label })).toBeVisible();
     expect(within(screen.getByRole('navigation')).getByRole('link', { name: item.label })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    // Profile, Statistics and Leaderboard render real pages instead of the placeholder.
+    if (!['/profile', '/statistics', '/leaderboard'].includes(item.path)) {
+      expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    }
   });
   it('navigates using the shell links', async () => {
     await mount('/', true);
