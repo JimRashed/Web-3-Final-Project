@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuizArena.QuestionBank.Data.Context;
+using QuizArena.QuestionBank.Data.Repositories;
+using QuizArena.QuestionBank.Domain.Repositories;
 
 namespace QuizArena.QuestionBank.Data;
 
@@ -15,6 +17,7 @@ public static class QuestionBankPersistenceExtensions
         }
 
         services.AddDbContext<QuestionBankDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddScoped<IQuestionRepository, QuestionRepository>();
         return services;
     }
 }
