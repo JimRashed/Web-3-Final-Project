@@ -12,13 +12,13 @@ const questionId = '26c94137-d660-4397-a731-050c2bb07004';
 
 describe('gameplay api', () => {
   it('reads a match', async () => {
-    const { api } = apiWith({ matchId, status: 'ACTIVE', playerAScore: 1, playerBScore: 0, currentQuestionIndex: 0, winnerUserId: null, draw: false });
+    const { api } = apiWith({ matchId, playerAId: 'host', playerBId: 'guest', status: 'ACTIVE', playerAScore: 1, playerBScore: 0, currentQuestionIndex: 0, winnerUserId: null, draw: false });
 
     await expect(api.getMatch(matchId, new AbortController().signal)).resolves.toMatchObject({ status: 'ACTIVE', playerAScore: 1 });
   });
 
   it('rejects a match with an impossible score', async () => {
-    const { api } = apiWith({ matchId, status: 'ACTIVE', playerAScore: 9, playerBScore: 0, currentQuestionIndex: 0, winnerUserId: null, draw: false });
+    const { api } = apiWith({ matchId, playerAId: 'host', playerBId: 'guest', status: 'ACTIVE', playerAScore: 9, playerBScore: 0, currentQuestionIndex: 0, winnerUserId: null, draw: false });
 
     await expect(api.getMatch(matchId, new AbortController().signal)).rejects.toBeInstanceOf(ApiError);
   });
