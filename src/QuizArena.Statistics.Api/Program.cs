@@ -1,4 +1,5 @@
 using QuizArena.Statistics.Api.Security;
+using QuizArena.Statistics.Api.Services;
 using QuizArena.Statistics.Data;
 
 namespace QuizArena.Statistics.Api;
@@ -12,6 +13,7 @@ public sealed class Program
         builder.Services.AddControllers();
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
         builder.Services.AddStatisticsPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));
+        builder.Services.AddScoped<IStatisticsApplication, StatisticsApplication>();
 
         var app = builder.Build();
         app.UseExceptionHandler();

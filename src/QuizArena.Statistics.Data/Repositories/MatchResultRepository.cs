@@ -43,7 +43,8 @@ public sealed class MatchResultRepository(StatisticsDbContext context) : IMatchR
             context.Entry(result).State = EntityState.Detached;
             var winner = await FindAsync(result.Issuer, result.MatchId, result.UserId, cancellationToken)
                 ?? throw new InvalidOperationException("Result insert conflicted but no stored result was found.", exception);
-            StatisticsCalculator.ShouldPersist(winner, result);
+            // Called only for its check: throws ResultConflictException when the stored content differs.
+            _ = StatisticsCalculator.ShouldPersist(winner, result);
             return ResultReplayDecision.IdempotentReplay;
         }
     }
