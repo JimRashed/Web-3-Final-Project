@@ -3,6 +3,7 @@ using QuizArena.Gameplay.Api.Contracts;
 using QuizArena.Gameplay.Api.Security;
 using QuizArena.Gameplay.Api.Services;
 using QuizArena.Gameplay.Domain.Entities;
+using QuizArena.Gameplay.Domain.Exceptions;
 using QuizArena.Gameplay.Domain.Repositories;
 using Xunit;
 
@@ -157,20 +158,87 @@ public sealed class GameplayApplicationTests
         question.Options.Should().Equal("A", "B", "C", "D");
     }
 
+    [Theory]
+    [InlineData(Guest)]
+    [InlineData("stranger")]
+    public async Task CreateAsync_RepeatedByNonHost_Returns403InsteadOfTheExistingMatch(string subject)
+    {
+        // Arrange
+        var sut = Sut();
+        await sut.CreateAsync(HostActor, new CreateMatchRequest("ABC123"), CancellationToken.None);
+
+        // Act
+        var act = () => sut.CreateAsync(new AuthenticatedActor("issuer", subject, ActorKind.User), new CreateMatchRequest("ABC123"), CancellationToken.None);
+
+        // Assert
+        (await act.Should().ThrowAsync<GameplayRequestException>()).Which.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task SubmitAnswerAsync_WhenTheOtherAnswerWasSavedFirst_ReloadsAndRecordsBoth()
+    {
+        // Arrange: the guest's save collides once with the host's answer stored in between.
+        var (match, _) = await Sut().CreateAsync(HostActor, new CreateMatchRequest("ABC123"), CancellationToken.None);
+        _matches.FailNextSaveWith = () => _matches.Update(match.MatchId, stored => stored.SubmitAnswer(Host, QuestionIds[0], "A", DateTime.UtcNow));
+
+        // Act
+        var outcome = await Sut().SubmitAnswerAsync(GuestActor, match.MatchId, new SubmitAnswerRequest(QuestionIds[0], "A"), CancellationToken.None);
+
+        // Assert
+        outcome.RoundComplete.Should().BeTrue();
+        outcome.PlayerAScore.Should().Be(1);
+        outcome.PlayerBScore.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SubmitAnswerAsync_WhenEveryAttemptCollides_SurfacesTheConcurrencyException()
+    {
+        // Arrange
+        var (match, _) = await Sut().CreateAsync(HostActor, new CreateMatchRequest("ABC123"), CancellationToken.None);
+        _matches.AlwaysConflict = true;
+
+        // Act
+        var act = () => Sut().SubmitAnswerAsync(HostActor, match.MatchId, new SubmitAnswerRequest(QuestionIds[0], "A"), CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<MatchConcurrencyException>();
+        _matches.ConflictCount.Should().Be(GameplayApplication.MaxAnswerAttempts);
+    }
+
     private sealed class FakeMatches : IMatchRepository
     {
         private readonly Dictionary<string, Match> _byId = [];
         public List<Match> Saved { get; } = [];
 
+        // Copies on read and on save, like a database: a failed attempt must not leak into the stored state.
         public Task<Match?> FindAsync(string matchId, CancellationToken cancellationToken) =>
-            Task.FromResult(_byId.GetValueOrDefault(matchId));
+            Task.FromResult(_byId.TryGetValue(matchId, out var stored) ? Copy(stored) : null);
+
+        public void Update(string matchId, Action<Match> change) => change(_byId[matchId]);
+
+        private static Match Copy(Match match) => Match.Rehydrate(
+            match.MatchId, match.LobbyId, match.PlayerAId, match.PlayerBId, match.Status, match.PlayerAScore, match.PlayerBScore,
+            match.CurrentQuestionIndex, match.WinnerUserId, match.Draw, match.CreatedAt, match.CompletedAt, match.Questions, match.Answers.ToArray());
 
         public Task<Match?> FindByLobbyAsync(string lobbyId, CancellationToken cancellationToken) =>
-            Task.FromResult(_byId.Values.SingleOrDefault(match => match.LobbyId == lobbyId));
+            Task.FromResult(_byId.Values.Where(match => match.LobbyId == lobbyId).Select(Copy).SingleOrDefault());
+
+        /// <summary>Runs once before failing the next save, to simulate the other player's answer landing first.</summary>
+        public Action? FailNextSaveWith { get; set; }
+        public bool AlwaysConflict { get; set; }
+        public int ConflictCount { get; private set; }
 
         public Task SaveAsync(Match match, CancellationToken cancellationToken)
         {
-            _byId[match.MatchId] = match;
+            if (AlwaysConflict || FailNextSaveWith is not null)
+            {
+                FailNextSaveWith?.Invoke();
+                FailNextSaveWith = null;
+                ConflictCount++;
+                throw new MatchConcurrencyException(match.MatchId);
+            }
+
+            _byId[match.MatchId] = Copy(match);
             Saved.Add(match);
             return Task.CompletedTask;
         }

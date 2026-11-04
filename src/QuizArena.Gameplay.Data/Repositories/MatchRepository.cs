@@ -61,7 +61,9 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         {
             // The row changed between load and save (for example the other player answered at the
             // same moment). Refuse the write instead of silently dropping the other answer; the
-            // caller reloads the match and retries the transition.
+            // caller reloads the match and retries the transition. Detach the stale row so that
+            // reload reads the current version instead of this context's cached copy.
+            context.Entry(record).State = EntityState.Detached;
             throw new MatchConcurrencyException(match.MatchId);
         }
         catch (DbUpdateException exception) when (IsDuplicateKey(exception))
@@ -69,8 +71,12 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
             // A concurrent request inserted the same match first: reload and apply on top.
             context.Entry(record).State = EntityState.Detached;
             var winner = await context.Matches
-                .SingleOrDefaultAsync(stored => stored.MatchId == match.MatchId, cancellationToken)
-                ?? throw new InvalidOperationException("Match insert conflicted but no stored match was found.", exception);
+                .SingleOrDefaultAsync(stored => stored.MatchId == match.MatchId, cancellationToken);
+            if (winner is null)
+            {
+                // The collision was on UX_Matches_LobbyId: another start for the same lobby won.
+                throw new MatchAlreadyStartedException(match.LobbyId);
+            }
 
             Apply(match, winner);
             await context.SaveChangesAsync(cancellationToken);
