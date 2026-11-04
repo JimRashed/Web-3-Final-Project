@@ -10,7 +10,7 @@ describe('OIDC session', () => {
     expect(adapter.init).toHaveBeenCalledTimes(1);
     expect(adapter.init).toHaveBeenCalledWith(expect.objectContaining({ flow: 'standard', pkceMethod: 'S256', responseMode: 'query', checkLoginIframe: false, enableLogging: false, scope: userScopes }));
     expect(userScopes).not.toMatch(/results.write|questions.play|lobbies.verify|events.write/);
-    expect(session.getSnapshot()).toEqual({ status: 'authenticated', displayName: 'CuriousPlayer' });
+    expect(session.getSnapshot()).toEqual({ status: 'authenticated', displayName: 'CuriousPlayer', subject: 'player-a' });
   });
   it('redirects to the registered callback only after explicit sign-in', async () => {
     const { session, adapter } = await sessionDouble(false);
