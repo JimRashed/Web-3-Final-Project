@@ -109,6 +109,44 @@ public sealed class ServiceBoundaryTests
         errors.Should().Contain(error => error.Contains("SDK", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("UnitTests", "Domain", true)]
+    [InlineData("UnitTests", "Api", true)]
+    [InlineData("IntegrationTests", "Api", true)]
+    [InlineData("UnitTests", "", false)]
+    [InlineData("UnitTests", "Domain,Api", false)]
+    [InlineData("UnitTests", "Api,Api", false)]
+    [InlineData("UnitTests", "Data", false)]
+    [InlineData("UnitTests", "PeerDomain", false)]
+    [InlineData("UnitTests", "PeerApi", false)]
+    [InlineData("UnitTests", "Legacy", false)]
+    [InlineData("IntegrationTests", "", false)]
+    [InlineData("IntegrationTests", "Domain", false)]
+    [InlineData("IntegrationTests", "Data", false)]
+    [InlineData("IntegrationTests", "PeerApi", false)]
+    [InlineData("IntegrationTests", "Api,Domain", false)]
+    public void TestProjectReferences_InMemoryProjects_EnforceSoleOwnBoundary(string kind, string targets, bool allowed)
+    {
+        // Arrange
+        var root = FindRepositoryRoot();
+        var path = Path.Combine(root, "tests", $"QuizArena.Lobby.{kind}", $"QuizArena.Lobby.{kind}.csproj");
+        var references = targets.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(target => target switch
+        {
+            "PeerDomain" => ProjectPath(root, "Statistics", "Domain"),
+            "PeerApi" => ProjectPath(root, "Statistics", "Api"),
+            "Legacy" => Path.Combine(root, "src", "QuizArena.Domain", "QuizArena.Domain.csproj"),
+            _ => ProjectPath(root, "Lobby", target),
+        });
+        var document = new XDocument(new XElement("Project", new XElement("ItemGroup",
+            references.Select(reference => new XElement("ProjectReference", new XAttribute("Include", reference))))));
+
+        // Act
+        var errors = InspectTestProject(document, path, root, "Lobby", kind);
+
+        // Assert
+        errors.Any().Should().Be(!allowed);
+    }
+
     private static IEnumerable<string> Inspect(XDocument document, string path, string root, string service, string layer)
     {
         var errors = new List<string>();
@@ -171,7 +209,7 @@ public sealed class ServiceBoundaryTests
 
     private static IEnumerable<string> InspectTestProjects(string root, string service)
     {
-        foreach (var (kind, targetLayer) in new[] { ("UnitTests", "Domain"), ("IntegrationTests", "Api") })
+        foreach (var kind in new[] { "UnitTests", "IntegrationTests" })
         {
             var path = Path.Combine(root, "tests", $"QuizArena.{service}.{kind}", $"QuizArena.{service}.{kind}.csproj");
             if (!File.Exists(path))
@@ -181,12 +219,31 @@ public sealed class ServiceBoundaryTests
             }
 
             var document = XDocument.Load(path);
-            var references = ProjectReferences(document.Root!, path).ToArray();
-            var expected = ProjectPath(root, service, targetLayer);
-            if (references.Length != 1 || !string.Equals(references[0], expected, StringComparison.OrdinalIgnoreCase))
+            foreach (var error in InspectTestProject(document, path, root, service, kind))
             {
-                yield return $"{path}: service test project must reference only own {targetLayer}";
+                yield return error;
             }
+        }
+    }
+
+    private static IEnumerable<string> InspectTestProject(XDocument document, string path, string root, string service, string kind)
+    {
+        var references = ProjectReferences(document.Root!, path).ToArray();
+        var allowedLayers = kind == "UnitTests" ? new[] { "Domain", "Api" } : new[] { "Api" };
+        var testSupport = Path.Combine(root, "tests", "QuizArena.TestSupport", "QuizArena.TestSupport.csproj");
+
+        var own = references
+            .Where(reference => allowedLayers.Any(layer =>
+                string.Equals(reference, ProjectPath(root, service, layer), StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        var support = references
+            .Where(reference => string.Equals(reference, testSupport, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // The shared test fixture (#24) is allowed on top of the service's own layer project, and nothing else is.
+        if (own.Length != 1 || references.Length != own.Length + support.Length)
+        {
+            yield return $"{path}: service test project must reference exactly one own {string.Join(" or ", allowedLayers)} project, optionally plus QuizArena.TestSupport";
         }
     }
 

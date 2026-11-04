@@ -12,6 +12,7 @@ public sealed class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddProblemDetails();
+        builder.Services.AddExceptionHandler<Errors.NotificationExceptionHandler>();
         builder.Services.AddControllers();
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
         builder.Services.AddNotificationPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));

@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\QuizArena.Notification.Api\QuizArena.Notification.Api.csproj" />
+    <ProjectReference Include="..\QuizArena.TestSupport\QuizArena.TestSupport.csproj" />
   </ItemGroup>
 </Project>
