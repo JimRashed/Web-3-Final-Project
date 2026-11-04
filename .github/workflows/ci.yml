@@ -1,0 +1,108 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - "feature/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend build and tests
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "QuizArena!Ci123456"
+        ports:
+          - 1433:1433
+
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      # The per-test databases are created from this server connection string.
+      QUIZARENA_TEST_SQLSERVER: "Server=127.0.0.1,1433;User Id=sa;Password=QuizArena!Ci123456;TrustServerCertificate=True;Encrypt=False"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore QuizArena.sln
+
+      - name: Build
+        run: >
+          dotnet build QuizArena.sln --no-restore -warnaserror
+          -p:NuGetAudit=false
+
+      - name: Wait for SQL Server
+        run: |
+          for attempt in $(seq 1 60); do
+            if (echo > /dev/tcp/127.0.0.1/1433) >/dev/null 2>&1; then
+              echo "SQL Server is listening (attempt ${attempt})"
+              break
+            fi
+            sleep 2
+          done
+          sleep 10
+
+      - name: Test
+        run: >
+          dotnet test QuizArena.sln --no-build --verbosity normal
+          --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: "**/TestResults/**/*.trx"
+          if-no-files-found: ignore
+
+  frontend:
+    name: frontend typecheck, lint, tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/QuizArena.Client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/QuizArena.Client/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test -- --run
+
+      - name: Build
+        run: npm run build
