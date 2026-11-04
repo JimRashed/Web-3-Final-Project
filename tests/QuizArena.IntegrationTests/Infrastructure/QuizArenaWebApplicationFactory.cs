@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,7 +15,19 @@ public sealed class QuizArenaWebApplicationFactory : WebApplicationFactory<Progr
 {
     private readonly string _databaseName = $"QuizArenaTests_{Guid.NewGuid():N}";
     private readonly SemaphoreSlim _databaseLock = new(1, 1);
-    public string ConnectionString => $"Server=(localdb)\\MSSQLLocalDB;Database={_databaseName};Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+
+    /// <summary>LocalDB locally; a real SQL Server (for example the CI service container) via QUIZARENA_TEST_SQLSERVER.</summary>
+    private static string ServerConnection =>
+        Environment.GetEnvironmentVariable("QUIZARENA_TEST_SQLSERVER") is { Length: > 0 } server
+            ? server
+            : "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+
+    public string ConnectionString =>
+        new SqlConnectionStringBuilder(ServerConnection)
+        {
+            InitialCatalog = _databaseName,
+            MultipleActiveResultSets = true,
+        }.ConnectionString;
     public string TestJoinCode => "TEST-LOBBY";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
