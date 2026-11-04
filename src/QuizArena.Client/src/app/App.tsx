@@ -5,6 +5,8 @@ import { SessionRequiredError } from '../auth/session';
 import { RequestState } from '../components/RequestState';
 import { destinations } from './routes';
 import { LobbyPage } from '../features/lobby/LobbyPage';
+import { EventsPage } from '../features/notification/EventsPage';
+import { PreferencesPage } from '../features/notification/PreferencesPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { LeaderboardPage } from '../features/statistics/LeaderboardPage';
 import { StatisticsPage } from '../features/statistics/StatisticsPage';
@@ -16,6 +18,8 @@ const pages: Record<string, ReactElement> = {
   '/profile': <ProfilePage />,
   '/statistics': <StatisticsPage />,
   '/leaderboard': <LeaderboardPage />,
+  '/events': <EventsPage />,
+  '/preferences': <PreferencesPage />,
 };
 
 function SessionActions() {
