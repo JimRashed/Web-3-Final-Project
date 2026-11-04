@@ -4,5 +4,12 @@
 **/TestResults/
 **/coverage.*
 .dispatcher/
+**/node_modules/
+**/dist/
+**/coverage/
+**/.env.local
+**/.env.*.local
+**/playwright-report/
+**/test-results/
 
 .env
