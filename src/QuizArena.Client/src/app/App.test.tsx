@@ -26,7 +26,10 @@ describe('application shell', () => {
     await mount(item.path, true);
     expect(screen.getByRole('heading', { level: 1, name: item.label })).toBeVisible();
     expect(within(screen.getByRole('navigation')).getByRole('link', { name: item.label })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    // Profile, Statistics, Leaderboard, Events and Preferences render real pages instead of the placeholder.
+    if (!['/profile', '/statistics', '/leaderboard', '/events', '/preferences'].includes(item.path)) {
+      expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    }
   });
   it('navigates using the shell links', async () => {
     await mount('/', true);
@@ -51,22 +54,25 @@ describe('application shell', () => {
     expect(screen.getByRole('heading', { name: 'A little off course' })).toBeVisible();
     expect(screen.getByRole('link', { name: /Back to the arena/ })).toHaveAttribute('href', '/');
   });
-  it.each([200, 201])('mounts real Lobby and routes returned match ID to an honest copyable shell on %s', async (status) => {
+  it.each([200, 201])('mounts real Lobby and opens the match page for the returned match ID on %s', async (status) => {
     const lobby = { lobbyId: '01234567-89ab-cdef-0123-456789abcdef', joinCode: 'ABC123', status: 'Open', memberCount: 2, isMember: true, isHost: true };
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(lobby)).mockResolvedValueOnce(Response.json({ ...lobby, status: 'Locked' })).mockResolvedValueOnce(Response.json({ matchId: 'actual returned id' }, { status }));
+    const match = { matchId: 'actual returned id', lobbyId: lobby.lobbyId, playerAId: 'player-a', playerBId: 'player-b', status: 'ACTIVE', playerAScore: 0, playerBScore: 0, currentQuestionIndex: 0, winnerUserId: null, draw: false, completedAt: null };
+    const question = { questionId: '26c94137-d660-4397-a731-050c2bb07004', text: 'What is 2 + 2?', options: ['4', '3', '5', '6'] };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(lobby)).mockResolvedValueOnce(Response.json({ ...lobby, status: 'Locked' })).mockResolvedValueOnce(Response.json({ matchId: 'actual returned id' }, { status }))
+      .mockResolvedValueOnce(Response.json(match)).mockResolvedValueOnce(Response.json(question));
     vi.stubGlobal('fetch', fetcher); await mount('/lobby', true);
     fireEvent.click(screen.getByRole('button', { name: 'Create lobby' })); await screen.findByText('ABC123');
     fireEvent.click(screen.getByRole('button', { name: 'Lock lobby' })); await screen.findByText('Locked');
     fireEvent.click(screen.getByRole('button', { name: 'Start match' }));
-    await screen.findByRole('heading', { name: 'Selected match' });
-    expect(screen.getByText('Match details and participant verification are not implemented in this screen yet.')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'What is 2 + 2?' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Match' })).toBeVisible();
     const link = screen.getByRole('link', { name: /http.*matches\?matchId=/ });
     const url = new URL(link.getAttribute('href')!);
     expect(url.origin).toBe(window.location.origin);
     expect(url.pathname).toBe('/matches');
     expect(url.searchParams.get('matchId')).toBe('actual returned id');
     expect(screen.getByRole('button', { name: 'Copy match link' })).toBeVisible();
-    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(String(fetcher.mock.calls[3][0])).toBe('http://localhost:5105/matches/actual%20returned%20id');
   });
   it.each([200, 201].flatMap((status) => ['.', '..', '%2E', '%252E', 'path/part?key=value+ space&other=100%#fragment', 'part\nid', '😀'.repeat(51), '😀'.repeat(100)].map((matchId) => ({ status, matchId }))))('roundtrips opaque returned ID $matchId through navigation and copied URL on $status', async ({ status, matchId }) => {
     const lobby = { lobbyId: '01234567-89ab-cdef-0123-456789abcdef', joinCode: 'ABC123', status: 'Open', memberCount: 2, isMember: true, isHost: true };
@@ -77,10 +83,9 @@ describe('application shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create lobby' })); await screen.findByText('ABC123');
     fireEvent.click(screen.getByRole('button', { name: 'Lock lobby' })); await screen.findByText('Locked');
     fireEvent.click(screen.getByRole('button', { name: 'Start match' }));
-    await screen.findByRole('heading', { name: 'Selected match' });
-    const returned = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === `Returned match ID: ${matchId}`);
+    const returned = await screen.findByText((_, element) => element?.tagName === 'P' && element.textContent === `Match ID: ${matchId}`);
     expect(returned).toBeVisible();
-    expect(returned.textContent).toBe(`Returned match ID: ${matchId}`);
+    expect(returned.textContent).toBe(`Match ID: ${matchId}`);
     const href = screen.getByRole('link', { name: /http.*matches\?matchId=/ }).getAttribute('href')!;
     const destination = new URL(href);
     expect(destination.origin).toBe(window.location.origin);
@@ -92,7 +97,6 @@ describe('application shell', () => {
     await screen.findByText('Match link copied.');
     expect(writeText).toHaveBeenCalledWith(href);
     expect(new URL(writeText.mock.calls[0][0] as string).searchParams.get('matchId')).toBe(matchId);
-    expect(fetcher).toHaveBeenCalledTimes(3);
   });
   it('uses the existing Events placeholder for the documented notifications alias', async () => {
     await mount('/notifications', true);

@@ -1,12 +1,27 @@
-import { useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { type ReactElement } from 'react';
+import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { useSession } from '../auth/AuthProvider';
 import { SessionRequiredError } from '../auth/session';
 import { RequestState } from '../components/RequestState';
 import { destinations } from './routes';
 import { LobbyPage } from '../features/lobby/LobbyPage';
 import { MatchPage } from '../features/match/MatchPage';
+import { EventsPage } from '../features/notification/EventsPage';
+import { PreferencesPage } from '../features/notification/PreferencesPage';
+import { ProfilePage } from '../features/profile/ProfilePage';
+import { LeaderboardPage } from '../features/statistics/LeaderboardPage';
+import { StatisticsPage } from '../features/statistics/StatisticsPage';
 import './App.css';
+
+/** Destinations with a real screen; the rest still render the placeholder. */
+const pages: Record<string, ReactElement> = {
+  '/lobby': <LobbyPage />,
+  '/profile': <ProfilePage />,
+  '/statistics': <StatisticsPage />,
+  '/leaderboard': <LeaderboardPage />,
+  '/events': <EventsPage />,
+  '/preferences': <PreferencesPage />,
+};
 
 function SessionActions() {
   const { session, status, displayName } = useSession();
@@ -42,21 +57,6 @@ function Destination({ item }: { item: typeof destinations[number] }) {
   </div></section>;
 }
 
-function SelectedMatch() {
-  const { matchId: routeMatchId } = useParams();
-  const [search] = useSearchParams();
-  const matchId = search.get('matchId') ?? routeMatchId;
-  const { status, session } = useSession();
-  const [copyNote, setCopyNote] = useState('');
-  const matchUrl = new URL('/matches', window.location.origin);
-  matchUrl.searchParams.set('matchId', matchId ?? '');
-  const matchLink = matchUrl.href;
-  if (status !== 'authenticated') return <RequestState state={status === 'loading' ? 'loading' : 'error'} error={new SessionRequiredError()} onSignIn={status === 'unavailable' ? undefined : () => { void session.login(); }} />;
-  return <section className="destination"><h1>Selected match</h1><p>Returned match ID: {matchId}</p><p>Match details and participant verification are not implemented in this screen yet.</p><p><a href={matchLink}>{matchLink}</a></p><button className="button secondary" onClick={() => {
-    if (!navigator.clipboard?.writeText) { setCopyNote('Select the link and copy it manually.'); return; }
-    void navigator.clipboard.writeText(matchLink).then(() => setCopyNote('Match link copied.'), () => setCopyNote('Select the link and copy it manually.'));
-  }}>Copy match link</button><p role="status">{copyNote}</p></section>;
-}
 
 export function App() {
   const { status } = useSession();
@@ -71,7 +71,7 @@ export function App() {
       <main id="main" tabIndex={-1}>
         {status === 'expired' && <div role="status" className="notice">Your session ended. Sign in when you’re ready to continue.</div>}
         {status === 'unavailable' && <div role="alert" className="notice">Sign-in is temporarily unavailable. You can explore the arena and reload to reconnect.</div>}
-        <Routes><Route path="/" element={<Home />} />{destinations.map((item) => <Route key={item.path} path={item.path} element={item.path === '/lobby' ? <LobbyPage /> : <Destination item={item} />} />)}<Route path="/matches" element={<SelectedMatch />} /><Route path="/matches/:matchId" element={<MatchPage />} /><Route path="/notifications" element={<Destination item={destinations.find((item) => item.path === '/events')!} />} /><Route path="/auth/callback" element={<RequestState state={status === 'loading' ? 'loading' : 'error'} title={status === 'loading' ? 'Completing sign-in…' : 'Sign-in could not be completed'}><p>Return to the overview to continue.</p><Link to="/">Go to overview</Link></RequestState>} /><Route path="*" element={<RequestState state="empty" title="A little off course"><p>That page could not be found.</p><Link to="/">Back to the arena →</Link></RequestState>} /></Routes>
+        <Routes><Route path="/" element={<Home />} />{destinations.map((item) => <Route key={item.path} path={item.path} element={pages[item.path] ?? <Destination item={item} />} />)}<Route path="/matches" element={<MatchPage />} /><Route path="/matches/:matchId" element={<MatchPage />} /><Route path="/notifications" element={<Destination item={destinations.find((item) => item.path === '/events')!} />} /><Route path="/auth/callback" element={<RequestState state={status === 'loading' ? 'loading' : 'error'} title={status === 'loading' ? 'Completing sign-in…' : 'Sign-in could not be completed'}><p>Return to the overview to continue.</p><Link to="/">Go to overview</Link></RequestState>} /><Route path="*" element={<RequestState state="empty" title="A little off course"><p>That page could not be found.</p><Link to="/">Back to the arena →</Link></RequestState>} /></Routes>
       </main><footer className="page-footer"><span>QuizArena</span><span>Good questions. Great company.</span></footer>
     </div>
   </div>;

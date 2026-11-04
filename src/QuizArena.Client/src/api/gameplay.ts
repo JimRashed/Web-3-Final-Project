@@ -5,6 +5,8 @@ export type MatchStatus = 'ACTIVE' | 'FINISHED';
 
 export interface MatchView {
   matchId: string;
+  playerAId: string;
+  playerBId: string;
   status: MatchStatus;
   playerAScore: number;
   playerBScore: number;
@@ -34,6 +36,8 @@ function readMatch(value: unknown): MatchView {
   if (!value || typeof value !== 'object') throw new ApiError('unexpected');
   const data = value as Record<string, unknown>;
   const valid = typeof data.matchId === 'string' && data.matchId.trim().length > 0
+    && typeof data.playerAId === 'string' && data.playerAId.trim().length > 0
+    && typeof data.playerBId === 'string' && data.playerBId.trim().length > 0 && data.playerAId !== data.playerBId
     && (data.status === 'ACTIVE' || data.status === 'FINISHED')
     && score(data.playerAScore) && score(data.playerBScore)
     && typeof data.currentQuestionIndex === 'number' && Number.isInteger(data.currentQuestionIndex)
@@ -42,6 +46,8 @@ function readMatch(value: unknown): MatchView {
   if (!valid) throw new ApiError('unexpected');
   return {
     matchId: data.matchId as string,
+    playerAId: data.playerAId as string,
+    playerBId: data.playerBId as string,
     status: data.status as MatchStatus,
     playerAScore: data.playerAScore as number,
     playerBScore: data.playerBScore as number,

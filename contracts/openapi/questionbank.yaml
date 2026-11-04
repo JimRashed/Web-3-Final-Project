@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "QuizArena questionbank API — proposed P02",
+    "title": "QuizArena QuestionBank API",
     "version": "1.0.0",
-    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+    "description": "Implemented QuestionBank surface matching P02 in docs/milestone3/api-contracts.md. This full document is backend-only: the answer-bearing internal operation is excluded from runtime API Explorer and must never be served in browser Swagger. JSON-compatible YAML; no credentials in examples."
   },
   "servers": [
     {

@@ -230,10 +230,20 @@ public sealed class ServiceBoundaryTests
     {
         var references = ProjectReferences(document.Root!, path).ToArray();
         var allowedLayers = kind == "UnitTests" ? new[] { "Domain", "Api" } : new[] { "Api" };
-        if (references.Length != 1 || !allowedLayers.Any(layer =>
-            string.Equals(references[0], ProjectPath(root, service, layer), StringComparison.OrdinalIgnoreCase)))
+        var testSupport = Path.Combine(root, "tests", "QuizArena.TestSupport", "QuizArena.TestSupport.csproj");
+
+        var own = references
+            .Where(reference => allowedLayers.Any(layer =>
+                string.Equals(reference, ProjectPath(root, service, layer), StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        var support = references
+            .Where(reference => string.Equals(reference, testSupport, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // The shared test fixture (#24) is allowed on top of the service's own layer project, and nothing else is.
+        if (own.Length != 1 || references.Length != own.Length + support.Length)
         {
-            yield return $"{path}: service test project must reference exactly one own {string.Join(" or ", allowedLayers)} project";
+            yield return $"{path}: service test project must reference exactly one own {string.Join(" or ", allowedLayers)} project, optionally plus QuizArena.TestSupport";
         }
     }
 
