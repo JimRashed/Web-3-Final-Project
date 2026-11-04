@@ -26,8 +26,10 @@ describe('application shell', () => {
     await mount(item.path, true);
     expect(screen.getByRole('heading', { level: 1, name: item.label })).toBeVisible();
     expect(within(screen.getByRole('navigation')).getByRole('link', { name: item.label })).toHaveAttribute('aria-current', 'page');
-    // Profile, Statistics, Leaderboard, Events and Preferences render real pages instead of the placeholder.
-    if (!['/profile', '/statistics', '/leaderboard', '/events', '/preferences'].includes(item.path)) {
+    // Feature routes render their own initial states; Lobby still uses the destination's empty label.
+    if (item.path === '/questions') {
+      expect(screen.getByRole('heading', { name: 'Ready when you are' })).toBeVisible();
+    } else if (!['/profile', '/statistics', '/leaderboard', '/events', '/preferences'].includes(item.path)) {
       expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
     }
   });
@@ -35,6 +37,16 @@ describe('application shell', () => {
     await mount('/', true);
     await userEvent.click(within(screen.getByRole('navigation')).getByRole('link', { name: 'Lobby' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Lobby' })).toBeVisible();
+  });
+  it('navigates to the real Questions preview without fetching before Generate', async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetcher);
+    await mount('/', true);
+    await userEvent.click(within(screen.getByRole('navigation')).getByRole('link', { name: 'Questions' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Questions' })).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Number of questions' })).toHaveValue(10);
+    expect(screen.getByRole('button', { name: 'Generate questions' })).toBeVisible();
+    expect(fetcher).not.toHaveBeenCalled();
   });
   it('requests sign-in only after an explicit action', async () => {
     const { adapter } = await mount('/profile');
