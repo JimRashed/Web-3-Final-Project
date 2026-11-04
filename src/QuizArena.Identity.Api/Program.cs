@@ -1,4 +1,5 @@
 using QuizArena.Identity.Api.Security;
+using QuizArena.Identity.Api.Services;
 using QuizArena.Identity.Data;
 
 namespace QuizArena.Identity.Api;
@@ -12,6 +13,8 @@ public sealed class Program
         builder.Services.AddControllers();
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
         builder.Services.AddIdentityPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddScoped<IProfileApplication, ProfileApplication>();
 
         var app = builder.Build();
         app.UseExceptionHandler();
