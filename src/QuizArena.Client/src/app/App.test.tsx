@@ -26,7 +26,10 @@ describe('application shell', () => {
     await mount(item.path, true);
     expect(screen.getByRole('heading', { level: 1, name: item.label })).toBeVisible();
     expect(within(screen.getByRole('navigation')).getByRole('link', { name: item.label })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    // /events and /preferences now render real notification pages instead of the placeholder.
+    if (item.path !== '/events' && item.path !== '/preferences') {
+      expect(screen.getByRole('heading', { name: item.empty })).toBeVisible();
+    }
   });
   it('navigates using the shell links', async () => {
     await mount('/', true);
