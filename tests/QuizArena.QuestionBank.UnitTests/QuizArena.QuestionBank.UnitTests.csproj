@@ -15,6 +15,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\QuizArena.QuestionBank.Domain\QuizArena.QuestionBank.Domain.csproj" />
+    <ProjectReference Include="..\..\src\QuizArena.QuestionBank.Api\QuizArena.QuestionBank.Api.csproj" />
   </ItemGroup>
 </Project>
