@@ -174,6 +174,35 @@ public sealed class MatchRepositoryTests : IAsyncLifetime
         await act.Should().ThrowAsync<MatchConcurrencyException>();
     }
 
+    [Fact]
+    public async Task SaveAsync_WhenTheMatchChangedAfterItWasRead_ThrowsInsteadOfLosingTheOtherAnswer()
+    {
+        // Arrange: both players read the match, then save one after the other (no overlap inside SaveAsync).
+        await using (var setup = NewContext())
+        {
+            await new MatchRepository(setup).SaveAsync(NewMatch(), CancellationToken.None);
+        }
+
+        await using var contextA = NewContext();
+        await using var contextB = NewContext();
+        var repositoryA = new MatchRepository(contextA);
+        var repositoryB = new MatchRepository(contextB);
+        var matchA = (await repositoryA.FindAsync("match-1", CancellationToken.None))!;
+        var matchB = (await repositoryB.FindAsync("match-1", CancellationToken.None))!;
+        matchA.SubmitAnswer(PlayerA, QuestionIds[0], "A", Now);
+        await repositoryA.SaveAsync(matchA, CancellationToken.None);
+        matchB.SubmitAnswer(PlayerB, QuestionIds[0], "B", Now);
+
+        // Act
+        var act = () => repositoryB.SaveAsync(matchB, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<MatchConcurrencyException>();
+        await using var fresh = NewContext();
+        var stored = await new MatchRepository(fresh).FindAsync("match-1", CancellationToken.None);
+        stored!.Answers.Should().ContainSingle(answer => answer.UserId == PlayerA);
+    }
+
     private static Match NewMatch() =>
         Match.Create(
             "match-1",
