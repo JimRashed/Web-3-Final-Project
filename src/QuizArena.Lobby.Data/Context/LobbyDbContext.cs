@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuizArena.Lobby.Data.Entities;
 
 namespace QuizArena.Lobby.Data.Context;
 
@@ -8,6 +9,9 @@ namespace QuizArena.Lobby.Data.Context;
 /// </summary>
 public sealed class LobbyDbContext(DbContextOptions<LobbyDbContext> options) : DbContext(options)
 {
+    public DbSet<ActiveLobbyRow> ActiveLobbies => Set<ActiveLobbyRow>();
+    public DbSet<LobbyPlayerRow> LobbyPlayers => Set<LobbyPlayerRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(LobbyDbContext).Assembly);

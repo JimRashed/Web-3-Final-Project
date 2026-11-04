@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuizArena.Lobby.Data.Context;
+using QuizArena.Lobby.Data.Repositories;
 
 namespace QuizArena.Lobby.Data;
 
@@ -14,7 +15,9 @@ public static class LobbyPersistenceExtensions
             throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required for the Lobby database.");
         }
 
-        services.AddDbContext<LobbyDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContextFactory<LobbyDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddScoped<ILobbyRepository, LobbyRepository>();
+        services.AddSingleton<IJoinCodeSource, RandomJoinCodeSource>();
         return services;
     }
 }

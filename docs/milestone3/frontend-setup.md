@@ -13,7 +13,23 @@ npm run dev
 
 Open `http://localhost:5173`. Vite uses that exact host and strict port because Keycloak redirects and API CORS origins are registered explicitly. The production host must serve `index.html` for application routes, including `/auth/callback`, while serving built assets normally.
 
-The shell contains overview, profile, questions, lobby, match, statistics, leaderboard, events and preferences destinations. It provides sign-in, sign-out, session status and accessible common states. It does not fabricate service data or implement the feature screens.
+The shell contains overview, profile, questions, lobby, match, statistics, leaderboard, events and preferences destinations. It provides sign-in, sign-out, session status and accessible common states. The Lobby feature is implemented as described below; other destinations remain placeholders and show no fabricated service data.
+
+## Lobby feature (#48)
+
+At `/lobby`, sign in explicitly, create a lobby or enter an exact six-character uppercase alphanumeric code. Create/join send `{}` to the configured Lobby origin; the user identity comes from the bearer token. The page shows only the public code, state, member count and caller-relative host/member flags. Copy code announces success only if clipboard access succeeds; otherwise select and copy the displayed code manually.
+
+The host can lock only after two players have joined, and start only after observing Locked with two players. Nonhost controls explain that the host must act. Foreground previews refresh sequentially every two seconds after the preceding request settles. Changing lobby, mutating, leaving the page or ending/replacing the session aborts outstanding work and ignores obsolete results. Failed polling stops for explicit recovery. No mutation is retried automatically: 409 performs one state refresh, 403 preserves the session, 401 clears feature state and offers explicit sign-in, and 503/network errors offer a user-triggered retry.
+
+Start sends only `{joinCode}` to the separately configured Gameplay origin at `POST /matches`, then navigates to `/matches?matchId=...` using the exact returned ID for 200/201 responses. The ID stays in a query parameter so valid opaque values such as `.`, `..`, `%2E` and IDs containing path separators cannot be normalized into another route or decoded twice. The shell displays that ID and a copyable same-origin query link with an explicit incomplete-screen message. Earlier `/matches/:matchId` links remain supported. This screen does not implement match details or establish participant access. Guests see waiting guidance and a `/notifications` link; that alias currently reaches the existing Events placeholder. Event delivery, guest opening and participant checks remain peer-service work.
+
+Returned IDs follow the committed Gameplay contract: nonblank strings of at most 100 Unicode code points, preserved exactly. Escaped controls and emoji are valid when that contract permits them; query navigation and copied links keep their values without manual decoding or identity rewriting.
+
+**Implementation and fetch-double verification are separate from live acceptance.** External [#53](https://github.com/JimRashed/Web-3-Final-Project/issues/53) remains open and blocks live Gameplay start/navigation and the complete two-user flow. No live provider/Lobby/Gameplay browser flow is claimed. [#24](https://github.com/JimRashed/Web-3-Final-Project/issues/24) and its unmerged draft PR#83 still block starting the separate #49 audit. The partial parent PR must retain these incomplete statuses.
+
+When the live dependencies are available, verify with two real accounts: host create, guest join by shared code, refreshed two-player state, guest-disabled host controls, host lock, host start, returned-ID navigation/copy, and guest entry through their own delivered notification or host-shared link. Exercise 400/401/403/404/409/503 and teardown while requests are pending. Component/fetch doubles do not satisfy this live checklist.
+
+Implementation checks on 2026-11-04: `npm run typecheck` and `npm run lint` passed; the focused Lobby API/page/lifecycle/App run passed 73 tests across four files. An initial sandbox cache EPERM prevented collection and was rerun outside the sandbox; it was not counted as passing evidence. Full frontend and aggregate regression/build results are recorded by the subsequent validation stage in the parent PR. These checks establish code behavior with doubles, not live acceptance.
 
 ## Public configuration
 
