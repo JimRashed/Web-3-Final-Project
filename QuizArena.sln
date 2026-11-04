@@ -79,6 +79,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuizArena.Notification.Inte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuizArena.ArchitectureTests", "tests\QuizArena.ArchitectureTests\QuizArena.ArchitectureTests.csproj", "{AFD26C43-E2EC-4608-9B7A-D193004CC054}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuizArena.TestSupport", "tests\QuizArena.TestSupport\QuizArena.TestSupport.csproj", "{0105F7C4-990F-4F08-998C-12EEAA012A49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -521,6 +523,18 @@ Global
 		{AFD26C43-E2EC-4608-9B7A-D193004CC054}.Release|x64.Build.0 = Release|Any CPU
 		{AFD26C43-E2EC-4608-9B7A-D193004CC054}.Release|x86.ActiveCfg = Release|Any CPU
 		{AFD26C43-E2EC-4608-9B7A-D193004CC054}.Release|x86.Build.0 = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|x64.Build.0 = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Debug|x86.Build.0 = Debug|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|x64.ActiveCfg = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|x64.Build.0 = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|x86.ActiveCfg = Release|Any CPU
+		{0105F7C4-990F-4F08-998C-12EEAA012A49}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -562,5 +576,6 @@ Global
 		{5AC87B21-6113-4EF7-9D54-7AD44E5FD3BA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{4678BA28-2703-4AA5-A400-F4C10FD90E3A} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{AFD26C43-E2EC-4608-9B7A-D193004CC054} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{0105F7C4-990F-4F08-998C-12EEAA012A49} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
