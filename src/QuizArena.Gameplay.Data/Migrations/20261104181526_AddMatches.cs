@@ -28,7 +28,8 @@ namespace QuizArena.Gameplay.Data.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     QuestionsJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    AnswersJson = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    AnswersJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {

@@ -38,4 +38,10 @@ public sealed class MatchRecord
 
     /// <summary>Immutable answers, canonical JSON.</summary>
     public string AnswersJson { get; set; } = "[]";
+
+    /// <summary>
+    /// SQL Server rowversion. Two players answering the same round concurrently would otherwise
+    /// overwrite each other's answer (last write wins); the token turns that into a detectable conflict.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
 }

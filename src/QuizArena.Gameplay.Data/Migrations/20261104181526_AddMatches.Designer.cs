@@ -12,7 +12,7 @@ using QuizArena.Gameplay.Data.Context;
 namespace QuizArena.Gameplay.Data.Migrations
 {
     [DbContext(typeof(GameplayDbContext))]
-    [Migration("20261104174225_AddMatches")]
+    [Migration("20261104181526_AddMatches")]
     partial class AddMatches
     {
         /// <inheritdoc />
@@ -75,6 +75,11 @@ namespace QuizArena.Gameplay.Data.Migrations
                     b.Property<string>("QuestionsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

@@ -5,6 +5,7 @@ using QuizArena.Gameplay.Data.Context;
 using QuizArena.Gameplay.Data.Repositories;
 using QuizArena.Gameplay.Domain.Entities;
 using QuizArena.Gameplay.Domain.Enums;
+using QuizArena.Gameplay.Domain.Exceptions;
 using Xunit;
 
 namespace QuizArena.Gameplay.IntegrationTests.Persistence;
@@ -141,6 +142,36 @@ public sealed class MatchRepositoryTests : IAsyncLifetime
 
         // Assert
         stored.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SaveAsync_WhenAnotherRequestChangedTheMatch_ThrowsConcurrencyConflict()
+    {
+        // Arrange — the match exists, then two requests load it independently.
+        var match = NewMatch();
+        await using (var context = NewContext())
+        {
+            await new MatchRepository(context).SaveAsync(match, CancellationToken.None);
+        }
+
+        await using var firstRequest = NewContext();
+        await using var secondRequest = NewContext();
+        var firstRepository = new MatchRepository(firstRequest);
+        var secondRepository = new MatchRepository(secondRequest);
+
+        var firstView = await firstRepository.FindAsync(match.MatchId, CancellationToken.None);
+        var secondView = await secondRepository.FindAsync(match.MatchId, CancellationToken.None);
+
+        // Act — the first request records player A's answer and saves.
+        firstView!.SubmitAnswer(PlayerA, QuestionIds[0], "A", Now);
+        await firstRepository.SaveAsync(firstView, CancellationToken.None);
+
+        // The second request, still holding the stale row version, records player B's answer.
+        secondView!.SubmitAnswer(PlayerB, QuestionIds[0], "A", Now);
+        var act = () => secondRepository.SaveAsync(secondView, CancellationToken.None);
+
+        // Assert — refusing the stale write is what prevents the lost answer.
+        await act.Should().ThrowAsync<MatchConcurrencyException>();
     }
 
     private static Match NewMatch() =>

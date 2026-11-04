@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using QuizArena.Gameplay.Data.Context;
 using QuizArena.Gameplay.Data.Records;
 using QuizArena.Gameplay.Domain.Entities;
+using QuizArena.Gameplay.Domain.Exceptions;
 using QuizArena.Gameplay.Domain.Repositories;
 
 namespace QuizArena.Gameplay.Data.Repositories;
@@ -18,8 +19,9 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
 
     public async Task<Match?> FindAsync(string matchId, CancellationToken cancellationToken)
     {
+        // Tracked on purpose: the row version loaded here is what makes SaveAsync detect another
+        // request changing the match in between (optimistic concurrency).
         var record = await context.Matches
-            .AsNoTracking()
             .SingleOrDefaultAsync(stored => stored.MatchId == matchId, cancellationToken);
 
         return record is null ? null : ToDomain(record);
@@ -45,6 +47,13 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The row changed between load and save (for example the other player answered at the
+            // same moment). Refuse the write instead of silently dropping the other answer; the
+            // caller reloads the match and retries the transition.
+            throw new MatchConcurrencyException(match.MatchId);
         }
         catch (DbUpdateException exception) when (IsDuplicateKey(exception))
         {

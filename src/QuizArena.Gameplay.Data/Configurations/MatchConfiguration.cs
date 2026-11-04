@@ -34,6 +34,9 @@ public sealed class MatchConfiguration : IEntityTypeConfiguration<MatchRecord>
         builder.Property(record => record.QuestionsJson).IsRequired();
         builder.Property(record => record.AnswersJson).IsRequired();
 
+        // Optimistic concurrency: two players answering at the same time cannot silently overwrite each other.
+        builder.Property(record => record.RowVersion).IsRowVersion();
+
         builder.HasIndex(record => record.LobbyId).IsUnique().HasDatabaseName("UX_Matches_LobbyId");
         builder.HasIndex(record => new { record.PlayerAId, record.CreatedAt }).HasDatabaseName("IX_Matches_PlayerA_CreatedAt");
         builder.HasIndex(record => new { record.PlayerBId, record.CreatedAt }).HasDatabaseName("IX_Matches_PlayerB_CreatedAt");
