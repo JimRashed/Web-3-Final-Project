@@ -40,11 +40,21 @@ function SessionMatch({ session, matchId }: { session: Session; matchId: string 
 
   useEffect(() => {
     const controller = new AbortController();
-    load(controller.signal).catch((failure: unknown) => {
-      if (!controller.signal.aborted) setError(failure);
-    });
+    void (async () => {
+      try {
+        const loaded = await api.getMatch(matchId, controller.signal);
+        if (controller.signal.aborted) return;
+        setMatch(loaded);
+        if (loaded.status === 'ACTIVE') {
+          const next = await api.currentQuestion(matchId, controller.signal);
+          if (!controller.signal.aborted) setQuestion(next);
+        }
+      } catch (failure) {
+        if (!controller.signal.aborted) setError(failure);
+      }
+    })();
     return () => controller.abort();
-  }, [load]);
+  }, [api, matchId]);
 
   async function submit(answer: string) {
     if (!question) return;
