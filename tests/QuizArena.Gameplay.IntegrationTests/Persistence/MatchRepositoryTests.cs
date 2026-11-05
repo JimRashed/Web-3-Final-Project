@@ -1,11 +1,14 @@
 using FluentAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using QuizArena.Gameplay.Api.Services;
 using QuizArena.Gameplay.Data.Context;
+using QuizArena.Gameplay.Data.Enums;
 using QuizArena.Gameplay.Data.Repositories;
 using QuizArena.Gameplay.Domain.Entities;
 using QuizArena.Gameplay.Domain.Enums;
 using QuizArena.Gameplay.Domain.Exceptions;
+using QuizArena.Gameplay.Domain.Repositories;
 using Xunit;
 
 namespace QuizArena.Gameplay.IntegrationTests.Persistence;
@@ -201,6 +204,57 @@ public sealed class MatchRepositoryTests : IAsyncLifetime
         await using var fresh = NewContext();
         var stored = await new MatchRepository(fresh).FindAsync("match-1", CancellationToken.None);
         stored!.Answers.Should().ContainSingle(answer => answer.UserId == PlayerA);
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithCompletionDeliveries_CommitsTheMatchAndItsOutboxTogether()
+    {
+        // Arrange
+        var match = NewMatch();
+        Finish(match);
+
+        // Act
+        await using (var context = NewContext())
+        {
+            await new MatchRepository(context).SaveAsync(match, MatchDeliveries.OnCompleted(match), CancellationToken.None);
+        }
+
+        // Assert: the finished match and its four rows are both there, from a fresh context.
+        await using var fresh = NewContext();
+        var stored = await new MatchRepository(fresh).FindAsync(match.MatchId, CancellationToken.None);
+        stored!.Status.Should().Be(MatchStatus.Finished);
+        stored.CompletedAt.Should().Be(match.CompletedAt);
+
+        var deliveries = await fresh.Deliveries.AsNoTracking().ToListAsync();
+        deliveries.Should().HaveCount(4);
+        deliveries.Count(row => row.Destination == MatchDelivery.Statistics).Should().Be(2);
+        deliveries.Count(row => row.Destination == MatchDelivery.Notification).Should().Be(2);
+        deliveries.Select(row => row.IdempotencyKey).Should().OnlyHaveUniqueItems();
+        deliveries.Should().OnlyContain(row =>
+            row.Status == DeliveryStatus.Pending && row.AttemptCount == 0 && row.DeliveredAt == null);
+        deliveries.Should().OnlyContain(row => row.Operation == MatchDeliveries.ResultOperation
+            ? row.Destination == MatchDelivery.Statistics
+            : row.Destination == MatchDelivery.Notification);
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithCreationDeliveries_StoresThemWithTheNewMatch()
+    {
+        // Arrange
+        var match = NewMatch();
+
+        // Act
+        await using (var context = NewContext())
+        {
+            await new MatchRepository(context).SaveAsync(match, MatchDeliveries.OnCreated(match), CancellationToken.None);
+        }
+
+        // Assert
+        await using var fresh = NewContext();
+        var deliveries = await fresh.Deliveries.AsNoTracking().ToListAsync();
+        deliveries.Should().HaveCount(2);
+        deliveries.Should().OnlyContain(row => row.Destination == MatchDelivery.Notification);
+        deliveries.Should().OnlyContain(row => row.PayloadJson.Contains("MATCH_CREATED", StringComparison.Ordinal));
     }
 
     private static Match NewMatch() =>

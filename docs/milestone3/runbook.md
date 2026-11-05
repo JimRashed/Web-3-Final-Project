@@ -75,6 +75,7 @@ Each API reads `appsettings.Development.json`, and any value can be overridden w
 | Token authority | `http://localhost:8080/realms/quizarena` | `Authentication__Authority` |
 | Audience | `quizarena-<service>` | `Authentication__Audience` |
 | Allowed browser origin | `http://localhost:5173` | `Cors__AllowedOrigins__0` |
+| Gameplay machine-client secret (Gameplay only) | empty in source | `Authentication__MachineClientSecret`. The start script sets it from `QUIZARENA_GAMEPLAY_CLIENT_SECRET` in `.env` for the Gameplay process only |
 
 The client's service URLs and OIDC settings are `VITE_*` variables. See [frontend setup](frontend-setup.md#public-configuration). The local Node/Vite server only serves the client's assets and has no API of its own. The Gameplay machine-client secret lives only in `.env`, and Keycloak reads it on first import (see [authentication](authentication.md#local-setup)).
 
@@ -118,5 +119,6 @@ These runs were on 2026-11-04 (Windows 11, LocalDB 17.0, Docker 29.1, Node 22.20
 | `-Services Identity -SkipFrontend` | only 5101 listening, Identity `ok` (services start independently) |
 | `npm run journey:ui` (browser, both players) | sign-in through Keycloak; lobby create, join by code, both see 2 of 2, guest's host controls disabled; host lock and start; **guest opens the match from the delivered `MATCH_CREATED` event in-app, still signed in**; each player sees their own score; 5 rounds by clicking answers; end screens "You won"/"You lost"; both see the match in Statistics; guest gets `MATCH_COMPLETED` with "View result"; no 5xx responses: **11/11** |
 | `npm run journey:retry` | Statistics stopped before the last round; match still finishes; both results stay Pending with `transport failure` and retries while the 4 Notification events are delivered; after Statistics restarts the outbox delivers them (guest games +1) and every row ends Delivered: **8/8** |
+| Two-player API journey with real Keycloak tokens (`player-a` hosts, `player-b` joins) | lobby create/join/lock, Gameplay start verified against Lobby and QuestionBank with machine tokens, guest start refused (403), repeated start returns the same match, 5 rounds with both players answering simultaneously, match finished, the outbox delivered both results to Statistics and `MATCH_CREATED`/`MATCH_COMPLETED` to both players in Notification: **10/10** (after the fixes in this PR; before them every start returned 503) |
 
 **Still needed for acceptance:** another team member follows this runbook from a clean checkout and records the commands, ports and redacted health results here.
