@@ -54,12 +54,12 @@ The relational tests run against a real SQL Server (LocalDB locally, a SQL Serve
 | Gameplay #95/#96/#100 | a repeated start returned the match to non-hosts; simultaneous starts and answers returned 500; the match page was unreachable and showed the guest the host's score | #107, #108, #109 |
 | Gameplay outbox #111 | the machine-token options bound the wrong config keys, and the OAuth response was read as camelCase, so **every match start returned 503** | #118 |
 | Client | the guest had no in-app way to reach the match (`/notifications` placeholder, no link) | #121 |
+| Gameplay outbox (#111 review, P3) | completion writes didn't check lease ownership, so a worker that outlived its lease could overwrite the new owner's result | this PR (lease-fenced writes and the first SQL tests of the claim) |
 
 ## Still open
 | Item | Status |
 |---|---|
 | Notification `GET /events` | merged without the contract's paging and `userId` 403 rule (review on #90). Follow-up needed. |
-| Outbox lease fencing | P3 from the #111 review: completion writes don't check lease ownership. Receivers are idempotent, so the impact is limited. |
 | D01 #62 | a teammate's clean-checkout run of the runbook is still to be recorded |
 | D06 #67 | final read-only review and signoff |
 
