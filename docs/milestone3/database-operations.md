@@ -15,11 +15,11 @@ Issue [#19](https://github.com/JimRashed/Web-3-Final-Project/issues/19), parent 
 
 Each context applies every `IEntityTypeConfiguration<T>` in its own assembly (`ApplyConfigurationsFromAssembly`), so a data task only adds a `DbSet`, a configuration class under `Configurations/` and a migration. The baseline `InitialCreate` migration in every service is intentionally empty; it starts the lineage and `__EFMigrationsHistory`.
 
-The legacy `QuizArenaDb` and `QuizArenaContext` are **not touched**. Data transfer, verification and retirement of the aggregate host are D02 #63.
+The legacy `QuizArenaDb` is never modified. D02 (#63) moves the owned data with `scripts/migrate-legacy-data/` (see [data cutover](data-cutover.md)) and has removed the aggregate host and `QuizArenaContext` from the solution.
 
 ## Legacy constraints the data tasks must preserve
 
-From `src/QuizArena.Data/Context/QuizArenaContext.cs`, adapted to the P02 contracts (string subjects, string match IDs):
+From the former `QuizArenaContext` (removed in D02; its schema is kept in `scripts/migrate-legacy-data/legacy-schema.sql`), adapted to the P02 contracts (string subjects, string match IDs):
 
 | Owner | Constraint to keep or replace |
 |---|---|
@@ -72,7 +72,7 @@ They use LocalDB by default; set `QUIZARENA_TEST_SQLSERVER` to a server connecti
 
 ## Dependency note
 
-`Microsoft.EntityFrameworkCore.SqlServer` 10.0.12 pulls `System.Security.Cryptography.Pkcs` 9.0.11 through `Microsoft.Data.SqlClient`, which has two advisories ([GHSA-2fmv-rv2c-59x7](https://github.com/advisories/GHSA-2fmv-rv2c-59x7), [GHSA-846f-f764-76mx](https://github.com/advisories/GHSA-846f-f764-76mx)). Every Data project, including legacy `QuizArena.Data`, pins the patched `System.Security.Cryptography.Pkcs` 10.0.13. With that, `dotnet build QuizArena.sln -warnaserror` passes with 0 warnings. Remove the pin once SqlClient depends on a patched version.
+`Microsoft.EntityFrameworkCore.SqlServer` 10.0.12 pulls `System.Security.Cryptography.Pkcs` 9.0.11 through `Microsoft.Data.SqlClient`, which has two advisories ([GHSA-2fmv-rv2c-59x7](https://github.com/advisories/GHSA-2fmv-rv2c-59x7), [GHSA-846f-f764-76mx](https://github.com/advisories/GHSA-846f-f764-76mx)). Every Data project pins the patched `System.Security.Cryptography.Pkcs` 10.0.13. With that, `dotnet build QuizArena.sln -warnaserror` passes with 0 warnings. Remove the pin once SqlClient depends on a patched version.
 
 ## Verification (2026-11-03, LocalDB 17.0, .NET SDK 10.0.401)
 
