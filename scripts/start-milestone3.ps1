@@ -133,9 +133,13 @@ Remove-Item env:Authentication__MachineClientSecret -ErrorAction SilentlyContinu
 # 5. Frontend -------------------------------------------------------------------------------------
 if (-not $SkipFrontend) {
     $client = Join-Path $root 'src/QuizArena.Client'
-    if (-not (Test-Path (Join-Path $client 'node_modules'))) {
+    # Check the vite launcher, not just the folder, so a half-finished install is redone.
+    if (-not (Test-Path (Join-Path $client 'node_modules/.bin/vite.cmd'))) {
         Step 'Installing client packages (npm ci)'
-        Push-Location $client; try { & npm ci --no-audit --no-fund | Out-Null } finally { Pop-Location }
+        # npm.cmd, not npm: Windows PowerShell 5.1 mangles the arguments of the npm.ps1 shim ("Unknown command: pm").
+        Push-Location $client
+        try { & npm.cmd ci --no-audit --no-fund *> (Join-Path $logDir 'npm-ci.log') } finally { Pop-Location }
+        if ($LASTEXITCODE -ne 0) { Fail 'npm ci failed for the client. See .run/logs/npm-ci.log.' }
     }
     if (Test-PortFree 5173) {
         Step 'Starting the React client on http://localhost:5173'
