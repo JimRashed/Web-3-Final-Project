@@ -59,8 +59,8 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
         return claimed;
     }
 
-    public Task DeliveredAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken) =>
-        UpdateAsync(id, record =>
+    public Task<bool> DeliveredAsync(Guid id, DateTime claimedLeaseUntil, DateTime utcNow, CancellationToken cancellationToken) =>
+        UpdateAsync(id, claimedLeaseUntil, record =>
         {
             record.Status = DeliveryStatus.Delivered;
             record.DeliveredAt = utcNow;
@@ -68,8 +68,8 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
             record.LastError = null;
         }, cancellationToken);
 
-    public Task RescheduleAsync(Guid id, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken) =>
-        UpdateAsync(id, record =>
+    public Task<bool> RescheduleAsync(Guid id, DateTime claimedLeaseUntil, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken) =>
+        UpdateAsync(id, claimedLeaseUntil, record =>
         {
             record.Status = DeliveryStatus.Pending;
             record.NextAttemptAt = nextAttemptAtUtc;
@@ -77,8 +77,8 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
             record.LastError = Truncate(error);
         }, cancellationToken);
 
-    public Task FailedAsync(Guid id, string error, CancellationToken cancellationToken) =>
-        UpdateAsync(id, record =>
+    public Task<bool> FailedAsync(Guid id, DateTime claimedLeaseUntil, string error, CancellationToken cancellationToken) =>
+        UpdateAsync(id, claimedLeaseUntil, record =>
         {
             record.Status = DeliveryStatus.Failed;
             record.LeaseUntil = null;
@@ -100,16 +100,20 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
         return affected == 1;
     }
 
-    private async Task UpdateAsync(Guid id, Action<DeliveryRecord> change, CancellationToken cancellationToken)
+    private async Task<bool> UpdateAsync(Guid id, DateTime claimedLeaseUntil, Action<DeliveryRecord> change, CancellationToken cancellationToken)
     {
-        var record = await context.Deliveries.SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
+        // Fence: only the holder of the current lease may complete the row.
+        var record = await context.Deliveries.SingleOrDefaultAsync(
+            row => row.Id == id && row.Status == DeliveryStatus.Pending && row.LeaseUntil == claimedLeaseUntil,
+            cancellationToken);
         if (record is null)
         {
-            return;
+            return false;
         }
 
         change(record);
         await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private static string Truncate(string error) =>
