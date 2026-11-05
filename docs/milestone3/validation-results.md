@@ -119,3 +119,65 @@ The following gates ran on milestone commit `3a9b9d26330259dd15804ea2f37b2efdd09
 Commands from the solution root: `dotnet restore QuizArena.sln --source C:\Users\kilda\.nuget\packages --disable-parallel -m:1`, `dotnet build QuizArena.sln --no-restore -warnaserror -m:1`, `dotnet format QuizArena.sln --verify-no-changes --no-restore`, `dotnet test QuizArena.sln --no-build -m:1 --verbosity normal`, a separate `dotnet test QuizArena.sln --no-build -m:1 --collect:"XPlat Code Coverage"`, focused Lobby/architecture project tests, and `node contracts/validate-contracts.mjs`. From the client directory: `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test -- --run`, `npm run build`. The package has no `test:e2e` script; no E2E suite pass is claimed. Coverage collection does not establish an unmeasured percentage or branch guarantee.
 
 The final draft PR will link the automated stages, with independent human signoff and the live checklist still pending. No manual issue closure or Done status is justified by these results alone.
+
+---
+
+## Issue #43 — QuestionBank coverage audit
+
+This section records the #43 audit on `feature/m3/43-questionbank-coverage`, initially based on milestone commit `a79f9ba90cc1a114019db93200289be3cf6cbeb1` and refreshed to `a5f973f3caa2c79a203db735d98d3d78ff33dbb9` before all final gates. Earlier sections remain historical evidence, including the PR #106 live observations; they are not new live results from this run. Scoped plan: [issue-43-plan.md](../../specs/issue-43-plan.md). Parent feature #11; epic #7.
+
+### Acceptance coverage
+
+| Requirement | Executed existing or added evidence |
+| --- | --- |
+| Option/answer invariants, boundaries and immutability | Existing `QuestionTests`, `QuestionSelectionTests`, `QuestionCatalogServiceTests` and unit contract tests retained. These cover four distinct options, answer membership, count1/50, invalid counts, duplicate selection, copying and public mapping. |
+| Real HTTP + SQL vertical slice | New `QuestionBankSqlApiFixture` retains and verifies production `QuestionRepository` and `QuestionCatalogService`, with real JwtBearer validation and a unique migrated SQL database per case. Only context configuration is replaced. |
+| Public safe projection and selection | New `QuestionSqlEndpointsTests` requests count1/default10/count50, checks unique IDs and exact four-field answer-free JSON, compares prompt/category/ordered options by ID against fresh persisted records and verifies complete catalog immutability. |
+| Internal answer material and shortage | New SQL tests compare five distinct machine snapshots and answers to persisted values. Owned four-question databases demonstrate public available-count behavior and safe internal409 without catalog mutation. Snapshot responses are not persisted match records. |
+| Authentication, scopes and principal separation | Existing actual-route `QuestionRouteSecurityTests` and `SecurityMatrixTests` cover signature, issuer, audience, expiry, token type, scopes and actor/client requirements. New SQL-backed cases cover no-expiry401, empty/whitespace subject403, browser/internal and machine/public denial, wrong/missing client and ordinal actor/client mismatch on both routes. Denials use safe ProblemDetails without answer fields; fresh contexts verify unchanged questions/categories/options. |
+| Persistence and deterministic isolation | Existing repository/migration tests cover round trips, constraints, no tracking, cancellation and competing insert IDs. New fixture guards the exact generated database/server before migration or deletion; comparisons use IDs and stored option positions rather than randomized selection order. |
+| React generation, bounds, errors and answer secrecy | Existing `QuestionBankPage.test.tsx`, lifecycle tests and `src/api/questionbank.test.ts` retained and executed. They cover generation/regeneration, min/max/invalid counts, safe mapping/rendering, error/retry/auth states, stale responses, cancellation and session replacement. No superficial duplicate UI tests added. |
+| Ownership and policies | Test-only change: no production code, authorization policies, contracts, dependencies, lockfile or existing tests changed. QuestionBank has no player-owned private resource; applicable isolation is public user versus machine answer access under the later approved authentication design. No new subject allowlist policy introduced. |
+
+### Actual commands and results
+
+Implementation baseline and focused checks (2026-11-04 local date):
+
+| Command | Result |
+| --- | --- |
+| `dotnet restore QuizArena.sln --source C:\Users\kilda\.nuget\packages --disable-parallel -m:1 --verbosity minimal` | PASS, existing offline package cache. |
+| `dotnet build QuizArena.sln --no-restore -warnaserror -m:1 --verbosity minimal` | PASS, 0 warnings/errors before edits. |
+| `dotnet test tests/QuizArena.QuestionBank.UnitTests/QuizArena.QuestionBank.UnitTests.csproj --no-build --verbosity minimal` | Baseline 70 passed, 0 failed/skipped. |
+| `dotnet test tests/QuizArena.QuestionBank.IntegrationTests/QuizArena.QuestionBank.IntegrationTests.csproj --no-build --verbosity minimal` | Baseline 140 passed; after additions 162 passed, 0 failed/skipped. |
+| Client `npm ci --no-audit --no-fund` | PASS, 254 locked packages installed. |
+| Client `npm run test -- --run src/features/questionbank src/api/questionbank.test.ts` | PASS, 62 tests across 3 files. |
+| Focused integration project build with `--no-restore -warnaserror -m:1` | PASS, 0 warnings/errors. |
+
+The 22 new cases passed on first execution. No production fix or test weakening was needed. Final independent validation ran against refreshed milestone base `a5f973f3caa2c79a203db735d98d3d78ff33dbb9` plus these tests. All automated code gates passed:
+
+| Final gate | Actual result |
+| --- | --- |
+| Offline restore, warnings-as-errors solution build, format verification | Each exit 0; build 0 warnings/errors. |
+| Full backend regression | 1,447 passed across 15 assemblies; 0 failed/skipped. |
+| Separate XPlat coverage test run | 1,447 passed across 15 assemblies; 0 failed/skipped; 15 distinct Cobertura attachments. No unmeasured percentage claim. |
+| Focused architecture | 21 passed; 0 failed/skipped. |
+| Contract validator | PASS: 30 operations, 179 examples, 12 corruption probes. |
+| Locked frontend install | Exit 0; 254 packages installed, lockfile unchanged. |
+| Frontend typecheck, lint, production build | Each exit 0; lint 0 warnings. |
+| Full frontend tests | 304 passed across 25 files; 0 failed/skipped. |
+| Independent focused QuestionBank tests | 70 unit, 162 integration, 62 frontend passed; 0 failed/skipped. |
+
+Commands are recorded in the scoped plan: solution restore/build/format, `dotnet test QuizArena.sln --no-build -m:1 --verbosity normal`, a separate run with `--collect:"XPlat Code Coverage"`, focused architecture and `node contracts/validate-contracts.mjs`; client `npm ci --no-audit --no-fund`, typecheck, lint, test `-- --run` and build. No source/test fixes or repair cycles were needed. Read-only review passed for draft publication with no actionable findings; independent human approval remains pending. The final PR links that review verdict and the live acceptance checklist. Local raw logs are ignored under `.dispatcher/runs/43-20261104/` and are not committed.
+
+### Live acceptance and final human gate
+
+Current probes of configured provider discovery (`localhost:8080/realms/quizarena/.well-known/openid-configuration`), QuestionBank health (`localhost:5103/health`) and frontend (`localhost:5173`) each timed out after 4 seconds. Docker is unavailable, and the current frontend package has no `test:e2e` script. Signed fixture tokens establish actual JWT pipeline behavior; they are not provider-backed browser acceptance. No new live acceptance is claimed.
+
+Before closure, record these results using the configured live environment without publishing credentials:
+
+- [ ] Sign in through the real provider and generate default/min/max quizzes; inspect public network JSON and rendered UI for answer secrecy.
+- [ ] Exercise invalid count and safe failure/retry/authentication behavior against the real API.
+- [ ] Verify a browser principal cannot access internal answers and the authorized configured Gameplay service client can obtain exactly five snapshots.
+- [ ] Owner inspects scope, persistence, security and actual validation evidence; independent human reviewer approves the draft PR with applicable CI evidence.
+
+Agent-reviewed research/plan and automated checks do not imply human approval. Human signoff remains pending; do not mark #43 Done or close it solely because tests or a draft PR exist.
