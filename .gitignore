@@ -13,3 +13,6 @@
 **/test-results/
 
 .env
+
+# Local run state from scripts/start-milestone3.ps1
+.run/
