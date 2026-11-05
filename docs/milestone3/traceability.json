@@ -3,7 +3,7 @@
   "milestone": "Milestone 3 — Layered Service Development",
   "summary": {
     "issues": 63,
-    "closed": 49,
+    "closed": 54,
     "epic": 1,
     "features": 8,
     "tasks": 54,
@@ -16,7 +16,9 @@
     "openWithMergedPr": [
       49,
       62,
-      65
+      64,
+      65,
+      69
     ]
   },
   "issues": [
@@ -63,11 +65,12 @@
         110,
         112,
         113,
-        116
+        115,
+        116,
+        119,
+        122
       ],
-      "openPrs": [
-        115
-      ],
+      "openPrs": [],
       "approvals": [
         "CarterBeasse",
         "JimRashed",
@@ -185,7 +188,7 @@
       "number": 13,
       "id": "F05",
       "title": "Deliver the independently runnable Gameplay service and connected React views",
-      "state": "OPEN",
+      "state": "CLOSED",
       "assignees": [
         "SuSu-Lisu"
       ],
@@ -235,11 +238,13 @@
       ],
       "parent": 7,
       "mergedPrs": [
-        113
+        113,
+        115,
+        119,
+        121,
+        122
       ],
-      "openPrs": [
-        115
-      ],
+      "openPrs": [],
       "approvals": [
         "SuSu-Lisu"
       ]
@@ -698,7 +703,8 @@
       ],
       "parent": 11,
       "mergedPrs": [
-        116
+        116,
+        120
       ],
       "openPrs": [],
       "approvals": [
@@ -865,11 +871,10 @@
       "mergedPrs": [
         95,
         107,
-        111
-      ],
-      "openPrs": [
+        111,
         118
       ],
+      "openPrs": [],
       "approvals": [
         "SuSu-Lisu"
       ]
@@ -915,16 +920,19 @@
       "number": 55,
       "id": "S05-T06",
       "title": "Complete Gameplay vertical-slice, authorization and regression coverage",
-      "state": "OPEN",
+      "state": "CLOSED",
       "assignees": [
         "SuSu-Lisu"
       ],
       "parent": 13,
-      "mergedPrs": [],
-      "openPrs": [
-        117
+      "mergedPrs": [
+        117,
+        120
       ],
-      "approvals": []
+      "openPrs": [],
+      "approvals": [
+        "CarterBeasse"
+      ]
     },
     {
       "number": 56,
@@ -1007,12 +1015,14 @@
       ],
       "parent": 14,
       "mergedPrs": [
-        94
+        94,
+        121
       ],
       "openPrs": [],
       "approvals": [
         "CarterBeasse",
-        "JimRashed"
+        "JimRashed",
+        "SuSu-Lisu"
       ]
     },
     {
@@ -1042,11 +1052,10 @@
       ],
       "parent": 15,
       "mergedPrs": [
-        113
-      ],
-      "openPrs": [
+        113,
         118
       ],
+      "openPrs": [],
       "approvals": [
         "SuSu-Lisu"
       ]
@@ -1055,16 +1064,18 @@
       "number": 63,
       "id": "D02",
       "title": "Migrate legacy data safely and retire the aggregate host and shared context",
-      "state": "OPEN",
+      "state": "CLOSED",
       "assignees": [
         "CarterBeasse"
       ],
       "parent": 15,
-      "mergedPrs": [],
-      "openPrs": [
+      "mergedPrs": [
         115
       ],
-      "approvals": []
+      "openPrs": [],
+      "approvals": [
+        "SuSu-Lisu"
+      ]
     },
     {
       "number": 64,
@@ -1075,11 +1086,14 @@
         "SuSu-Lisu"
       ],
       "parent": 15,
-      "mergedPrs": [],
-      "openPrs": [
-        118
+      "mergedPrs": [
+        118,
+        121
       ],
-      "approvals": []
+      "openPrs": [],
+      "approvals": [
+        "SuSu-Lisu"
+      ]
     },
     {
       "number": 65,
@@ -1102,14 +1116,18 @@
       "number": 66,
       "id": "D05",
       "title": "Audit issue traceability, acceptance evidence and board completeness",
-      "state": "OPEN",
+      "state": "CLOSED",
       "assignees": [
         "CarterBeasse"
       ],
       "parent": 15,
-      "mergedPrs": [],
+      "mergedPrs": [
+        119
+      ],
       "openPrs": [],
-      "approvals": []
+      "approvals": [
+        "SuSu-Lisu"
+      ]
     },
     {
       "number": 67,
@@ -1121,21 +1139,27 @@
       ],
       "parent": 15,
       "mergedPrs": [],
-      "openPrs": [],
+      "openPrs": [
+        124
+      ],
       "approvals": []
     },
     {
       "number": 68,
       "id": "D07",
       "title": "Merge the retained milestone branch through a reviewed GitHub milestone PR",
-      "state": "OPEN",
+      "state": "CLOSED",
       "assignees": [
         "CarterBeasse"
       ],
       "parent": 15,
-      "mergedPrs": [],
+      "mergedPrs": [
+        122
+      ],
       "openPrs": [],
-      "approvals": []
+      "approvals": [
+        "SuSu-Lisu"
+      ]
     },
     {
       "number": 69,
@@ -1146,9 +1170,13 @@
         "CarterBeasse"
       ],
       "parent": 15,
-      "mergedPrs": [],
+      "mergedPrs": [
+        122
+      ],
       "openPrs": [],
-      "approvals": []
+      "approvals": [
+        "SuSu-Lisu"
+      ]
     }
   ]
 }

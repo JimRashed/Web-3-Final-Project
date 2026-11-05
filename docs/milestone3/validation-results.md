@@ -1,6 +1,6 @@
 # Milestone 3 validation results
 
-These are actual results, recorded on 2026-11-04 against `feature/milestone-3-layered-service-development` at `ae896cf`. The CI workflow `.github/workflows/ci.yml` runs the same backend, architecture, security and frontend gates on every PR.
+These are actual results, recorded on 2026-11-05 against `main` at `0b5580a` (the merge of #123, which carries the whole milestone branch). The CI workflow `.github/workflows/ci.yml` runs the same backend, architecture, security and frontend gates on every PR.
 
 ## Build and static checks
 | Command | Result |
@@ -16,13 +16,14 @@ These are actual results, recorded on 2026-11-04 against `feature/milestone-3-la
 | QuizArena.ArchitectureTests | 21 |
 | Identity unit / integration | 39 / 135 |
 | Statistics unit / integration | 49 / 207 |
-| QuestionBank unit / integration | 70 / 140 |
-| Lobby unit / integration | 174 / 277 |
-| Gameplay unit / integration | 16 / 51 |
+| QuestionBank unit / integration | 70 / 162 |
+| Lobby unit / integration | 174 / 285 |
+| Gameplay unit / integration | 65 / 97 |
 | Notification unit / integration | 29 / 105 |
-| Legacy QuizArena unit / integration (historical aggregate host) | 24 / 11 |
-| **Backend total** | **1,348 passed, 0 failed, 0 skipped (15 assemblies)** |
-| React client (19 files) | **225 passed** |
+| **Backend total** | **1,438 passed, 0 failed, 0 skipped (13 assemblies)** |
+| React client (25 files) | **305 passed** |
+
+The legacy aggregate-host test projects were removed with the host in D02 (#115).
 
 The relational tests run against a real SQL Server (LocalDB locally, a SQL Server 2022 container in CI), and each test class gets its own uniquely named database.
 
@@ -42,15 +43,25 @@ The relational tests run against a real SQL Server (LocalDB locally, a SQL Serve
 |---|---|---|
 | Identity + Statistics: sign-in, save the profile, Gameplay machine client records results, statistics and leaderboard render | 9/9 | PR #102 |
 | QuestionBank: previews with no `correctAnswer` anywhere, count validation, 200/400/401, player token refused on the internal route (403) | 9/9 | PR #106 review |
+| **D03 browser journey** (`tests/e2e`, `npm run journey:ui`): two players through the React screens, from lobby to the end screens, with the guest opening the match from their delivered event, the result in both players' Statistics and no 5xx | **11/11** on `main` | PR #121 |
+| **D03 API journey** (`npm run journey:api`): the same game with simultaneous answers, ownership checks, and outbox delivery to Statistics and Notification | **10/10** on `main` | PR #118 |
+| **D03 delivery retry** (`npm run journey:retry`): Statistics down when the match finishes; results stay Pending with retries; delivered after the restart | **8/8** on `main` | PR #121 |
+| D02 cutover rehearsal (`scripts/migrate-legacy-data/Invoke-Rehearsal.ps1`) | 34/34 | PR #115 |
 
-## Pending at the time of writing
+## Defects found by live testing and review (all merged with fixes)
+| Area | Defect | Fix |
+|---|---|---|
+| Gameplay #95/#96/#100 | a repeated start returned the match to non-hosts; simultaneous starts and answers returned 500; the match page was unreachable and showed the guest the host's score | #107, #108, #109 |
+| Gameplay outbox #111 | the machine-token options bound the wrong config keys, and the OAuth response was read as camelCase, so **every match start returned 503** | #118 |
+| Client | the guest had no in-app way to reach the match (`/notifications` placeholder, no link) | #121 |
+
+## Still open
 | Item | Status |
 |---|---|
-| D03 #64: full secured two-player journey and delivery retries | not yet run. Depends on the Gameplay fixes below. Add the results here when complete. |
-| Gameplay #95/#96/#100 | review found a repeated-start authorization gap, 500s on simultaneous start and answer, and an unreachable or incorrect match page. Fixes are proposed in #107, #108 and #109, each with tests that fail before the fix. |
 | Notification `GET /events` | merged without the contract's paging and `userId` 403 rule (review on #90). Follow-up needed. |
-| Gameplay outbox and redelivery (ADR-07) | planned next slice of #52 |
-
+| Outbox lease fencing | P3 from the #111 review: completion writes don't check lease ownership. Receivers are idempotent, so the impact is limited. |
+| D01 #62 | a teammate's clean-checkout run of the runbook is still to be recorded |
+| D06 #67 | final read-only review and signoff |
 
 ---
 

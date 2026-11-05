@@ -79,6 +79,8 @@ They were weakest at the parts of a specification that are easy to skim. Teammat
 | #95/#96 Gameplay application/endpoints | a repeated start returned the match to non-hosts; simultaneous starts and simultaneous answers returned 500 | fixes proposed in #107/#108 |
 | #100 Match page | page unreachable from the Lobby, guest saw the host's score as "You", a second click left an error page with no recovery | fixes proposed in #109 |
 | #90 Notification endpoints | `GET /events` lacked the contract's paging and `userId` 403 rule | merged; open follow-up |
+| #111 Gameplay outbox (merged without review) | the token options bound the wrong config keys, and the OAuth response was read as camelCase, so every match start returned 503. Found only by a live two-player run. | fixed in #118 |
+| Client (guest flow) | the guest had no in-app way to reach the match | fixed in #121 |
 | #97 reflection draft | claimed three human gates per task, which we did not run | draft withdrawn; this report replaces it |
 
 The pattern: agents produce plausible code that passes the tests they wrote themselves. A reviewer reading the acceptance criteria and reasoning about **two requests at once** found what the tests did not.
@@ -96,6 +98,6 @@ What we would change:
 
 - **Submission through GitHub, not Azure.** The milestone is delivered as a reviewed GitHub milestone PR with the issue board, CI runs and PR history as evidence. Everything runs locally (LocalDB or SQL Server, and Keycloak in Docker), and no cloud deployment was in scope.
 - A full page reload signs the user out, because tokens are held only in memory. This is a deliberate trade-off. A silent `check-sso` is the planned improvement.
-- The Gameplay outbox and redelivery (ADR-07), the end-to-end two-player journey (D03 #64) and the Gameplay and Notification follow-ups above are still open at the time of writing. [Validation results](validation-results.md) records their status.
+- The Gameplay outbox and redelivery (ADR-07) shipped in #111. Live testing found that it could never obtain a machine token, fixed in #118. The end-to-end journeys (D03) now pass on `main`: browser 11/11, API 10/10 and delivery retry 8/8. Still open: the Notification `GET /events` paging follow-up and an outbox lease-fencing improvement. See [validation results](validation-results.md).
 
 **Links:** [issues](https://github.com/JimRashed/Web-3-Final-Project/issues?q=milestone%3A%22Milestone+3+%E2%80%94+Layered+Service+Development%22), [pull requests](https://github.com/JimRashed/Web-3-Final-Project/pulls?q=is%3Apr), [project board](https://github.com/users/CarterBeasse/projects/1) (private to the owner), [CI workflow](../../.github/workflows/ci.yml), plans in [`specs/milestone3/`](../../specs/milestone3/).

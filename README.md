@@ -14,7 +14,8 @@ A two-player quiz game built as six independently runnable, layered ASP.NET Core
 | `infra/` | Local Keycloak (Docker Compose) and the realm import |
 | `tests/` | Unit, integration, security and architecture tests per service |
 | `specs/` | Per-issue plans |
-| `src/QuizArena.{Api,Data,Domain}` | Milestone 2 aggregate host, kept for the legacy migration (D02) |
+| `scripts/` | Start/stop scripts, the legacy data cutover tool and the traceability generator |
+| `tests/e2e` | Live two-player journeys (browser, API, delivery retry) |
 
 ## Run locally
 
