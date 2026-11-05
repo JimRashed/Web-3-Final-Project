@@ -1,0 +1,1089 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuizArena Lobby API",
+    "version": "1.0.0",
+    "description": "Lobby service REST contract. See docs/milestone3/api-contracts.md for lifecycle and authorization rules. JSON-compatible YAML; no credentials in examples."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5104",
+      "description": "Development only; configure HTTPS for deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "lobby"
+    }
+  ],
+  "paths": {
+    "/api/lobbies": {
+      "post": {
+        "operationId": "createLobby",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "createLobby",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "lobbies.write"
+            ]
+          }
+        ],
+        "x-policy": "lobbies.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-lobby",
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                },
+                "example": {
+                  "lobbyId": "26c94137-d660-4397-a731-050c2bb07003",
+                  "joinCode": "ABC123",
+                  "status": "Open",
+                  "memberCount": 1,
+                  "isMember": true,
+                  "isHost": true
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "Relative URL of created resource",
+                "schema": {
+                  "type": "string"
+                },
+                "example": "/api/lobbies/ABC123"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              },
+              "example": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{joinCode}": {
+      "get": {
+        "operationId": "getLobbyPreview",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "getLobbyPreview",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "lobbies.read"
+            ]
+          }
+        ],
+        "x-policy": "lobbies.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-lobby",
+        "x-ownership": "none",
+        "parameters": [
+          {
+            "name": "joinCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JoinCode"
+            },
+            "example": "ABC123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                },
+                "example": {
+                  "lobbyId": "26c94137-d660-4397-a731-050c2bb07003",
+                  "joinCode": "ABC123",
+                  "status": "Open",
+                  "memberCount": 1,
+                  "isMember": false,
+                  "isHost": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{joinCode}/join": {
+      "post": {
+        "operationId": "joinLobby",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "joinLobby",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "lobbies.write"
+            ]
+          }
+        ],
+        "x-policy": "lobbies.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-lobby",
+        "x-ownership": "none",
+        "parameters": [
+          {
+            "name": "joinCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JoinCode"
+            },
+            "example": "ABC123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                },
+                "example": {
+                  "lobbyId": "26c94137-d660-4397-a731-050c2bb07003",
+                  "joinCode": "ABC123",
+                  "status": "Open",
+                  "memberCount": 2,
+                  "isMember": true,
+                  "isHost": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              },
+              "example": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{joinCode}/lock": {
+      "post": {
+        "operationId": "lockLobby",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "lockLobby",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "lobbies.write"
+            ]
+          }
+        ],
+        "x-policy": "lobbies.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-lobby",
+        "x-ownership": "caller is lobby host",
+        "parameters": [
+          {
+            "name": "joinCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JoinCode"
+            },
+            "example": "ABC123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                },
+                "example": {
+                  "lobbyId": "26c94137-d660-4397-a731-050c2bb07003",
+                  "joinCode": "ABC123",
+                  "status": "Locked",
+                  "memberCount": 2,
+                  "isMember": true,
+                  "isHost": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/lobbies/{joinCode}": {
+      "get": {
+        "operationId": "verifyLobby",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "verifyLobby",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "lobbies.verify"
+            ]
+          }
+        ],
+        "x-policy": "lobbies.verify",
+        "x-actor": "machine",
+        "x-audience": "quizarena-lobby",
+        "x-ownership": "none",
+        "parameters": [
+          {
+            "name": "joinCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JoinCode"
+            },
+            "example": "ABC123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provision"
+                },
+                "example": {
+                  "lobbyId": "26c94137-d660-4397-a731-050c2bb07003",
+                  "joinCode": "ABC123",
+                  "status": "Locked",
+                  "hostUserId": "player-a",
+                  "playerIds": [
+                    "player-a",
+                    "player-b"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "Resource not found",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "lobbyHealth",
+        "tags": [
+          "lobby"
+        ],
+        "summary": "lobbyHealth",
+        "description": "Liveness only; no credentials, topology, connection strings or dependency details.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "lobbies.read": "lobbies.read",
+              "lobbies.write": "lobbies.write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "lobbies.verify": "lobbies.verify"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Subject": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "\\S"
+      },
+      "MatchId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "\\S"
+      },
+      "JoinCode": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{6}$",
+        "minLength": 6,
+        "maxLength": 6
+      },
+      "Lobby": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lobbyId",
+          "joinCode",
+          "status",
+          "memberCount",
+          "isMember",
+          "isHost"
+        ],
+        "properties": {
+          "lobbyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "joinCode": {
+            "$ref": "#/components/schemas/JoinCode"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Locked"
+            ]
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2
+          },
+          "isMember": {
+            "type": "boolean"
+          },
+          "isHost": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EmptyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "Provision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lobbyId",
+          "joinCode",
+          "status",
+          "hostUserId",
+          "playerIds"
+        ],
+        "properties": {
+          "lobbyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "joinCode": {
+            "$ref": "#/components/schemas/JoinCode"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Locked"
+            ]
+          },
+          "hostUserId": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "playerIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Subject"
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  }
+}

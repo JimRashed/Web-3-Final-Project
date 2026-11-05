@@ -51,10 +51,12 @@
 
 ### Agent Workflow: R-PIV Protocol
 Whenever assigned a task or GitHub issue:
-1. **Research:** Inspect existing code, verify dependencies, and restate requirements. Do not write code yet.
-2. **Plan:** Produce a clear, file-by-file implementation plan and wait for confirmation. Save scoped follow-up plans in separate, clearly named files under specs.
-3. **Implement:** Execute the plan iteratively in small, verifiable check-ins.
-4. **Validate:** Execute the repository test suite and verify edge cases before concluding.
+1. **Research:** Inspect the issue, existing code, dependencies and constraints; return a verified context brief.
+2. **Plan:** Review the research and save a complete file-by-file plan at `specs/issue-<number>-plan.md`, with acceptance coverage and validation.
+3. **Implement and Test:** Execute the plan in small increments with meaningful tests in existing projects. Descriptive test names distinguish features; a dispatcher-specific folder is unnecessary.
+4. **Validate and Review:** Execute real checks, then read-only code review. Dispatcher may return actionable failures to Implement for at most two additional repair cycles by default.
+5. **Automatic Handoffs:** A single Dispatcher invocation runs the complete sequence. No intermediate CONFIRM/APPROVE or separate user call is required. Genuine missing requirements, unsafe actions, unavailable permissions/tools or provider limits still block honestly.
+6. **Final Human Gate:** Only Dispatcher commits/pushes issue-specific changes and opens a draft PR after checks/review pass. Include issue link, plan, actual validation, review findings and pending human signoff. An independent human reviews before merge; agents never self-approve or merge.
 
 ### Change checklist
 - [ ] Code compiles without warnings (`dotnet build`).
@@ -63,3 +65,6 @@ Whenever assigned a task or GitHub issue:
 - [ ] No EF Core entities leaked into API contracts (verified DTO usage).
 - [ ] Cancellation tokens are accepted and forwarded in async workflows.
 - [ ] Git diff inspected to verify no debug code, test credentials, or unwanted files were introduced.
+
+### Dispatcher entry point
+Use `.github/agents/dispatcher.agent.md` and `.github/skills/dispatcher/SKILL.md`. Dispatcher is a custom agent coordinating the host's actual subagent tool, not an executable program. Worker profiles use exact names prime, plan, implement, testing, validate and code-review. Stage workers return to Dispatcher without publishing Git/GitHub changes. Preserve unrelated local changes, use isolated issue branches/worktrees, and keep local `.dispatcher/` reports untracked. Dry-run is read-only. For dispatched work, this final-only human review policy supersedes intermediate-gate wording in historical plans/milestone backlog documents; other explicit scope/security constraints continue to apply.

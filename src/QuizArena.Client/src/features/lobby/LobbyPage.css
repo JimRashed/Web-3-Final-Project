@@ -1,0 +1,11 @@
+.lobby-entry { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+.lobby-entry > div, .lobby-entry form, .lobby-room { padding: 1.5rem; border: 1px solid var(--border, #d9e2e1); border-radius: 1rem; background: var(--surface, #fff); }
+.lobby-entry h2, .lobby-room h2 { margin-top: 0; }
+.lobby-entry .button { margin-top: 1rem; }
+.lobby-code { font: 700 1.6rem monospace; letter-spacing: .16em; user-select: all; overflow-wrap: anywhere; }
+.lobby-room dl { display: flex; flex-wrap: wrap; gap: 2rem; margin: 1.5rem 0; }
+.lobby-room dt { font-size: .85rem; color: #526563; }
+.lobby-room dd { margin: .4rem 0 0; font-weight: 600; }
+.lobby-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.lobby-page button:disabled { cursor: not-allowed; opacity: .55; }
+@media (max-width: 680px) { .lobby-entry { grid-template-columns: 1fr; } }

@@ -1,0 +1,633 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuizArena QuestionBank API",
+    "version": "1.0.0",
+    "description": "Implemented QuestionBank surface matching P02 in docs/milestone3/api-contracts.md. This full document is backend-only: the answer-bearing internal operation is excluded from runtime API Explorer and must never be served in browser Swagger. JSON-compatible YAML; no credentials in examples."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5103",
+      "description": "Development only; configure HTTPS for deployments"
+    }
+  ],
+  "tags": [
+    {
+      "name": "questionbank"
+    }
+  ],
+  "paths": {
+    "/api/questions/generate": {
+      "get": {
+        "operationId": "generateQuestions",
+        "tags": [
+          "questionbank"
+        ],
+        "summary": "generateQuestions",
+        "description": "See the normative lifecycle, authorization and error rules in docs/milestone3/api-contracts.md.",
+        "security": [
+          {
+            "oauth2": [
+              "questions.read"
+            ]
+          }
+        ],
+        "x-policy": "questions.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-questionbank",
+        "x-ownership": "none",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "example": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Question"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07002",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/question-sets": {
+      "post": {
+        "operationId": "createQuestionSnapshot",
+        "tags": [
+          "questionbank"
+        ],
+        "summary": "createQuestionSnapshot",
+        "description": "Select five distinct valid questions without replacement; immutable answer-bearing snapshot. Insufficient valid catalog409. Never expose this route or schemas in browser clients/Swagger.",
+        "security": [
+          {
+            "oauth2": [
+              "questions.play"
+            ]
+          }
+        ],
+        "x-policy": "questions.play",
+        "x-actor": "machine",
+        "x-audience": "quizarena-questionbank",
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionSnapshot"
+                  },
+                  "minItems": 5,
+                  "maxItems": 5
+                },
+                "example": [
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07002",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ],
+                    "correctAnswer": "Mars"
+                  },
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07003",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ],
+                    "correctAnswer": "Mars"
+                  },
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07004",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ],
+                    "correctAnswer": "Mars"
+                  },
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07005",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ],
+                    "correctAnswer": "Mars"
+                  },
+                  {
+                    "id": "26c94137-d660-4397-a731-050c2bb07006",
+                    "prompt": "Which planet is known as the Red Planet?",
+                    "category": "Science",
+                    "options": [
+                      "Mars",
+                      "Venus",
+                      "Earth",
+                      "Jupiter"
+                    ],
+                    "correctAnswer": "Mars"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Invalid input",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting duplicate or state",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "Conflicting duplicate or state",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Dependency unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionSetRequest"
+              },
+              "example": {
+                "count": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "questionbankHealth",
+        "tags": [
+          "questionbank"
+        ],
+        "summary": "questionbankHealth",
+        "description": "Liveness only; no credentials, topology, connection strings or dependency details.",
+        "security": [],
+        "x-policy": "public",
+        "x-actor": "public",
+        "x-audience": null,
+        "x-ownership": "none",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "questions.read": "questions.read"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/quizarena/protocol/openid-connect/token",
+            "scopes": {
+              "questions.play": "questions.play"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Subject": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "\\S"
+      },
+      "MatchId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "\\S"
+      },
+      "JoinCode": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{6}$",
+        "minLength": 6,
+        "maxLength": 6
+      },
+      "Question": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "prompt",
+          "category",
+          "options"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300,
+              "pattern": "\\S"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "uniqueItems": true
+          }
+        }
+      },
+      "QuestionSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "prompt",
+          "category",
+          "options",
+          "correctAnswer"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300,
+              "pattern": "\\S"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "uniqueItems": true
+          },
+          "correctAnswer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "QuestionSetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "enum": [
+              5
+            ]
+          }
+        }
+      }
+    }
+  }
+}

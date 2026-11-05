@@ -1,5 +1,5 @@
 ---
-name: testing-guidelines
+name: testing
 description: Authoritative standards, conventions, and execution patterns for writing and verifying unit and integration tests using xUnit, FluentAssertions, NSubstitute/Moq, and WebApplicationFactory.
 ---
 
@@ -13,9 +13,9 @@ Apply these rules whenever authoring, updating, or reviewing unit and integratio
 
 * **Runner & Framework:** xUnit (`[Fact]`, `[Theory]`, `[InlineData]`, `[MemberData]`).
 * **Assertions:** FluentAssertions (`result.Should().Be(...)`, `action.Should().ThrowAsync<T>()`).
-* **Mocking:** NSubstitute (preferred) or Moq.
+* **Mocking:** Moq, matching the existing repository tests; NSubstitute examples below are illustrative.
 * **Integration Host:** `Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>`.
-* **Database Isolation:** EF Core In-Memory provider with clean seeding per fixture.
+* **Database Isolation:** Use isolated SQL Server LocalDB for the existing relational integration suite; in-memory substitutes do not establish relational constraints.
 
 ---
 
@@ -115,3 +115,8 @@ public class UserServiceTests
         await _userRepository.DidNotReceive().AddAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
     }
 }
+
+```
+
+## Dispatcher handoff and placement
+Use the existing unit/integration projects alongside related tests, distinguished by descriptive class/method names. Do not create a dispatcher-specific test folder. Baseline tests run before edits. Testing workers modify tests only and return actual results/coverage gaps to Dispatcher; Implement owns production fixes. No intermediate human approval is required. Pure agent/instruction edits use proportionate static/manual checks rather than synthetic tests of Markdown text.

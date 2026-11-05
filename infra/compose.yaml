@@ -1,0 +1,28 @@
+# Local development infrastructure for Milestone 3.
+# Run from the repository root:
+#   docker compose --env-file .env -f infra/compose.yaml up -d
+# Development only: HTTP, dev-file database and start-dev are not production settings.
+name: quizarena
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:?set KC_BOOTSTRAP_ADMIN_USERNAME in .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?set KC_BOOTSTRAP_ADMIN_PASSWORD in .env}
+      # Substituted into infra/oidc/quizarena-realm.json on first import only.
+      QUIZARENA_GAMEPLAY_CLIENT_SECRET: ${QUIZARENA_GAMEPLAY_CLIENT_SECRET:?set QUIZARENA_GAMEPLAY_CLIENT_SECRET in .env}
+      # Pins the issuer to http://localhost:8080/realms/quizarena.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HTTP_PORT: "8080"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./oidc:/opt/keycloak/data/import:ro
+
+volumes:
+  keycloak-data:

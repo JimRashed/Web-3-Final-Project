@@ -1,23 +1,20 @@
 ---
 name: plan
-description: Generates a structured, step-by-step implementation and testing plan based on the primed issue and saved research.
+description: Produce an issue-scoped file-by-file plan and hand it automatically to implementation.
 ---
 
-# Implementation Planning Workflow
+# Implementation Planning
+Review the Prime brief against the issue. Verify that every acceptance criterion is addressed and that the approach respects repository boundaries. Resolve routine choices from evidence; report genuine scope-changing gaps as BLOCKED.
 
-Use this skill to convert the primed problem understanding into a formal execution plan.
+Save the plan to `specs/issue-<number>-plan.md`. Preserve historical `specs/implementation-plan.md`; use a supplied scoped plan path when explicitly provided.
 
-## 1. Required Structure
-Every plan must contain the following sections:
-1. **Summary & Architecture:** High-level overview of the proposed solution.
-2. **File Inventory:** Explicit list of files to create, modify, or delete across production and test projects.
-3. **Step-by-Step Task Sequence:** Small, logical increments. Every step must identify the specific files touched and the exact expected behavior.
-4. **Testing Strategy:**
-   - **Unit Tests:** Specific classes and methods to test using xUnit, FluentAssertions, and mocks (following the Arrange-Act-Assert pattern).
-   - **Integration Tests:** Scenarios using `WebApplicationFactory` covering happy paths, 400 Bad Request validations, and 404/409 error responses.
-5. **Validation Commands:** Exact CLI commands to verify builds and test execution.
+Required sections:
+1. **Summary and Architecture:** issue link, intended behavior and layer boundaries.
+2. **File Inventory:** exact files to create/modify/delete across production and existing test projects.
+3. **Ordered Steps:** goal, files, method/class behavior and verifiable completion check for each step.
+4. **Acceptance Coverage:** map every criterion to one or more steps; fix omissions before handoff.
+5. **Testing Strategy:** meaningful xUnit/FluentAssertions/Moq unit scenarios and HTTP/persistence integration scenarios as applicable. Use existing test locations and descriptive names; no dispatcher-specific test folder. Instruction-only changes use static/manual checks.
+6. **Validation Commands:** exact build/format/test/frontend commands and required environment; never invent a historical test count as current evidence.
+7. **Risks and Out of Scope:** unresolved blockers, constraints and excluded behavior.
 
-## 2. Output Artifact
-Save the completed plan to `specs/implementation-plan.md` (or output it cleanly in markdown for review). 
-
-**Rule:** Do not generate implementation code. Pause and wait for human review and approval.
+Do not write implementation code in this stage. Return PASS with the scoped plan path or BLOCKED with evidence. In dispatcher mode, the Dispatcher reviews plan completeness and proceeds directly to Implement; no intermediate human approval or separate user invocation. Record it as agent-reviewed, never human-approved.

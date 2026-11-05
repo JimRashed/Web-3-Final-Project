@@ -3,4 +3,16 @@
 **/obj/
 **/TestResults/
 **/coverage.*
+.dispatcher/
+**/node_modules/
+**/dist/
+**/coverage/
+**/.env.local
+**/.env.*.local
+**/playwright-report/
+**/test-results/
 
+.env
+
+# Local run state from scripts/start-milestone3.ps1
+.run/

@@ -45,10 +45,10 @@ If any test run fails or throws an unhandled exception:
 1. **Root Cause Analysis:**
    - Determine whether the failure originates from production logic, incorrect test assertions, or environment misconfiguration (such as in-memory context state leakage).
 2. **Minimal Correction:**
-   - Apply the targeted, minimal fix required to resolve the failure.
+   - Report the targeted correction to Dispatcher for Implement; Validate must not edit production code or tests.
    - **Strict Rule:** Never disable, skip (`[Fact(Skip = "...")]`), or delete an existing test to force a pass.
 3. **Re-Verification:**
-   - Re-run the full test command (`dotnet test`) to verify the fix does not introduce regressions elsewhere.
+   - After Implement/Testing repairs, Dispatcher invokes Validate again to re-run the required checks and verify regressions. Share the Dispatcher's bounded repair budget; do not loop indefinitely.
 
 ---
 
@@ -75,3 +75,6 @@ Upon test completion, output a structured Markdown report in the following forma
 
 #### PR Readiness Verdict
 **Ready for Pull Request** / **Changes Required**
+
+## Dispatcher result
+Return PASS/FAIL/BLOCKED with exact commands, exit codes, warnings, actual discovered/passed/failed/skipped counts and failed acceptance criteria. Missing environment/access is BLOCKED; never claim success from historical results or treat an agent promise as executed validation. Match checks to the issue (including static/manual verification for instruction-only changes). Return evidence directly to Dispatcher for repair or read-only Code Review without a human gate. Human signoff remains pending until the final PR review.
