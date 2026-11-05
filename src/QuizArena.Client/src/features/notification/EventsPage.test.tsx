@@ -26,6 +26,16 @@ describe('Events page', () => {
     expect(screen.getByText('Match finished')).toBeVisible();
   });
 
+  it('links each event to its match inside the app, encoding opaque ids', async () => {
+    await mount([
+      { eventId: '26c94137-d660-4397-a731-050c2bb07004', type: 'MATCH_CREATED', userId: 'player-a', payload: { matchId: 'a/b c' }, createdAt: '2026-11-04T12:00:00Z' },
+      { eventId: '36c94137-d660-4397-a731-050c2bb07005', type: 'MATCH_COMPLETED', userId: 'player-a', payload: { matchId: 'a/b c', winnerUserId: 'player-a', draw: false }, createdAt: '2026-11-04T12:05:00Z' },
+    ]);
+
+    expect(await screen.findByRole('link', { name: 'Open match' })).toHaveAttribute('href', '/matches?matchId=a%2Fb%20c');
+    expect(screen.getByRole('link', { name: 'View result' })).toHaveAttribute('href', '/matches?matchId=a%2Fb%20c');
+  });
+
   it('shows the empty state when the player has no events', async () => {
     await mount([]);
 

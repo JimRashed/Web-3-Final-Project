@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createClients } from '../../api/clients';
 import { createNotificationApi, type NotificationEvent } from '../../api/notification';
 import { useSession } from '../../auth/AuthProvider';
@@ -44,6 +45,8 @@ function SessionEvents({ session }: { session: Session }) {
       <strong>{event.type === 'MATCH_CREATED' ? 'Match started' : 'Match finished'}</strong>
       <span>{event.matchId}</span>
       <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString()}</time>
+      {/* In-app navigation keeps the in-memory session; a full page load would sign the player out. */}
+      <Link to={`/matches?matchId=${encodeURIComponent(event.matchId)}`}>{event.type === 'MATCH_CREATED' ? 'Open match' : 'View result'}</Link>
     </li>)}
   </ul>;
 }

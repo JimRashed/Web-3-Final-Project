@@ -110,8 +110,10 @@ describe('application shell', () => {
     expect(writeText).toHaveBeenCalledWith(href);
     expect(new URL(writeText.mock.calls[0][0] as string).searchParams.get('matchId')).toBe(matchId);
   });
-  it('uses the existing Events placeholder for the documented notifications alias', async () => {
+  it('renders the real Events page for the notifications alias the Lobby links to', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(Response.json([])));
     await mount('/notifications', true);
     expect(screen.getByRole('heading', { level: 1, name: 'Events' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'You’re all caught up' })).toBeVisible();
   });
 });
