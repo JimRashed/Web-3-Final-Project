@@ -18,6 +18,6 @@ public interface IEventRepository
     /// </summary>
     Task<Event> AddAsync(Event candidate, CancellationToken cancellationToken);
 
-    /// <summary>Events for one recipient, newest first.</summary>
-    Task<IReadOnlyList<Event>> GetByUserAsync(string issuer, string userId, CancellationToken cancellationToken);
+    /// <summary>One page of a recipient's events: newest first, then event id ascending.</summary>
+    Task<IReadOnlyList<Event>> GetByUserAsync(string issuer, string userId, int page, int pageSize, CancellationToken cancellationToken);
 }
