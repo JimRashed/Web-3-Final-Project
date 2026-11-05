@@ -19,6 +19,44 @@ describe('OIDC session', () => {
     expect(adapter.login).toHaveBeenCalledOnce();
     expect(adapter.login).toHaveBeenCalledWith({ redirectUri: 'http://localhost:5173/auth/callback', scope: userScopes });
   });
+  it('restores a shared match once after a new page completes the registered callback', async () => {
+    const matchId = '//elsewhere.example/path?extra=1#fragment';
+    const previousUrl = window.location.href;
+    try {
+      window.history.replaceState(null, '', `/matches?${new URLSearchParams({ matchId })}`);
+      const { session, adapter } = await sessionDouble(false);
+      await session.login();
+      expect(adapter.login).toHaveBeenCalledWith({ redirectUri: 'http://localhost:5173/auth/callback', scope: userScopes });
+      expect(session.completeLoginRedirect()).toBe('/');
+
+      window.history.replaceState(null, '', '/auth/callback');
+      const { session: callback } = await sessionDouble();
+      const destination = new URL(callback.completeLoginRedirect(), window.location.origin);
+      expect(destination.origin).toBe(window.location.origin);
+      expect(destination.pathname).toBe('/matches');
+      expect(destination.searchParams.get('matchId')).toBe(matchId);
+      expect(callback.completeLoginRedirect()).toBe('/');
+    } finally {
+      window.history.replaceState(null, '', previousUrl);
+      window.sessionStorage.removeItem('quizarena.login.matchId');
+    }
+  });
+  it('clears an abandoned match destination when sign-in starts from the overview', async () => {
+    const previousUrl = window.location.href;
+    try {
+      const { session } = await sessionDouble(false);
+      window.history.replaceState(null, '', '/matches?matchId=abandoned');
+      await session.login();
+      window.history.replaceState(null, '', '/');
+      await session.login();
+
+      const { session: callback } = await sessionDouble();
+      expect(callback.completeLoginRedirect()).toBe('/');
+    } finally {
+      window.history.replaceState(null, '', previousUrl);
+      window.sessionStorage.removeItem('quizarena.login.matchId');
+    }
+  });
   it('renders a safe unavailable state on callback or provider initialization failure', async () => {
     const adapter = adapterDouble();
     vi.mocked(adapter.init).mockRejectedValue(new Error('unsafe provider detail'));
