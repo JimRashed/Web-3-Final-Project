@@ -11,6 +11,8 @@ public sealed class GameplayDbContext(DbContextOptions<GameplayDbContext> option
 {
     public DbSet<MatchRecord> Matches => Set<MatchRecord>();
 
+    public DbSet<DeliveryRecord> Deliveries => Set<DeliveryRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GameplayDbContext).Assembly);

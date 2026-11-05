@@ -17,6 +17,14 @@ public interface IMatchRepository
     /// </summary>
     Task<Match?> FindByLobbyAsync(string lobbyId, CancellationToken cancellationToken);
 
-    /// <summary>Inserts a new match or replaces the stored state of an existing one.</summary>
-    Task SaveAsync(Match match, CancellationToken cancellationToken);
+    /// <summary>
+    /// Inserts or replaces the match and, in the same transaction, enqueues the outbound deliveries.
+    /// The two must commit together: a stored match without its creation deliveries (or a delivery
+    /// for a match that was rolled back) is never valid.
+    /// </summary>
+    Task SaveAsync(Match match, IReadOnlyList<MatchDelivery> deliveries, CancellationToken cancellationToken);
+
+    /// <summary>Saves the match without enqueueing deliveries (reads and mid-match answer updates).</summary>
+    Task SaveAsync(Match match, CancellationToken cancellationToken) =>
+        SaveAsync(match, [], cancellationToken);
 }

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using QuizArena.Gameplay.Data.Context;
+using QuizArena.Gameplay.Data.Enums;
 using QuizArena.Gameplay.Data.Records;
 using QuizArena.Gameplay.Domain.Entities;
 using QuizArena.Gameplay.Domain.Exceptions;
@@ -36,9 +37,14 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         return record is null ? null : ToDomain(record);
     }
 
-    public async Task SaveAsync(Match match, CancellationToken cancellationToken)
+    /// <summary>Saves the match alone; the application service uses the overload with deliveries.</summary>
+    public Task SaveAsync(Match match, CancellationToken cancellationToken) =>
+        SaveAsync(match, [], cancellationToken);
+
+    public async Task SaveAsync(Match match, IReadOnlyList<MatchDelivery> deliveries, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(deliveries);
 
         var record = await context.Matches
             .SingleOrDefaultAsync(stored => stored.MatchId == match.MatchId, cancellationToken);
@@ -52,6 +58,11 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         {
             context.Matches.Add(record);
         }
+
+        // The outbox rows ride the same SaveChanges round trip, so the match and its announcements
+        // commit or roll back together. No broker and no distributed transaction: the stored row is
+        // the message until the worker delivers it.
+        var pending = Enqueue(deliveries);
 
         try
         {
@@ -68,7 +79,13 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
         }
         catch (DbUpdateException exception) when (IsDuplicateKey(exception))
         {
-            // A concurrent request inserted the same match first: reload and apply on top.
+            // A concurrent request inserted the same match first: reload and apply on top. Its own
+            // transaction already enqueued the deliveries, so this one must not add them again.
+            foreach (var row in pending)
+            {
+                context.Entry(row).State = EntityState.Detached;
+            }
+
             context.Entry(record).State = EntityState.Detached;
             var winner = await context.Matches
                 .SingleOrDefaultAsync(stored => stored.MatchId == match.MatchId, cancellationToken);
@@ -81,6 +98,33 @@ public sealed class MatchRepository(GameplayDbContext context) : IMatchRepositor
             Apply(match, winner);
             await context.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private List<DeliveryRecord> Enqueue(IReadOnlyList<MatchDelivery> deliveries)
+    {
+        var now = DateTime.UtcNow;
+        var pending = new List<DeliveryRecord>(deliveries.Count);
+
+        foreach (var delivery in deliveries)
+        {
+            var row = new DeliveryRecord
+            {
+                Id = Guid.NewGuid(),
+                Destination = delivery.Destination,
+                Operation = delivery.Operation,
+                PayloadJson = delivery.PayloadJson,
+                IdempotencyKey = delivery.IdempotencyKey,
+                Status = DeliveryStatus.Pending,
+                AttemptCount = 0,
+                NextAttemptAt = now,
+                CreatedAt = now,
+            };
+
+            pending.Add(row);
+            context.Deliveries.Add(row);
+        }
+
+        return pending;
     }
 
     private static void Apply(Match match, MatchRecord record)
