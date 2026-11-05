@@ -78,6 +78,19 @@ Each API reads `appsettings.Development.json`, and any value can be overridden w
 
 The client's service URLs and OIDC settings are `VITE_*` variables. See [frontend setup](frontend-setup.md#public-configuration). The local Node/Vite server only serves the client's assets and has no API of its own. The Gameplay machine-client secret lives only in `.env`, and Keycloak reads it on first import (see [authentication](authentication.md#local-setup)).
 
+## End-to-end journeys (D03)
+
+With the stack running (`./scripts/start-milestone3.ps1 -ProvisionUsers` once) and Microsoft Edge installed:
+
+```powershell
+cd tests/e2e; npm ci
+npm run journey:ui     # two players through the React screens
+npm run journey:api    # the same game through the APIs with real Keycloak tokens
+npm run journey:retry  # Statistics down while the match finishes, then back: the outbox must redeliver
+```
+
+The scripts sign in as `player-a` (host) and `player-b` (guest) using `QUIZARENA_DEMO_PASSWORD` from `.env` and never print it. `journey:retry` stops and restarts the Statistics API itself and updates `.run/pids.json`, so `stop-milestone3.ps1` still stops it.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -103,5 +116,7 @@ These runs were on 2026-11-04 (Windows 11, LocalDB 17.0, Docker 29.1, Node 22.20
 | `stop-milestone3.ps1` | stopped all 7 processes, ports 5101–5106 and 5173 freed |
 | Stop everything including Keycloak, then start again | row counts identical before and after: results 2, profiles 1, questions 5 (data preserved, no reset) |
 | `-Services Identity -SkipFrontend` | only 5101 listening, Identity `ok` (services start independently) |
+| `npm run journey:ui` (browser, both players) | sign-in through Keycloak; lobby create, join by code, both see 2 of 2, guest's host controls disabled; host lock and start; **guest opens the match from the delivered `MATCH_CREATED` event in-app, still signed in**; each player sees their own score; 5 rounds by clicking answers; end screens "You won"/"You lost"; both see the match in Statistics; guest gets `MATCH_COMPLETED` with "View result"; no 5xx responses: **11/11** |
+| `npm run journey:retry` | Statistics stopped before the last round; match still finishes; both results stay Pending with `transport failure` and retries while the 4 Notification events are delivered; after Statistics restarts the outbox delivers them (guest games +1) and every row ends Delivered: **8/8** |
 
 **Still needed for acceptance:** another team member follows this runbook from a clean checkout and records the commands, ports and redacted health results here.
