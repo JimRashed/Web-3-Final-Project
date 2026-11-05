@@ -1,0 +1,2 @@
+LegacyUserId,Issuer,Subject,VerifiedBy,ProofReference
+00000000-0000-0000-0000-000000000000,http://localhost:8080/realms/quizarena,<exact Keycloak sub of this player>,<reviewer name>,<how ownership was proven, e.g. support ticket or signed-in confirmation>
