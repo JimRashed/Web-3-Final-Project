@@ -112,6 +112,58 @@ public sealed class NotificationEndpointsTests(NotificationApiFactory factory) :
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         factory.Application.Subjects.Should().Contain(PlayerA);
+        factory.Application.Pages.Should().Contain((1, 20));
+    }
+
+    [Fact]
+    public async Task GetEvents_WithPagingAndOwnUserId_ForwardsThePage()
+    {
+        // Arrange
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Bearer(factory.Tokens.UserToken(NotificationApiFactory.Audience, PlayerA, "events.read"));
+
+        // Act
+        using var response = await client.GetAsync($"/events?page=3&pageSize=5&userId={PlayerA}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        factory.Application.Pages.Should().Contain((3, 5));
+    }
+
+    [Theory]
+    [InlineData("other-player")]
+    [InlineData("PLAYER-A")]
+    public async Task GetEvents_ForAnotherUserId_Returns403Problem(string userId)
+    {
+        // Arrange
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Bearer(factory.Tokens.UserToken(NotificationApiFactory.Audience, PlayerA, "events.read"));
+
+        // Act
+        using var response = await client.GetAsync($"/events?userId={userId}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+    }
+
+    [Theory]
+    [InlineData("page=0")]
+    [InlineData("pageSize=0")]
+    [InlineData("pageSize=101")]
+    [InlineData("page=abc")]
+    [InlineData("page=0&userId=other-player")]
+    public async Task GetEvents_WithInvalidPaging_Returns400(string query)
+    {
+        // Arrange
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Bearer(factory.Tokens.UserToken(NotificationApiFactory.Audience, PlayerA, "events.read"));
+
+        // Act
+        using var response = await client.GetAsync($"/events?{query}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
