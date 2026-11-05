@@ -66,6 +66,7 @@ $envKeys = Get-Content $envFile | Where-Object { $_ -match '^[A-Z_]+=.+' } | For
 foreach ($key in 'KC_BOOTSTRAP_ADMIN_USERNAME', 'KC_BOOTSTRAP_ADMIN_PASSWORD', 'QUIZARENA_GAMEPLAY_CLIENT_SECRET', 'QUIZARENA_DEMO_PASSWORD') {
     if ($envKeys -notcontains $key) { Fail ".env has no value for $key." }
 }
+$gameplaySecret = (Get-Content $envFile | Where-Object { $_ -match '^QUIZARENA_GAMEPLAY_CLIENT_SECRET=' } | Select-Object -First 1) -replace '^QUIZARENA_GAMEPLAY_CLIENT_SECRET=', ''
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $running = @{}
 if (Test-Path $pidFile) { (Get-Content $pidFile | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $running[$_.Name] = $_.Value } }
@@ -119,11 +120,15 @@ foreach ($service in $Services) {
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $override = Connection $service
     if ($override) { $env:ConnectionStrings__DefaultConnection = $override } else { Remove-Item env:ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue }
+    # Only Gameplay gets the machine-client secret (it calls Lobby, QuestionBank, Statistics and Notification).
+    # It is passed through this process's environment and never written to disk or printed.
+    if ($service -eq 'Gameplay') { $env:Authentication__MachineClientSecret = $gameplaySecret } else { Remove-Item env:Authentication__MachineClientSecret -ErrorAction SilentlyContinue }
     $process = Start-Process dotnet -ArgumentList @('run', '--no-build', '--project', "src/QuizArena.$service.Api", '--no-launch-profile', '--urls', "http://localhost:$port") `
         -WorkingDirectory $root -RedirectStandardOutput $log -RedirectStandardError "$log.err" -WindowStyle Hidden -PassThru
     $running[$service] = $process.Id
 }
 Remove-Item env:ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue
+Remove-Item env:Authentication__MachineClientSecret -ErrorAction SilentlyContinue
 
 # 5. Frontend -------------------------------------------------------------------------------------
 if (-not $SkipFrontend) {

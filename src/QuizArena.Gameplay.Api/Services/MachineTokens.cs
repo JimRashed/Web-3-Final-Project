@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 
 namespace QuizArena.Gameplay.Api.Services;
@@ -26,9 +27,11 @@ public sealed class MachineTokenOptions
 
     public string Authority { get; set; } = string.Empty;
 
-    public string ClientId { get; set; } = string.Empty;
+    /// <summary>Bound from <c>Authentication:MachineClientId</c>, the same key the API's token validation uses.</summary>
+    public string MachineClientId { get; set; } = string.Empty;
 
-    public string ClientSecret { get; set; } = string.Empty;
+    /// <summary>Bound from <c>Authentication:MachineClientSecret</c>; supplied only through the environment.</summary>
+    public string MachineClientSecret { get; set; } = string.Empty;
 
     public int RequestTimeoutSeconds { get; set; } = 5;
 }
@@ -68,10 +71,10 @@ public sealed class KeycloakMachineTokenSource(
             }
 
             var settings = options.Value;
-            if (string.IsNullOrWhiteSpace(settings.Authority) || string.IsNullOrWhiteSpace(settings.ClientSecret))
+            if (string.IsNullOrWhiteSpace(settings.Authority) || string.IsNullOrWhiteSpace(settings.MachineClientId) || string.IsNullOrWhiteSpace(settings.MachineClientSecret))
             {
                 throw new MachineTokenUnavailableException(
-                    "The machine client is not configured (Authentication:Authority and Authentication:MachineClientSecret are required).");
+                    "The machine client is not configured (Authentication:Authority, Authentication:MachineClientId and Authentication:MachineClientSecret are required).");
             }
 
             using var request = new HttpRequestMessage(
@@ -81,8 +84,8 @@ public sealed class KeycloakMachineTokenSource(
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     ["grant_type"] = "client_credentials",
-                    ["client_id"] = settings.ClientId,
-                    ["client_secret"] = settings.ClientSecret,
+                    ["client_id"] = settings.MachineClientId,
+                    ["client_secret"] = settings.MachineClientSecret,
                     ["scope"] = scope,
                 }),
             };
@@ -99,8 +102,11 @@ public sealed class KeycloakMachineTokenSource(
                     $"The identity provider refused the machine token request (HTTP {(int)response.StatusCode}).");
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<TokenResponse>(JsonOptions, timeout.Token)
-                ?? throw new MachineTokenUnavailableException("The identity provider returned an empty token response.");
+            var payload = await response.Content.ReadFromJsonAsync<TokenResponse>(JsonOptions, timeout.Token);
+            if (string.IsNullOrWhiteSpace(payload?.AccessToken) || payload.ExpiresIn <= 0)
+            {
+                throw new MachineTokenUnavailableException("The identity provider returned no usable access token.");
+            }
 
             var lifetime = TimeSpan.FromSeconds(payload.ExpiresIn);
             var refreshAt = clock.GetUtcNow() + (lifetime > TimeSpan.FromSeconds(60) ? lifetime - TimeSpan.FromSeconds(30) : lifetime);
@@ -118,7 +124,10 @@ public sealed class KeycloakMachineTokenSource(
 
     private sealed record CachedToken(string Token, DateTimeOffset ExpiresAt);
 
-    private sealed record TokenResponse(string AccessToken, int ExpiresIn);
+    // OAuth token responses use snake_case (RFC 6749 section 5.1), not the web camelCase default.
+    private sealed record TokenResponse(
+        [property: JsonPropertyName("access_token")] string? AccessToken,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn);
 }
 
 /// <summary>Applies a machine bearer token to an outgoing request.</summary>

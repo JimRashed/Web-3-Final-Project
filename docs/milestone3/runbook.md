@@ -75,6 +75,7 @@ Each API reads `appsettings.Development.json`, and any value can be overridden w
 | Token authority | `http://localhost:8080/realms/quizarena` | `Authentication__Authority` |
 | Audience | `quizarena-<service>` | `Authentication__Audience` |
 | Allowed browser origin | `http://localhost:5173` | `Cors__AllowedOrigins__0` |
+| Gameplay machine-client secret (Gameplay only) | empty in source | `Authentication__MachineClientSecret`. The start script sets it from `QUIZARENA_GAMEPLAY_CLIENT_SECRET` in `.env` for the Gameplay process only |
 
 The client's service URLs and OIDC settings are `VITE_*` variables. See [frontend setup](frontend-setup.md#public-configuration). The local Node/Vite server only serves the client's assets and has no API of its own. The Gameplay machine-client secret lives only in `.env`, and Keycloak reads it on first import (see [authentication](authentication.md#local-setup)).
 
@@ -103,5 +104,6 @@ These runs were on 2026-11-04 (Windows 11, LocalDB 17.0, Docker 29.1, Node 22.20
 | `stop-milestone3.ps1` | stopped all 7 processes, ports 5101–5106 and 5173 freed |
 | Stop everything including Keycloak, then start again | row counts identical before and after: results 2, profiles 1, questions 5 (data preserved, no reset) |
 | `-Services Identity -SkipFrontend` | only 5101 listening, Identity `ok` (services start independently) |
+| Two-player API journey with real Keycloak tokens (`player-a` hosts, `player-b` joins) | lobby create/join/lock, Gameplay start verified against Lobby and QuestionBank with machine tokens, guest start refused (403), repeated start returns the same match, 5 rounds with both players answering simultaneously, match finished, the outbox delivered both results to Statistics and `MATCH_CREATED`/`MATCH_COMPLETED` to both players in Notification: **10/10** (after the fixes in this PR; before them every start returned 503) |
 
 **Still needed for acceptance:** another team member follows this runbook from a clean checkout and records the commands, ports and redacted health results here.
