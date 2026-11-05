@@ -298,8 +298,9 @@ public sealed class MatchesEndpointTests
         // Arrange
         using var factory = Factory();
         using var client = factory.Client(WriteToken());
+        using var reader = factory.Client(ReadToken());
         var matchId = await CreateMatchAsync(client);
-        var questionId = await CurrentQuestionAsync(client, matchId);
+        var questionId = await CurrentQuestionAsync(reader, matchId);
 
         // Act
         using var response = await GameplayHttp.SendAsync(
@@ -318,8 +319,9 @@ public sealed class MatchesEndpointTests
         // Arrange
         using var factory = Factory();
         using var client = factory.Client(WriteToken());
+        using var reader = factory.Client(ReadToken());
         var matchId = await CreateMatchAsync(client);
-        var questionId = await CurrentQuestionAsync(client, matchId);
+        var questionId = await CurrentQuestionAsync(reader, matchId);
         await AnswerAsync(client, matchId, questionId);
 
         // Act
@@ -339,8 +341,9 @@ public sealed class MatchesEndpointTests
         // Arrange
         using var factory = Factory();
         using var host = factory.Client(WriteToken());
+        using var hostReader = factory.Client(ReadToken());
         var matchId = await CreateMatchAsync(host);
-        var questionId = await CurrentQuestionAsync(host, matchId);
+        var questionId = await CurrentQuestionAsync(hostReader, matchId);
         using var stranger = factory.Client(WriteToken(Stranger));
 
         // Act
@@ -360,8 +363,9 @@ public sealed class MatchesEndpointTests
         // Arrange
         using var factory = Factory();
         using var client = factory.Client(WriteToken());
+        using var reader = factory.Client(ReadToken());
         var matchId = await CreateMatchAsync(client);
-        var questionId = await CurrentQuestionAsync(client, matchId);
+        var questionId = await CurrentQuestionAsync(reader, matchId);
 
         // Act
         using var response = await GameplayHttp.SendAsync(
