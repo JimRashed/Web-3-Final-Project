@@ -11,11 +11,13 @@ import { PreferencesPage } from '../features/notification/PreferencesPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { LeaderboardPage } from '../features/statistics/LeaderboardPage';
 import { StatisticsPage } from '../features/statistics/StatisticsPage';
+import { QuestionBankPage } from '../features/questionbank/QuestionBankPage';
 import './App.css';
 
 /** Destinations with a real screen; the rest still render the placeholder. */
 const pages: Record<string, ReactElement> = {
   '/lobby': <LobbyPage />,
+  '/questions': <QuestionBankPage />,
   '/profile': <ProfilePage />,
   '/statistics': <StatisticsPage />,
   '/leaderboard': <LeaderboardPage />,
