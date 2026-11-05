@@ -50,3 +50,72 @@ The relational tests run against a real SQL Server (LocalDB locally, a SQL Serve
 | Gameplay #95/#96/#100 | review found a repeated-start authorization gap, 500s on simultaneous start and answer, and an unreachable or incorrect match page. Fixes are proposed in #107, #108 and #109, each with tests that fail before the fix. |
 | Notification `GET /events` | merged without the contract's paging and `userId` 403 rule (review on #90). Follow-up needed. |
 | Gameplay outbox and redelivery (ADR-07) | planned next slice of #52 |
+
+
+---
+
+## Issue #49 — Lobby coverage audit
+
+Date: 2026-11-04. Issue [#49](https://github.com/JimRashed/Web-3-Final-Project/issues/49), parent [#12](https://github.com/JimRashed/Web-3-Final-Project/issues/12), milestone base 3a9b9d26330259dd15804ea2f37b2efdd0995bac. The [scoped plan](../../specs/issue-49-plan.md) is agent-reviewed. Final automated validation passed as recorded below. Read-only review and independent human approval are pending and will be recorded on the draft PR; live acceptance remains pending.
+
+### Acceptance coverage
+
+| Requirement | Existing executed coverage | New coverage |
+|---|---|---|
+| Create, join, duplicate/full/locked transitions and host rules | Domain/ActiveLobbyTests.cs; Services/LobbyServiceTests.cs; baseline Lobby unit suite 174 passed | Existing assertions retained |
+| Relational uniqueness, capacity and concurrency | Persistence/LobbyConstraintTests.cs and LobbyConcurrencyTests.cs; baseline Lobby integration suite 277 passed | Existing SQL fixture and ownership retained |
+| Actual HTTP lifecycle, input/status and persisted lock | Endpoints/LobbyLifecycleTests.cs, LobbyInputTests.cs, LobbyErrorTests.cs and LobbyContractTests.cs; baseline integration suite passed | LobbyPrincipalIsolationTests.cs verifies fresh-context no mutation for rejected actor cases |
+| Signed token, scope, client, actor and caller identity | Endpoints/LobbyRouteSecurityTests.cs and Security/SecurityMatrixTests.cs; baseline integration suite passed | Eight actual-route principal cases cover absent/blank subject, oversized join subject, case-sensitive preview/lock and wrong service/browser access to private roster |
+| Two-player UI create/join/refresh/lock/start | Existing LobbyPage.test.tsx and LobbyPage.lifecycle.test.tsx; baseline focused frontend run 106 passed | LobbyPage.multiplayer.test.tsx verifies one coherent two-session public workflow and host-only Gameplay call; 1 passed |
+| Real provider, Lobby and Gameplay browser flow | Not established by automated doubles or local signed-token fixtures | Pending live checklist below |
+
+The eight new principal cases use the real JwtBearer validation pipeline, signed ephemeral RSA test tokens and an isolated fixture-owned SQL catalog. Rejected create/join/lock routes are checked through new DbContext instances with AsNoTracking rather than an already tracked entity. The fixture verifies that its repository connection targets its own disposable catalog. Public preview remains available to scoped nonmembers, with caller-relative flags and no private roster. The internal roster route rejects a validly signed token from another service client even when audience and scope match, and rejects a browser token. These tests do not simulate provider claim issuance.
+
+The UI test mounts separate authenticated Session objects and routers. A controlled fetch double returns only public Lobby responses and the separate Gameplay match response. It proves the guest controls stay disabled, the host observes a normal refresh before lock, and the browser sends exactly one host Gameplay start with only the returned join code. It does not prove server behavior or live provider-backed navigation.
+
+### Actual implementation-stage checks
+
+| Command | Result |
+|---|---|
+| dotnet restore QuizArena.sln from cached NuGet source, serial | Exit 0 |
+| dotnet build QuizArena.sln --no-restore -warnaserror -m:1 | Exit 0, zero warnings/errors before test edits |
+| dotnet test tests/QuizArena.Lobby.UnitTests/QuizArena.Lobby.UnitTests.csproj --no-build | Exit 0, 174 passed, 0 failed |
+| dotnet test tests/QuizArena.Lobby.IntegrationTests/QuizArena.Lobby.IntegrationTests.csproj --no-build | Exit 0, 277 passed, 0 failed, 0 skipped before test edits |
+| npm run test -- --run Lobby API/page/lifecycle/App files | Exit 0, 4 files and 106 tests passed before test edits |
+| dotnet build tests/QuizArena.Lobby.IntegrationTests/QuizArena.Lobby.IntegrationTests.csproj --no-restore -warnaserror -m:1 | Exit 0, zero warnings/errors after new C# test |
+| dotnet test Lobby integration project --no-build --filter FullyQualifiedName~LobbyPrincipalIsolationTests | Exit 0, 8 passed, 0 failed/skipped |
+| npm run test -- --run src/features/lobby/LobbyPage.multiplayer.test.tsx | Exit 0, 1 passed after correcting a test-only scoped query |
+| npm run typecheck | Exit 0 after test edits |
+| npm run lint | Exit 0, zero warnings after test edits |
+
+The first new UI test run failed because both simulated browser tabs shared one jsdom document, making duplicate field IDs ambiguous to a name query. The guest textbox query was scoped to its render, and the rerun passed. No product code changed. The independent Validate stage subsequently completed the aggregate tests, format, contract, coverage and frontend gates; exact counts and exits are recorded below.
+
+### Scope and pending acceptance
+
+Changed tracked scope is this audit and the scoped plan; the only test additions are Endpoints/LobbyPrincipalIsolationTests.cs and LobbyPage.multiplayer.test.tsx. No production, authorization, contract, dependency, lockfile or existing test file was changed. Raw logs, TRX and coverage files remain ignored under .dispatcher/runs/49-20261104/.
+
+Dispatcher's current environment probe timed out after four seconds for provider discovery on port 8080, Lobby health on 5104 and Gameplay health on 5105; Docker was unavailable on PATH. Gameplay [#53](https://github.com/JimRashed/Web-3-Final-Project/issues/53) remains open. No live two-player browser flow, CI link, PR URL, read-only review verdict or human signoff is claimed here.
+
+When the environment is available, use two normal user browser sessions to verify host create, guest join, host refresh, guest-disabled controls, persistent host lock and actual Gameplay match navigation. Exercise safe errors and session teardown without bypassing bearer authorization. Record real observations and independent PR approval before closing #49.
+
+### Final independent validation
+
+The following gates ran on milestone commit `3a9b9d26330259dd15804ea2f37b2efdd0995bac` plus the #49 tests. Publication integrates documentation-only milestone commit `211b84828419296ba4c12b57d6093a09135749e9`; no runtime or test file changed during that integration. The earlier milestone report above is preserved as historical evidence and is not a claim that this run exercised a live provider.
+
+| Gate | Actual result |
+|---|---|
+| Offline solution restore | Exit 0 |
+| Solution build with warnings as errors | Exit 0; 0 warnings, 0 errors |
+| Format verification | Exit 0 |
+| Full backend regression | Exit 0; 1,356 passed, 0 failed/skipped; 15 test assemblies |
+| Separate XPlat coverage test run | Exit 0; 1,356 passed, 0 failed/skipped; 15 coverage artifacts |
+| Focused architecture suite | Exit 0; 21 passed |
+| Contract validator | Exit 0; 30 operations, 179 examples, 12 corruption probes |
+| Frontend typecheck, lint and production build | Each exit 0; lint 0 warnings |
+| Full frontend suite | Exit 0; 289 passed across 23 files |
+| Independent focused Lobby tests | 174 unit, 285 integration, 107 frontend passed; 0 failed/skipped |
+| Locked frontend dependency install | Exit 0; 254 packages installed, lockfile unchanged |
+
+Commands from the solution root: `dotnet restore QuizArena.sln --source C:\Users\kilda\.nuget\packages --disable-parallel -m:1`, `dotnet build QuizArena.sln --no-restore -warnaserror -m:1`, `dotnet format QuizArena.sln --verify-no-changes --no-restore`, `dotnet test QuizArena.sln --no-build -m:1 --verbosity normal`, a separate `dotnet test QuizArena.sln --no-build -m:1 --collect:"XPlat Code Coverage"`, focused Lobby/architecture project tests, and `node contracts/validate-contracts.mjs`. From the client directory: `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test -- --run`, `npm run build`. The package has no `test:e2e` script; no E2E suite pass is claimed. Coverage collection does not establish an unmeasured percentage or branch guarantee.
+
+The final draft PR will link the automated stages, with independent human signoff and the live checklist still pending. No manual issue closure or Done status is justified by these results alone.
