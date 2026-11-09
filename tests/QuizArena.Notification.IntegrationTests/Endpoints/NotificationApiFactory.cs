@@ -56,9 +56,12 @@ public sealed class StubEventApplication : IEventApplication
             DateTime.UtcNow));
     }
 
-    public Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, CancellationToken cancellationToken)
+    public List<(int Page, int PageSize)> Pages { get; } = [];
+
+    public Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, int page, int pageSize, CancellationToken cancellationToken)
     {
         Subjects.Add(subject);
+        Pages.Add((page, pageSize));
         return Task.FromResult<IReadOnlyList<EventResponse>>([]);
     }
 

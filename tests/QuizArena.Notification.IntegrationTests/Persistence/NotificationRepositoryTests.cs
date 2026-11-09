@@ -112,12 +112,57 @@ public sealed class NotificationRepositoryTests : IAsyncLifetime
         await repository.AddAsync(Event.CreateMatchCreated(Guid.NewGuid(), Issuer, "player-b", "match-3", Now), CancellationToken.None);
 
         // Act
-        var events = await repository.GetByUserAsync(Issuer, "player-a", CancellationToken.None);
+        var events = await repository.GetByUserAsync(Issuer, "player-a", 1, 20, CancellationToken.None);
 
         // Assert
         events.Should().HaveCount(2);
         events[0].MatchId.Should().Be("match-2");
         events[1].MatchId.Should().Be("match-1");
+    }
+
+    [Fact]
+    public async Task GetByUserAsync_PagesNewestFirstWithEventIdTieBreakAndEmptyBeyondTheEnd()
+    {
+        // Arrange: five events; two share a timestamp so the event id decides their order.
+        await using var context = NewContext();
+        var repository = new EventRepository(context);
+        var tieLow = Guid.Parse("10000000-0000-0000-0000-000000000000");
+        var tieHigh = Guid.Parse("f0000000-0000-0000-0000-000000000000");
+        await repository.AddAsync(Event.CreateMatchCreated(tieHigh, Issuer, "player-a", "tie-high", Now), CancellationToken.None);
+        await repository.AddAsync(Event.CreateMatchCreated(tieLow, Issuer, "player-a", "tie-low", Now), CancellationToken.None);
+        for (var minutes = 1; minutes <= 3; minutes++)
+        {
+            await repository.AddAsync(Event.CreateMatchCreated(Guid.NewGuid(), Issuer, "player-a", $"older-{minutes}", Now.AddMinutes(-minutes)), CancellationToken.None);
+        }
+
+        // Act
+        var first = await repository.GetByUserAsync(Issuer, "player-a", 1, 2, CancellationToken.None);
+        var second = await repository.GetByUserAsync(Issuer, "player-a", 2, 2, CancellationToken.None);
+        var third = await repository.GetByUserAsync(Issuer, "player-a", 3, 2, CancellationToken.None);
+        var beyond = await repository.GetByUserAsync(Issuer, "player-a", 4, 2, CancellationToken.None);
+
+        // Assert
+        first.Select(e => e.MatchId).Should().Equal("tie-low", "tie-high");
+        second.Select(e => e.MatchId).Should().Equal("older-1", "older-2");
+        third.Select(e => e.MatchId).Should().Equal("older-3");
+        beyond.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(0, 20)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetByUserAsync_WithPagingOutOfBounds_ThrowsBeforeQuerying(int page, int pageSize)
+    {
+        // Arrange
+        await using var context = NewContext();
+        var repository = new EventRepository(context);
+
+        // Act
+        var act = () => repository.GetByUserAsync(Issuer, "player-a", page, pageSize, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidPagingException>();
     }
 
     [Fact]
