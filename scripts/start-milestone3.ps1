@@ -137,8 +137,13 @@ if (-not $SkipFrontend) {
     if (-not (Test-Path (Join-Path $client 'node_modules/.bin/vite.cmd'))) {
         Step 'Installing client packages (npm ci)'
         # npm.cmd, not npm: Windows PowerShell 5.1 mangles the arguments of the npm.ps1 shim ("Unknown command: pm").
+        # Under 'Stop', Windows PowerShell 5.1 turns any redirected stderr line (an npm warning) into a terminating
+        # error, so relax it for the install and judge the result by the exit code alone.
         Push-Location $client
-        try { & npm.cmd ci --no-audit --no-fund *> (Join-Path $logDir 'npm-ci.log') } finally { Pop-Location }
+        $previousPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try { & npm.cmd ci --no-audit --no-fund *> (Join-Path $logDir 'npm-ci.log') }
+        finally { $ErrorActionPreference = $previousPreference; Pop-Location }
         if ($LASTEXITCODE -ne 0) { Fail 'npm ci failed for the client. See .run/logs/npm-ci.log.' }
     }
     if (Test-PortFree 5173) {
