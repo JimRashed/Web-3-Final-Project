@@ -55,13 +55,20 @@ public sealed class EventRepository(NotificationDbContext context) : IEventRepos
     {
         InvalidPagingException.ThrowIfInvalid(page, pageSize);
 
+        // A page past Int32 rows is past the end; computing it in int would wrap to a negative OFFSET (SQL error).
+        var offset = (long)(page - 1) * pageSize;
+        if (offset > int.MaxValue)
+        {
+            return [];
+        }
+
         // The contract orders by createdAt descending, then eventId ordinal ascending (a stable page boundary).
         return await context.Events
             .AsNoTracking()
             .Where(@event => @event.Issuer == issuer && @event.UserId == userId)
             .OrderByDescending(@event => @event.CreatedAt)
             .ThenBy(@event => @event.EventId.ToString())
-            .Skip((page - 1) * pageSize)
+            .Skip((int)offset)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
     }

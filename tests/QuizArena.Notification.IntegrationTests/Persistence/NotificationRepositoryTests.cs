@@ -149,6 +149,23 @@ public sealed class NotificationRepositoryTests : IAsyncLifetime
     }
 
     [Theory]
+    [InlineData(int.MaxValue, 100)]
+    [InlineData(21_474_838, 100)]
+    public async Task GetByUserAsync_WithPageWhoseOffsetExceedsInt32_ReturnsEmpty(int page, int pageSize)
+    {
+        // Arrange: (page - 1) * pageSize would overflow Int32 and become a negative OFFSET.
+        await using var context = NewContext();
+        var repository = new EventRepository(context);
+        await repository.AddAsync(Event.CreateMatchCreated(Guid.NewGuid(), Issuer, "player-a", "only", Now), CancellationToken.None);
+
+        // Act
+        var events = await repository.GetByUserAsync(Issuer, "player-a", page, pageSize, CancellationToken.None);
+
+        // Assert
+        events.Should().BeEmpty();
+    }
+
+    [Theory]
     [InlineData(0, 20)]
     [InlineData(1, 0)]
     [InlineData(1, 101)]
