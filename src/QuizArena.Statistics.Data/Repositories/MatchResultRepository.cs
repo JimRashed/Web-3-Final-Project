@@ -71,11 +71,18 @@ public sealed class MatchResultRepository(StatisticsDbContext context) : IMatchR
     {
         StatisticsCalculator.ValidatePaging(page, pageSize);
 
+        // A page past Int32 rows is past the end; computing it in int would wrap to a negative OFFSET (SQL error).
+        var offset = (long)(page - 1) * pageSize;
+        if (offset > int.MaxValue)
+        {
+            return [];
+        }
+
         return await Results
             .Where(r => r.Issuer == issuer && r.UserId == userId)
             .OrderByDescending(r => r.PlayedAt)
             .ThenBy(r => r.MatchId)
-            .Skip((page - 1) * pageSize)
+            .Skip((int)offset)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
     }

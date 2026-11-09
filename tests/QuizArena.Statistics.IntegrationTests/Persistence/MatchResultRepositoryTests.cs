@@ -224,6 +224,23 @@ public sealed class MatchResultRepositoryTests : IAsyncLifetime
         beyond.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(int.MaxValue, 100)]
+    [InlineData(21_474_838, 100)]
+    public async Task GetHistoryAsync_WithPageWhoseOffsetExceedsInt32_ReturnsEmpty(int page, int pageSize)
+    {
+        // Arrange: (page - 1) * pageSize would overflow Int32 and become a negative OFFSET.
+        await Record(New("player-a", "m-only", 1, false, minutes: 0));
+
+        // Act
+        await using var context = NewContext();
+        var repository = new MatchResultRepository(context);
+        var history = await repository.GetHistoryAsync(Issuer, "player-a", page, pageSize, CancellationToken.None);
+
+        // Assert
+        history.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task GetLeaderboardAsync_MatchesCalculatorOrderingAndTop()
     {
