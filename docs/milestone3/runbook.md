@@ -19,6 +19,7 @@ To use a different SQL Server instead of LocalDB, set `QUIZARENA_SQLSERVER` to a
 ```powershell
 git clone https://github.com/JimRashed/Web-3-Final-Project.git
 cd Web-3-Final-Project
+git switch feature/milestone-3-layered-service-development
 Copy-Item .env.example .env   # fill in the three blank values; .env is git-ignored, never commit it
 ```
 
@@ -78,6 +79,79 @@ Each API reads `appsettings.Development.json`, and any value can be overridden w
 | Gameplay machine-client secret (Gameplay only) | empty in source | `Authentication__MachineClientSecret`. The start script sets it from `QUIZARENA_GAMEPLAY_CLIENT_SECRET` in `.env` for the Gameplay process only |
 
 The client's service URLs and OIDC settings are `VITE_*` variables. See [frontend setup](frontend-setup.md#public-configuration). The local Node/Vite server only serves the client's assets and has no API of its own. The Gameplay machine-client secret lives only in `.env`, and Keycloak reads it on first import (see [authentication](authentication.md#local-setup)).
+
+## Start with portable Keycloak on Windows
+
+Use this path when you have Java 21 and the Keycloak 26.7.5 Windows ZIP. Extract the [Microsoft Build of OpenJDK 21 ZIP](https://aka.ms/download-jdk/microsoft-jdk-21-windows-x64.zip) and [Keycloak 26.7.5 ZIP](https://github.com/keycloak/keycloak/releases/download/26.7.5/keycloak-26.7.5.zip) to separate directories outside the checkout. Use a newly extracted Keycloak directory for a fresh realm. Keep port 8080 free and fill in the blank values in the ignored `.env` first.
+
+In a PowerShell terminal at the repository root, set the two paths to your extracted directories and start Keycloak in the foreground:
+
+```powershell
+$env:JAVA_HOME = 'C:\local-tools\jdk-21'
+$keycloakHome = 'C:\local-tools\keycloak-26.7.5'
+$providerKeys = 'KC_BOOTSTRAP_ADMIN_USERNAME', 'KC_BOOTSTRAP_ADMIN_PASSWORD', 'QUIZARENA_GAMEPLAY_CLIENT_SECRET'
+Get-Content .env | ForEach-Object {
+    $key, $value = $_ -split '=', 2
+    if ($key -in $providerKeys) { Set-Item "env:$key" $value }
+}
+$env:KC_HOSTNAME = 'http://localhost:8080'
+$env:KC_HEALTH_ENABLED = 'true'
+$importDir = Join-Path $keycloakHome 'data/import'
+New-Item -ItemType Directory -Force $importDir | Out-Null
+Copy-Item infra/oidc/quizarena-realm.json $importDir
+& (Join-Path $keycloakHome 'bin/kc.bat') start-dev --import-realm --http-host=127.0.0.1
+```
+
+In a second terminal at the repository root, check discovery, provision the two demo accounts, and start the APIs and React. For a fresh demo, choose a new LocalDB instance name if the example name already exists.
+
+```powershell
+Invoke-RestMethod http://localhost:8080/realms/quizarena/.well-known/openid-configuration |
+    Select-Object issuer
+node --env-file=.env infra/oidc/provision-demo-users.mjs
+sqllocaldb create QuizArenaDemo130 -s
+$env:QUIZARENA_SQLSERVER = 'Server=(localdb)\QuizArenaDemo130;Trusted_Connection=True;TrustServerCertificate=True'
+./scripts/start-milestone3.ps1 -SkipKeycloak
+```
+
+Discovery should report `http://localhost:8080/realms/quizarena` as issuer. Provisioning is separate because `-SkipKeycloak` also skips the script's provisioning step. Startup applies all six migrations to the isolated instance and reports the six API and client health checks. Use `./scripts/stop-milestone3.ps1` to stop the APIs and client, then press Ctrl+C in the Keycloak terminal.
+
+## Rehearse the two-player demo (#130)
+
+1. Confirm the QuestionBank migration `20261104192345_AddQuestionCatalog` applied. It seeds five questions and their options. For the isolated LocalDB instance above, use this read-only aggregate check with SQL Server's `sqlcmd`. It prints a count without displaying the answer key.
+
+   ```powershell
+   $query = @"
+   SELECT COUNT(*) AS ValidQuestions
+   FROM dbo.Questions AS q
+   JOIN dbo.Categories AS c ON c.Id = q.CategoryId
+   CROSS APPLY (
+       SELECT COUNT(*) AS OptionCount,
+              COUNT(DISTINCT CONVERT(varbinary(600), o.Value)) AS DistinctCount,
+              SUM(CASE WHEN LEN(LTRIM(RTRIM(o.Value))) > 0 THEN 1 ELSE 0 END) AS NonblankCount
+       FROM dbo.QuestionOptions AS o
+       WHERE o.QuestionId = q.Id
+   ) AS options
+   WHERE LEN(LTRIM(RTRIM(q.Prompt))) > 0
+     AND LEN(LTRIM(RTRIM(c.Name))) > 0
+     AND options.OptionCount = 4
+     AND options.DistinctCount = 4
+     AND options.NonblankCount = 4
+     AND EXISTS (
+         SELECT 1 FROM dbo.QuestionOptions AS answer
+         WHERE answer.QuestionId = q.Id
+           AND CONVERT(varbinary(600), answer.Value) = CONVERT(varbinary(600), q.CorrectAnswer)
+     );
+   "@
+   sqlcmd -S '(localdb)\QuizArenaDemo130' -d QuizArenaQuestionBankDb -E -C -b -Q $query
+   ```
+
+   Expect at least five valid questions. Check Gameplay's outbound HTTP log at `.run/logs/Gameplay.log` for `POST /internal/question-sets` and its 200 response at the host's match start. Gameplay calls that endpoint using its `questions.play` machine token. Compare question IDs from the match with persisted catalog IDs if recording route provenance. Keep tokens and answer values out of evidence.
+2. Open [the React client](http://localhost:5173) in two independent browser sessions, such as two profiles or a regular and an InPrivate window. Sign in as `player-a` and `player-b` using the local `QUIZARENA_DEMO_PASSWORD`.
+3. Have Player A create a lobby and share its code. Player B joins by code. After both see two members, Player A locks the lobby and starts the match once.
+4. On Player A's Match page, use **Copy match link** or copy the displayed link manually. Open it in Player B's browser before checking Notifications. If the page prompts for sign-in, sign in as Player B and confirm the app returns to the shared match. Both views should show the same match ID. When the start event arrives, confirm **Open match** in Notifications leads to that match.
+5. Submit one answer per player in each round. Check that the first player waits for the second answer, both views advance through five rounds, and the final scores and winner or draw agree from each player's perspective.
+6. Check both players' Statistics history for the persisted result and Notifications for the corresponding match start and finish events. Delivery is asynchronous. Refresh the relevant page if the event or result is still pending.
+7. Record the commit or PR, commands, observed results and any blocker or repair in [validation-results.md](validation-results.md). Run the relevant automated journeys below alongside the separate manual rehearsal.
 
 ## End-to-end journeys (D03)
 
