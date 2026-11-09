@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using QuizArena.Gameplay.Data.Context;
 using QuizArena.Gameplay.Data.Enums;
 using QuizArena.Gameplay.Data.Records;
@@ -60,30 +61,30 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
     }
 
     public Task<bool> DeliveredAsync(Guid id, DateTime claimedLeaseUntil, DateTime utcNow, CancellationToken cancellationToken) =>
-        UpdateAsync(id, claimedLeaseUntil, record =>
-        {
-            record.Status = DeliveryStatus.Delivered;
-            record.DeliveredAt = utcNow;
-            record.LeaseUntil = null;
-            record.LastError = null;
-        }, cancellationToken);
+        CompleteAsync(id, claimedLeaseUntil, setters => setters
+            .SetProperty(record => record.Status, DeliveryStatus.Delivered)
+            .SetProperty(record => record.DeliveredAt, utcNow)
+            .SetProperty(record => record.LeaseUntil, (DateTime?)null)
+            .SetProperty(record => record.LastError, (string?)null), cancellationToken);
 
-    public Task<bool> RescheduleAsync(Guid id, DateTime claimedLeaseUntil, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken) =>
-        UpdateAsync(id, claimedLeaseUntil, record =>
-        {
-            record.Status = DeliveryStatus.Pending;
-            record.NextAttemptAt = nextAttemptAtUtc;
-            record.LeaseUntil = null;
-            record.LastError = Truncate(error);
-        }, cancellationToken);
+    public Task<bool> RescheduleAsync(Guid id, DateTime claimedLeaseUntil, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken)
+    {
+        var lastError = Truncate(error);
+        return CompleteAsync(id, claimedLeaseUntil, setters => setters
+            .SetProperty(record => record.Status, DeliveryStatus.Pending)
+            .SetProperty(record => record.NextAttemptAt, nextAttemptAtUtc)
+            .SetProperty(record => record.LeaseUntil, (DateTime?)null)
+            .SetProperty(record => record.LastError, lastError), cancellationToken);
+    }
 
-    public Task<bool> FailedAsync(Guid id, DateTime claimedLeaseUntil, string error, CancellationToken cancellationToken) =>
-        UpdateAsync(id, claimedLeaseUntil, record =>
-        {
-            record.Status = DeliveryStatus.Failed;
-            record.LeaseUntil = null;
-            record.LastError = Truncate(error);
-        }, cancellationToken);
+    public Task<bool> FailedAsync(Guid id, DateTime claimedLeaseUntil, string error, CancellationToken cancellationToken)
+    {
+        var lastError = Truncate(error);
+        return CompleteAsync(id, claimedLeaseUntil, setters => setters
+            .SetProperty(record => record.Status, DeliveryStatus.Failed)
+            .SetProperty(record => record.LeaseUntil, (DateTime?)null)
+            .SetProperty(record => record.LastError, lastError), cancellationToken);
+    }
 
     public async Task<bool> RedriveAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken)
     {
@@ -100,20 +101,19 @@ public sealed class OutboxStore(GameplayDbContext context) : IOutboxStore
         return affected == 1;
     }
 
-    private async Task<bool> UpdateAsync(Guid id, DateTime claimedLeaseUntil, Action<DeliveryRecord> change, CancellationToken cancellationToken)
+    private async Task<bool> CompleteAsync(
+        Guid id,
+        DateTime claimedLeaseUntil,
+        Action<UpdateSettersBuilder<DeliveryRecord>> change,
+        CancellationToken cancellationToken)
     {
-        // Fence: only the holder of the current lease may complete the row.
-        var record = await context.Deliveries.SingleOrDefaultAsync(
-            row => row.Id == id && row.Status == DeliveryStatus.Pending && row.LeaseUntil == claimedLeaseUntil,
-            cancellationToken);
-        if (record is null)
-        {
-            return false;
-        }
+        // Fence: only the holder of the current lease may complete the row. The check and the write are one
+        // UPDATE ... WHERE statement, so a reclaim cannot slip in between a separate read and save.
+        var affected = await context.Deliveries
+            .Where(row => row.Id == id && row.Status == DeliveryStatus.Pending && row.LeaseUntil == claimedLeaseUntil)
+            .ExecuteUpdateAsync(change, cancellationToken);
 
-        change(record);
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return affected == 1;
     }
 
     private static string Truncate(string error) =>
