@@ -191,3 +191,23 @@ Before closure, record these results using the configured live environment witho
 - [ ] Owner inspects scope, persistence, security and actual validation evidence; independent human reviewer approves the draft PR with applicable CI evidence.
 
 Agent-reviewed research/plan and automated checks do not imply human approval. Human signoff remains pending; do not mark #43 Done or close it solely because tests or a draft PR exist.
+
+## Issue #130 — live two-player demo
+
+On 2026-11-05, the rehearsal stack ran from milestone revision `422dc747dfbec2b1b7e9b1231ce3fffc45191b2e` and the focused repair in the accompanying #130 PR. The [scoped plan](../../specs/issue-130-plan.md) and [runbook](runbook.md) describe the setup and commands. The earlier #64 results above are historical.
+
+| Check | Observed result |
+| --- | --- |
+| Fresh environment | Portable Keycloak 26.7.5 with Java 21, imported repository realm, discovery reachable on 8080. The Node provisioning script created `player-a` and `player-b`. |
+| Migrations and startup | `./scripts/start-milestone3.ps1 -SkipKeycloak` applied migrations to all six databases on a fresh `QuizArenaDemo130` LocalDB instance. All six API health checks and the React page on 5173 passed. |
+| Question provenance | The runbook's aggregate `sqlcmd` check returned five valid seeded questions. Gameplay's HTTP log recorded `POST /internal/question-sets` → 200 on match start. Five snapshot IDs from the shared-link match joined to the persisted QuestionBank catalog. |
+| Existing browser journey | `npm run journey:ui` passed 11/11 before and after the repair, including guest entry through the delivered event, five answers each, consistent win/loss screens, both Statistics histories and the completion event. No 5xx responses. |
+| Existing API journey | `npm run journey:api` passed 10/10 before the frontend repair, including the same match ID on repeated host start, guest start denied, five concurrent rounds, results and events for each player. |
+| Shared-link reproduction | Before the repair, opening the host's shared URL and signing in as the guest landed at the overview. After the repair, the same check returned the guest to the exact match URL and rendered their 0–5 final score. |
+| Full shared-link browser rerun | A local adaptation of `journey:ui` used the host's shared link and OIDC sign-in in place of guest notification navigation, then ran the same remaining checks. Passed 11/11. Both sessions answered all five rounds and reached complementary win/loss outcomes. Match `9a85c38a-caaf-4f83-b2d4-a43acb7f8ac3` persisted score 5–0, ten answers, two Statistics rows for distinct players, and two created plus two completed events for those players. |
+
+The repair preserves the registered OIDC callback and stores only the match ID in tab storage until a successful sign-in consumes it. A fixed local path and encoded query prevent the stored ID from becoming an external redirect. Normal sign-in still lands at the overview. Credentials and answer values were excluded from the evidence.
+
+The separate human two-session rehearsal and independent human review remain pending. The automated browser runs demonstrate both entry paths against the live stack. Record the human rehearsal observations and exact tested PR revision before closing #130.
+
+Final automated gates passed on the repaired tree. Offline solution restore, Release build with warnings as errors, and format verification exited 0. The Release regression passed 1,438 tests across 13 assemblies, with zero failures or skips. An initial Debug build hit Windows file locks from the running services, so the final build and test used Release while the demo remained available. Client typecheck, lint, production build and 307 tests across 25 files passed. The contract checker passed 30 operations, 179 examples and 12 corruption probes.

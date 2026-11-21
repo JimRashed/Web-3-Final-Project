@@ -1,5 +1,7 @@
 import type { KeycloakInitOptions, KeycloakLoginOptions, KeycloakLogoutOptions } from 'keycloak-js';
 
+const matchReturnKey = 'quizarena.login.matchId';
+
 export const userScopes = 'openid profile profiles.read profiles.write stats.read leaderboard.read questions.read lobbies.read lobbies.write matches.read matches.write events.read preferences.read preferences.write';
 export type SessionStatus = 'loading' | 'anonymous' | 'authenticated' | 'expired' | 'unavailable';
 export interface SessionSnapshot { status: SessionStatus; displayName?: string; subject?: string }
@@ -76,9 +78,27 @@ export class Session {
   async login(): Promise<void> {
     await this.initialize();
     if (this.snapshot.status === 'unavailable') return;
+    // Keep only a match ID across the full-page redirect, never a caller-controlled URL.
+    try {
+      const { pathname, search } = window.location;
+      const matchId = pathname === '/matches' ? new URLSearchParams(search).get('matchId') : null;
+      if (matchId) window.sessionStorage.setItem(matchReturnKey, matchId);
+      else window.sessionStorage.removeItem(matchReturnKey);
+    } catch { /* blocked storage must not prevent sign-in */ }
     try {
       await this.adapter.login({ redirectUri: `${this.origin}/auth/callback`, scope: userScopes });
     } catch { this.invalidate('unavailable'); }
+  }
+
+  /** Consume the match destination after the provider completes sign-in. */
+  completeLoginRedirect(): string {
+    if (this.snapshot.status !== 'authenticated') return '/';
+    try {
+      const matchId = window.sessionStorage.getItem(matchReturnKey);
+      window.sessionStorage.removeItem(matchReturnKey);
+      if (matchId) return `/matches?${new URLSearchParams({ matchId })}`;
+    } catch { /* ordinary login can still continue to the overview */ }
+    return '/';
   }
 
   logout(): void {
