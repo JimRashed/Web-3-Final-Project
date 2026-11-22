@@ -9,4 +9,9 @@ public class IdentityDomainException : Exception
         : base(message)
     {
     }
+
+    public IdentityDomainException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

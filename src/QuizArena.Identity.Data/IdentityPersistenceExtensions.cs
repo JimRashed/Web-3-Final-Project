@@ -18,6 +18,7 @@ public static class IdentityPersistenceExtensions
 
         services.AddDbContext<IdentityDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
+        services.AddScoped<IProfilePictureStore, ProfilePictureStore>();
         return services;
     }
 }

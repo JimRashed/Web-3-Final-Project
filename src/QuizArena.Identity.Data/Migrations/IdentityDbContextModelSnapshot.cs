@@ -58,6 +58,45 @@ namespace QuizArena.Identity.Data.Migrations
 
                     b.ToTable("UserProfiles", (string)null);
                 });
+
+            modelBuilder.Entity("QuizArena.Identity.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProfileId");
+
+                    b.ToTable("ProfilePictures", (string)null);
+                });
+
+            modelBuilder.Entity("QuizArena.Identity.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.HasOne("QuizArena.Identity.Domain.Entities.PlayerProfile", null)
+                        .WithOne()
+                        .HasForeignKey("QuizArena.Identity.Domain.Entities.ProfilePicture", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

@@ -11,6 +11,9 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 {
     public DbSet<PlayerProfile> UserProfiles => Set<PlayerProfile>();
 
+    /// <summary>Private profile pictures (one per profile); never exposed by key, path or URL.</summary>
+    public DbSet<ProfilePicture> ProfilePictures => Set<ProfilePicture>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);
