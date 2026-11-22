@@ -434,3 +434,12 @@ node contracts/validate-contracts.mjs
 - The threat model (A3 #139).
 - The other five OpenAPI documents.
 - Merging, or closing the issue or milestone.
+
+## 8. Implementation adjustments (implement stage)
+
+- **Discrepancy IDs use `DR-1` to `DR-8`** instead of `D1` to `D7`, so they cannot be confused with the issue stable IDs D1 (#146) and D2 (#147). Every "D2" in Section 3 that means the cross-device journey refers to issue #147.
+- **New discrepancy DR-8**, found in Step 1: Statistics (`StatisticsExceptionHandler.cs:41`), Gameplay for its own database (`GameplayExceptionHandler.cs:30`) and Notification (`NotificationExceptionHandler.cs:25`) return 500 on a database outage, while their contracts declare 503. Lobby and QuestionBank already map to 503. No SEC issue owns it yet; it is recorded for the team and the #139 threat model.
+- **DR-4 widened**: Gameplay ownership 403s set no problem title, so the framework default applies; this is listed with the Lobby and Notification titles.
+- **`api-contracts.md` inventory keeps its four columns**; the two picture rows mark "proposed, #144" in the outcomes cell instead of adding a fifth column to all 30 existing rows.
+- **SEC-11 prerequisite text** reflects the live state on 2026-11-21: PR #131 merged into the milestone branch; #130 and #62 are still open (#62 awaits another member's clean-checkout run).
+- File touchpoints are unchanged.

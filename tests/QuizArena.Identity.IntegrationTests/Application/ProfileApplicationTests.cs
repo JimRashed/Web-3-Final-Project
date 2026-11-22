@@ -185,7 +185,60 @@ public sealed class ProfileApplicationTests
         json.RootElement.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(contract);
     }
 
-    private static IReadOnlyList<string> ContractSchemaProperties(string schema)
+    [Fact]
+    public void ContractDocument_ProposedOperations_AreExactlyThePictureOperationsWithFollowUpMarker()
+    {
+        // Arrange
+        var paths = ReadContract().GetProperty("paths");
+
+        // Act
+        var proposed = paths.EnumerateObject()
+            .SelectMany(path => path.Value.EnumerateObject()
+                .Where(op => IsProposed(op.Value))
+                .Select(op => (Route: $"{op.Name.ToUpperInvariant()} {path.Name}", Operation: op.Value)))
+            .ToList();
+
+        // Assert
+        proposed.Select(p => p.Route).Should().BeEquivalentTo("GET /api/users/me/picture", "PUT /api/users/me/picture");
+        proposed.Should().OnlyContain(p => p.Operation.GetProperty("x-implemented-by").GetString() == "#144");
+        IsProposed(paths.GetProperty("/api/users/me").GetProperty("get")).Should().BeFalse();
+        IsProposed(paths.GetProperty("/api/users/me").GetProperty("put")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ProfileContract_ProposedProperties_AreOnlyNullableOptionalPicture()
+    {
+        // Arrange
+        var profile = ReadContract().GetProperty("components").GetProperty("schemas").GetProperty("Profile");
+        var properties = profile.GetProperty("properties");
+        var required = profile.GetProperty("required").EnumerateArray().Select(r => r.GetString()).ToList();
+
+        // Act
+        var proposed = properties.EnumerateObject().Where(p => IsProposed(p.Value)).Select(p => p.Name).ToList();
+        var picture = properties.GetProperty("picture");
+        using var implemented = JsonDocument.Parse(JsonSerializer.Serialize(
+            new ProfileResponse(Guid.NewGuid(), Issuer, "player-a", "Alex"), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+
+        // Assert
+        proposed.Should().Equal("picture");
+        picture.GetProperty("nullable").GetBoolean().Should().BeTrue();
+        picture.GetProperty("x-implemented-by").GetString().Should().Be("#144");
+        required.Should().NotContain("picture");
+        ContractSchemaProperties("Profile", excludeProposed: false).Should().BeEquivalentTo(
+            implemented.RootElement.EnumerateObject().Select(p => p.Name).Append("picture"));
+    }
+
+    private static bool IsProposed(JsonElement node) =>
+        node.TryGetProperty("x-status", out var status) && status.GetString() == "proposed";
+
+    // Proposed properties (x-status: proposed, not implemented until #144) are skipped by default; nothing else is.
+    private static IReadOnlyList<string> ContractSchemaProperties(string schema, bool excludeProposed = true) =>
+        ReadContract().GetProperty("components").GetProperty("schemas").GetProperty(schema)
+            .GetProperty("properties").EnumerateObject()
+            .Where(p => !excludeProposed || !IsProposed(p.Value))
+            .Select(p => p.Name).ToList();
+
+    private static JsonElement ReadContract()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "QuizArena.sln")))
@@ -195,8 +248,7 @@ public sealed class ProfileApplicationTests
 
         var path = Path.Combine(directory!.FullName, "contracts", "openapi", "identity.yaml");
         using var document = JsonDocument.Parse(File.ReadAllText(path));
-        return document.RootElement.GetProperty("components").GetProperty("schemas").GetProperty(schema)
-            .GetProperty("properties").EnumerateObject().Select(p => p.Name).ToList();
+        return document.RootElement.Clone();
     }
 
     private sealed class FixedClock(DateTime utcNow) : TimeProvider
