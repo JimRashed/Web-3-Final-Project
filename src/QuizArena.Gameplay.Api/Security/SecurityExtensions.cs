@@ -85,7 +85,7 @@ public static class SecurityExtensions
         {
             OnTokenValidated = context =>
             {
-                // Discovery supplies signing keys. Only the configured authority identifies the trusted issuer.
+                // JwtBearer can also trust the issuer from discovery metadata. Enforce the configured issuer here.
                 if (!string.Equals(context.SecurityToken.Issuer, trustedIssuer, StringComparison.Ordinal))
                 {
                     context.Fail("The token issuer does not match the configured authority.");

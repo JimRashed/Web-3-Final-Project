@@ -1,9 +1,13 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using QuizArena.Gameplay.Api.Security;
 using Xunit;
 
@@ -33,7 +37,8 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
                 foreach (var kind in new[]
                 {
                     "missing", "malformed", "bad-signature", "unknown-key", "expired", "no-expiry",
-                    "wrong-issuer", "peer-audience", "audience-trailing-slash", "legacy-credential", "id-token-type",
+                    "wrong-issuer", "missing-audience", "wrong-audience", "peer-audience",
+                    "audience-trailing-slash", "legacy-credential", "id-token-type",
                 })
                 {
                     data.Add(policy, kind);
@@ -108,6 +113,8 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
             "expired" => TestTokens.Create(actor, policy, expires: DateTime.UtcNow.AddMinutes(-5)),
             "no-expiry" => TestTokens.Create(actor, policy, includeExpiry: false),
             "wrong-issuer" => TestTokens.Create(actor, policy, claims => claims["iss"] = "http://localhost:8080/realms/other"),
+            "missing-audience" => TestTokens.Create(actor, policy, claims => claims.Remove("aud")),
+            "wrong-audience" => TestTokens.Create(actor, policy, claims => claims["aud"] = "unrelated-service"),
             "peer-audience" => TestTokens.Create(actor, policy, claims => claims["aud"] = PeerAudience),
             "audience-trailing-slash" => TestTokens.Create(actor, policy, claims => claims["aud"] = TestTokens.Audience + "/"),
             "legacy-credential" => TestTokens.CreateLegacyCredential(),
@@ -126,10 +133,44 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
     }
 
     [Fact]
-    public async Task PolicyEndpoint_WithHostAndPeerAudiences_Returns200()
+    public async Task PolicyEndpoint_WithIssuerMismatchAfterBearerValidation_Returns401Problem()
     {
         // Arrange
-        var (policy, actor) = GameplayPolicies.All.First(entry => entry.Value == ActorKind.User);
+        var (policy, actor) = GameplayPolicies.All.First();
+        var reachedIssuerCheck = false;
+        using var factory = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                var productionOnTokenValidated = options.Events.OnTokenValidated;
+                options.Events.OnTokenValidated = context =>
+                {
+                    // Supply the mismatched issuer only at the production callback boundary.
+                    reachedIssuerCheck = true;
+                    context.SecurityToken = new JwtSecurityToken(issuer: "https://issuer.invalid/");
+                    return productionOnTokenValidated(context);
+                };
+            })));
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/__security-probe/{policy}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", TestTokens.Create(actor, policy));
+
+        // Act
+        using var response = await client.SendAsync(request);
+
+        // Assert
+        reachedIssuerCheck.Should().BeTrue();
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var challenge = response.Headers.WwwAuthenticate.Should().ContainSingle(header => header.Scheme == "Bearer").Subject;
+        challenge.Parameter.Should().Be("error=\"invalid_token\"");
+        await AssertProblemAsync(response, 401);
+    }
+
+    [Theory]
+    [MemberData(nameof(Policies))]
+    public async Task PolicyEndpoint_WithHostAndPeerAudiences_Returns200(string policy)
+    {
+        // Arrange
+        var actor = GameplayPolicies.All[policy];
         var token = TestTokens.Create(actor, policy, claims => claims["aud"] = new[] { PeerAudience, TestTokens.Audience });
 
         // Act
