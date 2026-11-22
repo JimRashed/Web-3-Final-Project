@@ -36,15 +36,15 @@ public sealed class MachineTokenLeakTests
         using var factory = baseFactory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment(environment);
-            // Program reads the connection string while building; Production has no appsettings value for it.
+            // Program reads the connection string and CORS origins while building; Production has no appsettings value for them.
             builder.UseSetting("ConnectionStrings:DefaultConnection", "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaGameplayLeakTests;Trusted_Connection=True;TrustServerCertificate=True");
+            builder.UseSetting("Cors:AllowedOrigins:0", "https://app.example.test");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // A complete non-Development configuration, so the Production run passes startup validation.
                 ["Authentication:Authority"] = HttpsIssuer,
                 ["Authentication:RequireHttpsMetadata"] = "true",
                 ["Authentication:MachineClientSecret"] = secret,
-                ["Cors:AllowedOrigins:0"] = "https://app.example.test",
             }));
             builder.ConfigureTestServices(services =>
             {

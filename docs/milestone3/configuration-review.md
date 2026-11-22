@@ -40,4 +40,4 @@ Environment setup, the per-service key matrix and rotation are in the [runbook](
 - **R5** The authorization code is briefly visible in the callback URL before the client replaces the history entry.
 - **R6** The browser access token carries six audiences (SEC-12); a leaked token works against every host for its lifetime.
 - **R7** The deployment target and secret store are undefined (SEC-10 open item), so deployment-time secret handling is unreviewed.
-- **R8** The CI job's per-job password is masked in logs, but any step that prints the connection string in a transformed form (for example base64) would bypass the mask.
+- **R8** The CI job's per-job password is masked in logs, but any step that prints the connection string in a transformed form (for example base64) would bypass the mask. `::add-mask::` also only masks log output: it does not mask uploaded artifacts such as TRX test results, so a test that writes the connection string into its output would publish it in the artifact.

@@ -115,6 +115,7 @@ public sealed class StartupConfigurationTests
         // Arrange
         var settings = ValidProduction();
         settings.Remove("Cors:AllowedOrigins:0");
+        settings.Remove("Cors:AllowedOrigins:1");
 
         // Act
         var failure = StartupFailure("Production", settings);
@@ -169,6 +170,78 @@ public sealed class StartupConfigurationTests
         failure.Should().Contain("ConnectionStrings:DefaultConnection");
     }
 
+    [Theory]
+    [InlineData("Development", "{0}=value")]
+    [InlineData("Production", "{0}=value")]
+    [InlineData("Production", "Server=db;{0}")]
+    [InlineData("Production", "Server=db;Connect Timeout={0}")]
+    public void Startup_WithMalformedConnectionString_FailsNamingTheKeyOnly(string environment, string template)
+    {
+        // Arrange: unknown keyword, missing "=", and a non-numeric value. None of them opens a connection.
+        var settings = ValidProduction();
+        settings["ConnectionStrings:DefaultConnection"] = string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Sentinel);
+
+        // Act
+        var failure = StartupFailure(environment, settings);
+
+        // Assert
+        failure.Should().Contain("ConnectionStrings:DefaultConnection").And.NotContain(Sentinel);
+    }
+
+    [Theory]
+    [InlineData("https://{0}.example.test/")]
+    [InlineData("https://{0}.example.test/app")]
+    [InlineData("https://{0}.example.test?tab=1")]
+    [InlineData("https://{0}.example.test#top")]
+    [InlineData("https://user@{0}.example.test")]
+    [InlineData("https://{0}.example.test:443")]
+    public void Startup_ProductionWithNonOriginCorsEntry_FailsNamingTheKeyOnly(string template)
+    {
+        // Arrange: each entry is an absolute https URI, but not the exact value a browser sends as Origin.
+        var settings = ValidProduction();
+        settings["Cors:AllowedOrigins:1"] = string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Sentinel);
+
+        // Act
+        var failure = StartupFailure("Production", settings);
+
+        // Assert
+        failure.Should().Contain("Cors:AllowedOrigins").And.NotContain(Sentinel);
+    }
+
+    [Theory]
+    [InlineData("https://app.example.test")]
+    [InlineData("http://localhost:5173")]
+    public async Task Preflight_FromConfiguredOrigin_IsAllowed(string origin)
+    {
+        // Arrange
+        using var factory = new ConfiguredGameplayFactory("Production", ValidProduction());
+        using var client = factory.CreateClient();
+
+        // Act
+        using var response = await client.SendAsync(Preflight(origin));
+
+        // Assert
+        response.Headers.TryGetValues("Access-Control-Allow-Origin", out var allowed).Should().BeTrue();
+        allowed.Should().ContainSingle().Which.Should().Be(origin);
+    }
+
+    [Theory]
+    [InlineData("https://evil.example.test")]
+    [InlineData("https://app.example.test:8443")]
+    [InlineData("http://app.example.test")]
+    public async Task Preflight_FromUnlistedOrigin_GetsNoAllowOriginHeader(string origin)
+    {
+        // Arrange
+        using var factory = new ConfiguredGameplayFactory("Production", ValidProduction());
+        using var client = factory.CreateClient();
+
+        // Act
+        using var response = await client.SendAsync(Preflight(origin));
+
+        // Assert
+        response.Headers.Contains("Access-Control-Allow-Origin").Should().BeFalse();
+    }
+
     [Fact]
     public void Startup_WithInvalidSettings_NeverEchoesTheMachineSecret()
     {
@@ -191,12 +264,22 @@ public sealed class StartupConfigurationTests
         ["Authentication:RequireHttpsMetadata"] = "true",
         ["Authentication:MachineClientSecret"] = $"secret-{Guid.NewGuid():N}",
         ["Cors:AllowedOrigins:0"] = "https://app.example.test",
+        ["Cors:AllowedOrigins:1"] = "http://localhost:5173",
         ["ConnectionStrings:DefaultConnection"] = "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaGameplayStartupTests;Trusted_Connection=True;TrustServerCertificate=True",
         ["ServiceUrls:Lobby"] = "https://lobby.example.test",
         ["ServiceUrls:QuestionBank"] = "https://questionbank.example.test",
         ["ServiceUrls:Statistics"] = "https://statistics.example.test",
         ["ServiceUrls:Notification"] = "https://notification.example.test",
     };
+
+    private static HttpRequestMessage Preflight(string origin)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Options, "/health");
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+        request.Headers.Add("Access-Control-Request-Headers", "authorization");
+        return request;
+    }
 
     private static string StartupFailure(string environment, Dictionary<string, string?> settings)
     {

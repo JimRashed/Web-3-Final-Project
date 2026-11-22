@@ -12,6 +12,9 @@ public static class SecurityExtensions
 
     public static IServiceCollection AddQuizArenaSecurity(this IServiceCollection services, IConfiguration configuration)
     {
+        // Read once: the same values are validated below and configure the CORS policy.
+        var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
         services.AddOptions<QuizArenaAuthenticationOptions>()
             .Bind(configuration.GetSection(QuizArenaAuthenticationOptions.SectionName))
             .Validate(o => IsHttpUri(o.Authority), "Authentication:Authority must be an absolute http or https URI.")
@@ -26,9 +29,9 @@ public static class SecurityExtensions
             .Validate<IHostEnvironment>(
                 (o, env) => env.IsDevelopment() || o.RequireHttpsMetadata,
                 "Authentication:RequireHttpsMetadata must be true outside the Development environment.")
-            .Validate<IHostEnvironment, IConfiguration>(
-                (_, env, config) => env.IsDevelopment() || HasValidOrigins(config),
-                "Cors:AllowedOrigins must list at least one absolute http or https origin outside the Development environment.")
+            .Validate<IHostEnvironment>(
+                (_, env) => env.IsDevelopment() || AreValidOrigins(origins),
+                "Cors:AllowedOrigins must list at least one origin outside the Development environment, each only an http or https scheme, a host and an optional port (no path, trailing slash, query, fragment or user info).")
             .ValidateOnStart();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
@@ -51,7 +54,6 @@ public static class SecurityExtensions
             }
         });
 
-        var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
         services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy => policy
             .WithOrigins(origins)
             .WithMethods("GET", "POST", "PUT", "DELETE")
@@ -67,11 +69,16 @@ public static class SecurityExtensions
     private static bool IsHttpsUri(string? value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
 
-    private static bool HasValidOrigins(IConfiguration configuration)
-    {
-        var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-        return origins.Length > 0 && origins.All(IsHttpUri);
-    }
+    private static bool AreValidOrigins(string[] origins) => origins.Length > 0 && origins.All(IsOrigin);
+
+    // CORS compares the browser Origin header (scheme://host[:port]) with each entry, so an entry with
+    // a path or trailing slash would never match. The entry must equal its own scheme-and-authority part;
+    // that also rejects an explicit default port, which browsers omit from Origin.
+    private static bool IsOrigin(string? value) =>
+        IsHttpUri(value)
+        && Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && uri.UserInfo.Length == 0
+        && string.Equals(value, uri.GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase);
 
     public static WebApplication UseQuizArenaSecurity(this WebApplication app)
     {

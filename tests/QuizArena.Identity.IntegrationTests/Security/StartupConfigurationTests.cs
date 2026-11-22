@@ -46,6 +46,24 @@ public sealed class StartupConfigurationTests
     }
 
     [Theory]
+    [InlineData("Development", "{0}=value")]
+    [InlineData("Production", "{0}=value")]
+    [InlineData("Production", "Server=db;{0}")]
+    [InlineData("Production", "Server=db;Connect Timeout={0}")]
+    public void Startup_WithMalformedConnectionString_FailsNamingTheKeyOnly(string environment, string template)
+    {
+        // Arrange: unknown keyword, missing "=", and a non-numeric value. None of them opens a connection.
+        var settings = ValidProduction();
+        settings["ConnectionStrings:DefaultConnection"] = string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Sentinel);
+
+        // Act
+        var failure = StartupFailure(environment, settings);
+
+        // Assert
+        failure.Should().Contain("ConnectionStrings:DefaultConnection").And.NotContain(Sentinel);
+    }
+
+    [Theory]
     [InlineData("Development")]
     [InlineData("Production")]
     public void Startup_WithInvalidAuthority_FailsNamingTheKeyOnly(string environment)

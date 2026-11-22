@@ -102,8 +102,8 @@ The deployment target and its secret store are an open item (SEC-10). Whatever i
 
 - `Authentication__Authority` is an absolute https URI;
 - `Authentication__RequireHttpsMetadata` is `true` (the `appsettings.json` default);
-- `Cors__AllowedOrigins__0` (and further entries) are absolute http or https origins, at least one;
-- `ConnectionStrings__DefaultConnection` is set;
+- `Cors__AllowedOrigins__0` (and further entries) are origins exactly as the browser sends them in the `Origin` header, at least one: `http` or `https`, a host and an optional port, with no path, trailing slash, query, fragment or user info (`https://app.example.org` passes, `https://app.example.org/` does not, and neither does an explicit default port such as `:443`);
+- `ConnectionStrings__DefaultConnection` is set and parses as a SQL Server connection string (checked without connecting, in every environment);
 - for Gameplay: `ServiceUrls__Lobby`, `ServiceUrls__QuestionBank`, `ServiceUrls__Statistics`, `ServiceUrls__Notification` are absolute http or https URIs and `Authentication__MachineClientSecret` is set.
 
 `Authentication:Audience`, `BrowserClientId` and `MachineClientId` are required in every environment; `appsettings.json` already provides them. In Development the Authority may use http, and Gameplay may start without the machine secret (its outbound calls then return 503).
