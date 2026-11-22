@@ -110,4 +110,17 @@ describe('Lobby page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create lobby' })); await screen.findByText('Unable to connect. Check your connection and try again.');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible(); expect(fetcher).toHaveBeenCalledOnce();
   });
+  it('navigates to the match with only its ID and never puts the access token in a URL', async () => {
+    const fetcher = fetchResponses({ ...lobby, memberCount: 2 }, { ...lobby, status: 'Locked', memberCount: 2 }, Response.json({ matchId: 'm-1' }, { status: 201 }));
+    await mount(); await create();
+    fireEvent.click(screen.getByRole('button', { name: 'Lock lobby' })); await screen.findByText('Locked');
+    fireEvent.click(screen.getByRole('button', { name: 'Start match' }));
+    const shown = await screen.findByText((text) => text.startsWith('/matches?'));
+    const route = new URL(shown.textContent ?? '', 'http://localhost');
+    expect(route.pathname).toBe('/matches');
+    expect([...route.searchParams.keys()]).toEqual(['matchId']);
+    expect(route.searchParams.get('matchId')).toBe('m-1');
+    expect(route.href).not.toContain('access-one');
+    fetcher.mock.calls.forEach(([url]) => expect(String(url)).not.toContain('access-one'));
+  });
 });

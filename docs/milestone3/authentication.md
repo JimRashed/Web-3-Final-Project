@@ -130,7 +130,7 @@ app.MapControllers();
 | Actor | `User.GetAuthenticatedActor()` returns `(Issuer, Subject, Kind)` from validated claims only. Endpoints use it for ownership checks; never take the acting user from body, query or headers |
 | Errors | 401 `application/problem+json` with `WWW-Authenticate: Bearer`; 403 problem for missing scope/actor; both include `traceId` |
 | CORS | Policy `frontend` from `Cors:AllowedOrigins` (Development: `http://localhost:5173`); preflight succeeds without a token |
-| Startup | Fails fast if `Authentication:Authority` (absolute URI), `Audience`, `BrowserClientId` or `MachineClientId` is missing. `appsettings.json` leaves Authority blank; `appsettings.Development.json` points at local Keycloak with `RequireHttpsMetadata=false` |
+| Startup | Fails fast if `Authentication:Authority` (absolute http/https URI), `Audience`, `BrowserClientId` or `MachineClientId` is missing. `appsettings.json` leaves Authority blank; `appsettings.Development.json` points at local Keycloak with `RequireHttpsMetadata=false`. Stricter rules apply outside Development (below) |
 
 Usage in a future endpoint task (e.g. #35):
 
@@ -144,6 +144,10 @@ public async Task<IActionResult> GetStats(string userId, CancellationToken ct)
     ...
 }
 ```
+
+### Startup validation (SEC-A2, #138)
+
+The shared `Security/SecurityExtensions.cs` (identical on all six hosts) validates the bound options when the host starts. Outside the Development environment it also requires an https `Authentication:Authority`, `Authentication:RequireHttpsMetadata=true` and at least one absolute http/https entry in `Cors:AllowedOrigins`. Gameplay additionally requires absolute http/https `ServiceUrls:Lobby`, `QuestionBank`, `Statistics` and `Notification` in every environment, and `Authentication:MachineClientSecret` outside Development. Every message names the key, never the configured value. `StartupConfigurationTests` in the Gameplay and Identity integration tests cover each rule. Environment setup, key matrix and rotation: [runbook](runbook.md#environment-configuration-sec-a2-138).
 
 ### Security test matrix
 

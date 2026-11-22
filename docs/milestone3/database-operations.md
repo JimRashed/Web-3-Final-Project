@@ -37,6 +37,9 @@ From the former `QuizArenaContext` (removed in D02; its schema is kept in `scrip
 | `ConnectionStrings:DefaultConnection` | `appsettings.Development.json` per Api | `Server=(localdb)\MSSQLLocalDB;Database=QuizArena<S>Db;Trusted_Connection=True;TrustServerCertificate=True` (Windows integrated auth, no credentials) |
 | `ConnectionStrings:DefaultConnection` | `appsettings.json` per Api | blank: startup fails until the environment supplies it |
 | Other environments | environment variable `ConnectionStrings__DefaultConnection`, user-secrets or CI secret | never commit passwords or connection strings with credentials |
+| CI | `QUIZARENA_TEST_SQLSERVER`, exported by the backend job's `Start SQL Server` step | SQL Server login with a password generated and masked for each job; nothing is committed (SEC-10, #138) |
+
+Profile pictures are stored in the Identity database, so Identity's `ConnectionStrings:DefaultConnection` is also the picture storage (SEC-05). There is no separate storage key or secret. A missing or blank connection string stops every host at startup with "ConnectionStrings:DefaultConnection is required ...", before any database access; the message never contains a connection string. A malformed but non-blank value is only detected at first use (recorded as a residual risk in [configuration-review.md](configuration-review.md)). Environment setup: [runbook](runbook.md#environment-configuration-sec-a2-138).
 
 Startup never creates or migrates the schema (`EnsureCreated` is not used anywhere in the new services). `/health` stays a liveness check and does not touch the database.
 

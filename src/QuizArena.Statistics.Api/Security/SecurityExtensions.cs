@@ -14,10 +14,21 @@ public static class SecurityExtensions
     {
         services.AddOptions<QuizArenaAuthenticationOptions>()
             .Bind(configuration.GetSection(QuizArenaAuthenticationOptions.SectionName))
-            .Validate(o => Uri.TryCreate(o.Authority, UriKind.Absolute, out _), "Authentication:Authority must be an absolute URI.")
+            .Validate(o => IsHttpUri(o.Authority), "Authentication:Authority must be an absolute http or https URI.")
             .Validate(o => !string.IsNullOrWhiteSpace(o.Audience), "Authentication:Audience is required.")
             .Validate(o => !string.IsNullOrWhiteSpace(o.BrowserClientId), "Authentication:BrowserClientId is required.")
             .Validate(o => !string.IsNullOrWhiteSpace(o.MachineClientId), "Authentication:MachineClientId is required.")
+            // Outside Development the host refuses plain-http token metadata and a browser-less CORS policy.
+            // The messages name the key only, never the configured value.
+            .Validate<IHostEnvironment>(
+                (o, env) => env.IsDevelopment() || IsHttpsUri(o.Authority),
+                "Authentication:Authority must use https outside the Development environment.")
+            .Validate<IHostEnvironment>(
+                (o, env) => env.IsDevelopment() || o.RequireHttpsMetadata,
+                "Authentication:RequireHttpsMetadata must be true outside the Development environment.")
+            .Validate<IHostEnvironment, IConfiguration>(
+                (_, env, config) => env.IsDevelopment() || HasValidOrigins(config),
+                "Cors:AllowedOrigins must list at least one absolute http or https origin outside the Development environment.")
             .ValidateOnStart();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
@@ -47,6 +58,19 @@ public static class SecurityExtensions
             .WithHeaders("Authorization", "Content-Type")));
 
         return services;
+    }
+
+    private static bool IsHttpUri(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private static bool IsHttpsUri(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    private static bool HasValidOrigins(IConfiguration configuration)
+    {
+        var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        return origins.Length > 0 && origins.All(IsHttpUri);
     }
 
     public static WebApplication UseQuizArenaSecurity(this WebApplication app)

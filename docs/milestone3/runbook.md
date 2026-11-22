@@ -80,6 +80,67 @@ Each API reads `appsettings.Development.json`, and any value can be overridden w
 
 The client's service URLs and OIDC settings are `VITE_*` variables. See [frontend setup](frontend-setup.md#public-configuration). The local Node/Vite server only serves the client's assets and has no API of its own. The Gameplay machine-client secret lives only in `.env`, and Keycloak reads it on first import (see [authentication](authentication.md#local-setup)).
 
+## Environment configuration (SEC-A2, #138)
+
+Secrets come only from the SEC-10 store for each environment ([security decisions](security-decisions.md)). Committed files hold names, public values and blank placeholders, never a secret. This section describes the setup; it does not record an approval of any SEC decision.
+
+### Local
+
+1. Copy `.env.example` to `.env` (git-ignored) and fill in `KC_BOOTSTRAP_ADMIN_PASSWORD`, `QUIZARENA_GAMEPLAY_CLIENT_SECRET` and `QUIZARENA_DEMO_PASSWORD`.
+2. Run `./scripts/start-milestone3.ps1`. It checks that the required keys are set without printing them, forces `ASPNETCORE_ENVIRONMENT=Development`, and passes the Gameplay client secret to the Gameplay process only (as `Authentication__MachineClientSecret`).
+3. `dotnet user-secrets` is optional; no project defines a `UserSecretsId` yet.
+
+The documented clean-checkout run of this setup is still pending in #62.
+
+### CI
+
+The backend job needs no repository secret. It generates a SQL Server password for each job, masks it (`::add-mask::`) before any use, passes it to the container by variable name only, and exports `QUIZARENA_TEST_SQLSERVER` to the test step through `GITHUB_ENV`. The value lives only for that job. Forks and fork PRs work unchanged. Any future CI secret goes into GitHub Actions secrets (SEC-10).
+
+### Deployment
+
+The deployment target and its secret store are an open item (SEC-10). Whatever is chosen must supply these settings as environment variables. Outside the Development environment a host refuses to start, naming the key but never its value, unless:
+
+- `Authentication__Authority` is an absolute https URI;
+- `Authentication__RequireHttpsMetadata` is `true` (the `appsettings.json` default);
+- `Cors__AllowedOrigins__0` (and further entries) are absolute http or https origins, at least one;
+- `ConnectionStrings__DefaultConnection` is set;
+- for Gameplay: `ServiceUrls__Lobby`, `ServiceUrls__QuestionBank`, `ServiceUrls__Statistics`, `ServiceUrls__Notification` are absolute http or https URIs and `Authentication__MachineClientSecret` is set.
+
+`Authentication:Audience`, `BrowserClientId` and `MachineClientId` are required in every environment; `appsettings.json` already provides them. In Development the Authority may use http, and Gameplay may start without the machine secret (its outbound calls then return 503).
+
+### Per-service key matrix (names only)
+
+| Key | Services | Secret? | Source |
+|---|---|---|---|
+| `Authentication:Authority` | all six APIs | public | `appsettings.Development.json`; deployment: environment |
+| `Authentication:Audience`, `BrowserClientId`, `MachineClientId` | all six APIs | public | `appsettings.json` |
+| `Authentication:RequireHttpsMetadata` | all six APIs | public | `appsettings.json` (`true`); Development json (`false`) |
+| `Cors:AllowedOrigins` | all six APIs | public | `appsettings.Development.json`; deployment: environment |
+| `ConnectionStrings:DefaultConnection` | all six APIs | secret when it holds credentials | LocalDB in Development json (integrated auth, no password); start script `QUIZARENA_SQLSERVER` override; CI: generated per job; deployment: store |
+| Identity `ConnectionStrings:DefaultConnection` | Identity | as above | also the profile-picture storage (SEC-05); no separate storage key |
+| `ServiceUrls:*` | Gameplay | public | `appsettings.Development.json`; deployment: environment |
+| `Authentication:MachineClientSecret` | Gameplay only | secret | `.env` `QUIZARENA_GAMEPLAY_CLIENT_SECRET` via the start script; deployment: store |
+| `VITE_*` | React client | public | `src/QuizArena.Client/.env.example` (public settings only) |
+| `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` | Keycloak (compose) | password is secret | `.env` |
+| `QUIZARENA_GAMEPLAY_CLIENT_SECRET` | Keycloak realm import, start script | secret | `.env` |
+| `QUIZARENA_DEMO_PASSWORD` | `infra/oidc/provision-demo-users.mjs` | secret | `.env` |
+
+### Rotation
+
+- Gameplay client secret: regenerate it in the Keycloak admin console (client `quizarena-gameplay`, Credentials), put the new value in `.env`, restart Gameplay. The realm JSON applies only on the first import, so editing `.env` alone does not change Keycloak.
+- Demo password: change `QUIZARENA_DEMO_PASSWORD` and re-run `provision-demo-users.mjs`.
+- CI SQL password: nothing to rotate; each job generates a new one.
+
+### Logging warning
+
+Outside local debugging, never:
+
+- raise `Logging:LogLevel` to `Debug` or `Trace` for `Microsoft.AspNetCore.Authentication`, `Microsoft.EntityFrameworkCore` or `System.Net.Http`;
+- enable `EnableSensitiveDataLogging`;
+- enable HTTP logging of request headers.
+
+Each of these can write tokens, connection details or request parameters to the logs. The log and error review is in [configuration-review.md](configuration-review.md).
+
 ## Start with portable Keycloak on Windows
 
 Use this path when you have Java 21 and the Keycloak 26.7.5 Windows ZIP. Extract the [Microsoft Build of OpenJDK 21 ZIP](https://aka.ms/download-jdk/microsoft-jdk-21-windows-x64.zip) and [Keycloak 26.7.5 ZIP](https://github.com/keycloak/keycloak/releases/download/26.7.5/keycloak-26.7.5.zip) to separate directories outside the checkout. Use a newly extracted Keycloak directory for a fresh realm. Keep port 8080 free and fill in the blank values in the ignored `.env` first.

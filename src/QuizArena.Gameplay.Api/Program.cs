@@ -23,8 +23,22 @@ public sealed class Program
         services.AddQuizArenaSecurity(configuration);
         services.AddGameplayPersistence(configuration.GetConnectionString("DefaultConnection"));
 
-        services.Configure<GameplayServiceOptions>(configuration.GetSection(GameplayServiceOptions.SectionName));
-        services.Configure<MachineTokenOptions>(configuration.GetSection(MachineTokenOptions.SectionName));
+        // Fail at startup, naming the key only, when a downstream address or the machine secret is unusable.
+        services.AddOptions<GameplayServiceOptions>()
+            .Bind(configuration.GetSection(GameplayServiceOptions.SectionName))
+            .Validate(o => GameplayServiceOptions.IsHttpUri(o.Lobby), GameplayServiceOptions.Messages.Lobby)
+            .Validate(o => GameplayServiceOptions.IsHttpUri(o.QuestionBank), GameplayServiceOptions.Messages.QuestionBank)
+            .Validate(o => GameplayServiceOptions.IsHttpUri(o.Statistics), GameplayServiceOptions.Messages.Statistics)
+            .Validate(o => GameplayServiceOptions.IsHttpUri(o.Notification), GameplayServiceOptions.Messages.Notification)
+            .ValidateOnStart();
+
+        // Development keeps the lazy 503 path so a local host without the secret still starts.
+        services.AddOptions<MachineTokenOptions>()
+            .Bind(configuration.GetSection(MachineTokenOptions.SectionName))
+            .Validate<IHostEnvironment>(
+                (o, env) => env.IsDevelopment() || !string.IsNullOrWhiteSpace(o.MachineClientSecret),
+                GameplayServiceOptions.Messages.MachineClientSecret)
+            .ValidateOnStart();
         services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
         services.AddSingleton(TimeProvider.System);
 

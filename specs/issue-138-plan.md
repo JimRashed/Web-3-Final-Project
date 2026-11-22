@@ -257,3 +257,13 @@ Out of scope:
 - user-secrets wiring / `UserSecretsId`;
 - realm JSON and compose changes;
 - marking any SEC decision approved.
+
+## 8. Plan adjustments (implementation)
+
+Recorded by the implement stage; no file outside the inventory was added.
+
+- `src/QuizArena.Client/src/config.test.ts`: the `?raw` import of `.env.example` is refused by Vite (`server.fs.deny` covers `.env.*`). The test reads the file with `node:fs` from `process.cwd()` (the client root, which is the Vitest root locally and in CI). `npm run typecheck` passes because the Node types are already loaded through Vite's own type references. The Vite config is not changed.
+- `tests/QuizArena.Identity.IntegrationTests/Endpoints/ProfileEndpointsTests.cs`: not modified. `PutMe_ThenGetMe_ReturnsProfileForTokenIdentity` already asserts the exact property set `id, issuer, subject, displayName` (step 8 "skip if an equivalent assertion already exists").
+- `GameplayExceptionHandler`: not modified. `MachineTokenLeakTests` passes under Development and Production, so the Development problem body carries no exception detail.
+- Lobby client test: added to `LobbyPage.test.tsx` (not `MatchPage.test.tsx`).
+- Startup tests pass every key through `UseSetting` (host-level settings reach both the eager reads in `Program` and the lazily validated options). The Gameplay ones remove only the `DeliveryWorker` hosted service, not every `IHostedService`. The leak test sets `ConnectionStrings:DefaultConnection` with `UseSetting` because the Production run has no appsettings value for it.
