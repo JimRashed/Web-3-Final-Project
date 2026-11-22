@@ -12,7 +12,7 @@ public interface IEventApplication
     Task<EventResponse> PublishAsync(CreateEventRequest request, string issuer, CancellationToken cancellationToken);
 
     /// <summary>Events addressed to one recipient, newest first.</summary>
-    Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, CancellationToken cancellationToken);
+    Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, int page, int pageSize, CancellationToken cancellationToken);
 
     /// <summary>Stored preferences, or the disabled default when the player never saved any.</summary>
     Task<UserPreferencesResponse> GetPreferencesAsync(string issuer, string subject, CancellationToken cancellationToken);

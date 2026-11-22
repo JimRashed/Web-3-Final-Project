@@ -86,9 +86,13 @@ public sealed class DeliveryWorker(
 
     private async Task ProcessAsync(IOutboxStore store, DeliveryRecord delivery, DateTime startedAt, CancellationToken cancellationToken)
     {
+        // Every completion write carries the lease this worker claimed; a false result means the lease expired
+        // and another worker owns the row now, so this worker's outcome is dropped.
+        var lease = delivery.LeaseUntil ?? throw new InvalidOperationException($"Delivery {delivery.Id} was returned without a lease.");
+
         if (!_channels.TryGetValue(delivery.Destination, out var channel))
         {
-            await store.FailedAsync(delivery.Id, $"unknown destination '{delivery.Destination}'", cancellationToken);
+            LogIfLeaseLost(await store.FailedAsync(delivery.Id, lease, $"unknown destination '{delivery.Destination}'", cancellationToken), delivery);
             return;
         }
 
@@ -97,22 +101,23 @@ public sealed class DeliveryWorker(
         switch (attempt.Disposition)
         {
             case DeliveryDisposition.Delivered:
-                await store.DeliveredAsync(delivery.Id, startedAt, cancellationToken);
+                LogIfLeaseLost(await store.DeliveredAsync(delivery.Id, lease, startedAt, cancellationToken), delivery);
                 return;
 
             case DeliveryDisposition.Permanent:
                 logger.LogError("Delivery {DeliveryId} to {Destination} failed permanently: {Error}",
                     delivery.Id, delivery.Destination, attempt.Error);
-                await store.FailedAsync(delivery.Id, attempt.Error ?? "permanent failure", cancellationToken);
+                LogIfLeaseLost(await store.FailedAsync(delivery.Id, lease, attempt.Error ?? "permanent failure", cancellationToken), delivery);
                 return;
 
             default:
                 if (delivery.AttemptCount >= DeliveryRetryPolicy.MaxAttempts)
                 {
-                    await store.FailedAsync(
+                    LogIfLeaseLost(await store.FailedAsync(
                         delivery.Id,
+                        lease,
                         $"retries exhausted after {delivery.AttemptCount} attempts: {attempt.Error}",
-                        cancellationToken);
+                        cancellationToken), delivery);
                     return;
                 }
 
@@ -121,12 +126,22 @@ public sealed class DeliveryWorker(
                     attempt.RetryAfter,
                     Random.Shared.NextDouble());
 
-                await store.RescheduleAsync(
+                LogIfLeaseLost(await store.RescheduleAsync(
                     delivery.Id,
+                    lease,
                     startedAt + delay,
                     attempt.Error ?? "transient failure",
-                    cancellationToken);
+                    cancellationToken), delivery);
                 return;
+        }
+    }
+
+    private void LogIfLeaseLost(bool applied, DeliveryRecord delivery)
+    {
+        if (!applied)
+        {
+            logger.LogWarning("Delivery {DeliveryId} to {Destination} outlived its lease; another worker owns it now, so this outcome was dropped.",
+                delivery.Id, delivery.Destination);
         }
     }
 }

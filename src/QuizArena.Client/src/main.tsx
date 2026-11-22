@@ -17,7 +17,7 @@ async function start() {
   // Resolve callback handling before the router reads the URL; initialize once per page.
   await session.initialize();
   if (window.location.pathname === '/auth/callback' && session.getSnapshot().status === 'authenticated') {
-    window.history.replaceState(null, '', '/');
+    window.history.replaceState(null, '', session.completeLoginRedirect());
   }
   root.render(<React.StrictMode><AuthProvider session={session}><BrowserRouter><App /></BrowserRouter></AuthProvider></React.StrictMode>);
 }

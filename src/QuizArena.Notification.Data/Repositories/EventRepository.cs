@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using QuizArena.Notification.Data.Context;
 using QuizArena.Notification.Domain.Entities;
+using QuizArena.Notification.Domain.Exceptions;
 using QuizArena.Notification.Domain.Repositories;
 using QuizArena.Notification.Domain.Services;
 
@@ -48,12 +49,22 @@ public sealed class EventRepository(NotificationDbContext context) : IEventRepos
     public async Task<IReadOnlyList<Event>> GetByUserAsync(
         string issuer,
         string userId,
-        CancellationToken cancellationToken) =>
-        await context.Events
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        InvalidPagingException.ThrowIfInvalid(page, pageSize);
+
+        // The contract orders by createdAt descending, then eventId ordinal ascending (a stable page boundary).
+        return await context.Events
             .AsNoTracking()
             .Where(@event => @event.Issuer == issuer && @event.UserId == userId)
             .OrderByDescending(@event => @event.CreatedAt)
+            .ThenBy(@event => @event.EventId.ToString())
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+    }
 
     private static bool IsDuplicateKey(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: UniqueIndexViolation or PrimaryKeyViolation };

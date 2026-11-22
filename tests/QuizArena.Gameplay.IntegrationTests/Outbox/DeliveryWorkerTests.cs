@@ -134,25 +134,39 @@ public sealed class DeliveryWorkerTests
 
         public List<(Guid Id, string Reason)> Failed { get; } = [];
 
-        public Task<IReadOnlyList<DeliveryRecord>> ClaimAsync(int batchSize, TimeSpan lease, DateTime utcNow, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<DeliveryRecord>>(rows.Take(batchSize).ToArray());
+        // Like the real store, a claimed row always carries the lease the worker must present to complete it.
+        public Task<IReadOnlyList<DeliveryRecord>> ClaimAsync(int batchSize, TimeSpan lease, DateTime utcNow, CancellationToken cancellationToken)
+        {
+            var claimed = rows.Take(batchSize).ToArray();
+            foreach (var row in claimed)
+            {
+                row.LeaseUntil = utcNow + lease;
+            }
 
-        public Task DeliveredAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken)
+            return Task.FromResult<IReadOnlyList<DeliveryRecord>>(claimed);
+        }
+
+        public List<DateTime> Leases { get; } = [];
+
+        public Task<bool> DeliveredAsync(Guid id, DateTime claimedLeaseUntil, DateTime utcNow, CancellationToken cancellationToken)
         {
             Delivered.Add(id);
-            return Task.CompletedTask;
+            Leases.Add(claimedLeaseUntil);
+            return Task.FromResult(true);
         }
 
-        public Task RescheduleAsync(Guid id, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken)
+        public Task<bool> RescheduleAsync(Guid id, DateTime claimedLeaseUntil, DateTime nextAttemptAtUtc, string error, CancellationToken cancellationToken)
         {
             Rescheduled.Add((id, nextAttemptAtUtc, error));
-            return Task.CompletedTask;
+            Leases.Add(claimedLeaseUntil);
+            return Task.FromResult(true);
         }
 
-        public Task FailedAsync(Guid id, string error, CancellationToken cancellationToken)
+        public Task<bool> FailedAsync(Guid id, DateTime claimedLeaseUntil, string error, CancellationToken cancellationToken)
         {
             Failed.Add((id, error));
-            return Task.CompletedTask;
+            Leases.Add(claimedLeaseUntil);
+            return Task.FromResult(true);
         }
 
         public Task<bool> RedriveAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken) =>

@@ -16,9 +16,10 @@ public sealed class EventApplication(
         return EventResponse.FromDomain(stored);
     }
 
-    public async Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<EventResponse>> GetEventsAsync(string issuer, string subject, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var stored = await events.GetByUserAsync(issuer, subject, cancellationToken);
+        InvalidPagingException.ThrowIfInvalid(page, pageSize);
+        var stored = await events.GetByUserAsync(issuer, subject, page, pageSize, cancellationToken);
         return stored.Select(EventResponse.FromDomain).ToList();
     }
 

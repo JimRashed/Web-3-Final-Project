@@ -54,14 +54,13 @@ The relational tests run against a real SQL Server (LocalDB locally, a SQL Serve
 | Gameplay #95/#96/#100 | a repeated start returned the match to non-hosts; simultaneous starts and answers returned 500; the match page was unreachable and showed the guest the host's score | #107, #108, #109 |
 | Gameplay outbox #111 | the machine-token options bound the wrong config keys, and the OAuth response was read as camelCase, so **every match start returned 503** | #118 |
 | Client | the guest had no in-app way to reach the match (`/notifications` placeholder, no link) | #121 |
+| Notification `GET /events` (#90) | no paging and no `userId` 403 rule, so the whole history came back in one response and another player's id was ignored | #128 |
+| Gameplay outbox (#111 review, P3) | completion writes didn't check lease ownership, so a worker that outlived its lease could overwrite the new owner's result | #129 (lease-fenced writes and the first SQL tests of the claim) |
 
 ## Still open
 | Item | Status |
 |---|---|
-| Notification `GET /events` | merged without the contract's paging and `userId` 403 rule (review on #90). Follow-up needed. |
-| Outbox lease fencing | P3 from the #111 review: completion writes don't check lease ownership. Receivers are idempotent, so the impact is limited. |
 | D01 #62 | a teammate's clean-checkout run of the runbook is still to be recorded |
-| D06 #67 | final read-only review and signoff |
 
 ---
 
@@ -192,3 +191,23 @@ Before closure, record these results using the configured live environment witho
 - [ ] Owner inspects scope, persistence, security and actual validation evidence; independent human reviewer approves the draft PR with applicable CI evidence.
 
 Agent-reviewed research/plan and automated checks do not imply human approval. Human signoff remains pending; do not mark #43 Done or close it solely because tests or a draft PR exist.
+
+## Issue #130 — live two-player demo
+
+On 2026-11-05, the rehearsal stack ran from milestone revision `422dc747dfbec2b1b7e9b1231ce3fffc45191b2e` and the focused repair in the accompanying #130 PR. The [scoped plan](../../specs/issue-130-plan.md) and [runbook](runbook.md) describe the setup and commands. The earlier #64 results above are historical.
+
+| Check | Observed result |
+| --- | --- |
+| Fresh environment | Portable Keycloak 26.7.5 with Java 21, imported repository realm, discovery reachable on 8080. The Node provisioning script created `player-a` and `player-b`. |
+| Migrations and startup | `./scripts/start-milestone3.ps1 -SkipKeycloak` applied migrations to all six databases on a fresh `QuizArenaDemo130` LocalDB instance. All six API health checks and the React page on 5173 passed. |
+| Question provenance | The runbook's aggregate `sqlcmd` check returned five valid seeded questions. Gameplay's HTTP log recorded `POST /internal/question-sets` → 200 on match start. Five snapshot IDs from the shared-link match joined to the persisted QuestionBank catalog. |
+| Existing browser journey | `npm run journey:ui` passed 11/11 before and after the repair, including guest entry through the delivered event, five answers each, consistent win/loss screens, both Statistics histories and the completion event. No 5xx responses. |
+| Existing API journey | `npm run journey:api` passed 10/10 before the frontend repair, including the same match ID on repeated host start, guest start denied, five concurrent rounds, results and events for each player. |
+| Shared-link reproduction | Before the repair, opening the host's shared URL and signing in as the guest landed at the overview. After the repair, the same check returned the guest to the exact match URL and rendered their 0–5 final score. |
+| Full shared-link browser rerun | A local adaptation of `journey:ui` used the host's shared link and OIDC sign-in in place of guest notification navigation, then ran the same remaining checks. Passed 11/11. Both sessions answered all five rounds and reached complementary win/loss outcomes. Match `9a85c38a-caaf-4f83-b2d4-a43acb7f8ac3` persisted score 5–0, ten answers, two Statistics rows for distinct players, and two created plus two completed events for those players. |
+
+The repair preserves the registered OIDC callback and stores only the match ID in tab storage until a successful sign-in consumes it. A fixed local path and encoded query prevent the stored ID from becoming an external redirect. Normal sign-in still lands at the overview. Credentials and answer values were excluded from the evidence.
+
+The separate human two-session rehearsal and independent human review remain pending. The automated browser runs demonstrate both entry paths against the live stack. Record the human rehearsal observations and exact tested PR revision before closing #130.
+
+Final automated gates passed on the repaired tree. Offline solution restore, Release build with warnings as errors, and format verification exited 0. The Release regression passed 1,438 tests across 13 assemblies, with zero failures or skips. An initial Debug build hit Windows file locks from the running services, so the final build and test used Release while the demo remained available. Client typecheck, lint, production build and 307 tests across 25 files passed. The contract checker passed 30 operations, 179 examples and 12 corruption probes.
