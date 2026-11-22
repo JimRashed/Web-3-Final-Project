@@ -60,6 +60,7 @@ Shipped code at `c8dcc78` compared with the previous matrix, ADRs and contracts.
 - Upload attack surface: polyglot and renamed files, decompression bombs (very large pixel dimensions in a small file; no dimension limit this milestone, open question in SEC-02), embedded metadata such as EXIF location, oversized bodies and slow uploads (SEC-02).
 - Private-delivery assumptions: no shared caching, no URL-embedded tokens, object URLs revoked on sign-out (SEC-08).
 - Error-mapping gaps that turn outages into 500 (DR-3, DR-8).
+- Configuration and secret-handling residual risks from SEC-A2 (#138): see [configuration-review.md](configuration-review.md).
 
 ## Prerequisites
 
