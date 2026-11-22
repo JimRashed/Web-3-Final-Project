@@ -347,3 +347,27 @@ Recorded by the Implement stage; behaviour and scope are unchanged.
   retries on the same store (`...RollsBackToPreviousPictureAndRetrySucceeds`).
 - **Script header:** the `Rollback` line in `Invoke-LegacyMigration.ps1`'s comment help notes that a profile with an
   uploaded picture is always kept.
+
+### Repair cycle 1 (review on PR #154)
+
+- **Unknown commit outcome.** When the commit step throws, `ProfilePictureStore.ReplaceAsync` disposes the transaction
+  and re-reads the row with a no-tracking query (no caller token). It returns success only when the row carries the
+  rowversion produced by this call's write plus the expected version, content type and content SHA-256; it rethrows the
+  original exception when the row is still the prior state (prior rowversion, or no row on a first upload); otherwise it
+  throws `PlayerProfileNotFoundException` (profile gone) or `ProfilePictureConflictException`. Guarantee: one call
+  increments the version at most once and never reports failure for a committed write that is still current, so the
+  caller has nothing to retry. Separate calls are not de-duplicated. If the verification read fails, the original
+  commit exception is rethrown and the outcome stays unknown (residual risk).
+- **Validated reads.** `GetAsync` maps through `ProfilePicture.Rehydrate`, `GetInfoAsync` through the new
+  `ProfilePicture.RehydrateInfo` (content type, version, UTC; bytes are not loaded so empty content is caught only by
+  `GetAsync`), and `ReplaceAsync` validates the loaded row. A corrupt row throws the new
+  `ProfilePictureCorruptException` (extra touchpoint, `IdentityDomainException`, inner `InvalidProfileException`); it is
+  not mapped to 400, so it reaches the default 500 until #144 maps errors.
+- **Concurrency vs. deletion.** A `DbUpdateConcurrencyException` whose profile no longer exists (cascade delete) now
+  throws `PlayerProfileNotFoundException` instead of a conflict.
+- **Failure cleanup.** Only the picture entry tracked by the failed call is detached; `ChangeTracker.Clear()` is gone.
+- **Tests added:** lost-acknowledgement interceptor (`TransactionCommittedAsync` throws after the real commit) for
+  replace and first upload, plus lost acknowledgement followed by a competing replace (conflict) or profile delete
+  (not found); profile deleted before the UPDATE; unrelated tracked entries kept; corrupt rows inserted with raw SQL for
+  reads and replace; domain tests for `RehydrateInfo` and empty content. HTTP 409/404 mapping stays with #144.
+

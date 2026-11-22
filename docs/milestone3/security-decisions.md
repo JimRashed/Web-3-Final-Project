@@ -36,6 +36,10 @@ No secret value appears in this document. Never paste one into an issue, pull re
 | `UpdatedAt` | `datetime2` (UTC) |
 | `RowVersion` | `rowversion`; concurrency token (SEC-07) |
 
+Implementation note (#143, not an approval): the store validates every row it reads and treats a corrupt row as a
+server fault. If a commit's acknowledgement is lost, it re-reads the row and reports success only when the row is its
+own write (matching rowversion, version, content type and content hash), so one upload never increments `version` twice.
+
 ## Discrepancy register
 
 Shipped code at `c8dcc78` compared with the previous matrix, ADRs and contracts. IDs use the `DR-` prefix so they are not confused with the issue stable IDs D1 (#146) and D2 (#147). The security files under `src/QuizArena.<Service>.Api/Security/` are identical on all six hosts apart from namespaces and the `<Service>Policies.cs` file; Identity line numbers are shown.

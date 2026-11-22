@@ -204,6 +204,39 @@ public sealed class ProfilePictureTests
     }
 
     [Fact]
+    public void Rehydrate_WithEmptyContent_Throws()
+    {
+        // Act
+        var act = () => ProfilePicture.Rehydrate(ProfileId, "image/png", [], 1, Now);
+
+        // Assert
+        act.Should().Throw<InvalidProfileException>().Which.Field.Should().Be("content");
+    }
+
+    [Theory]
+    [InlineData("image/png", 0, DateTimeKind.Utc)]
+    [InlineData("image/png", 1, DateTimeKind.Local)]
+    [InlineData("image/gif", 1, DateTimeKind.Utc)]
+    public void RehydrateInfo_WithCorruptValues_Throws(string contentType, int version, DateTimeKind kind)
+    {
+        // Act
+        var act = () => ProfilePicture.RehydrateInfo(contentType, version, DateTime.SpecifyKind(Now, kind));
+
+        // Assert
+        act.Should().Throw<InvalidProfileException>();
+    }
+
+    [Fact]
+    public void RehydrateInfo_WithValidValues_ReturnsReference()
+    {
+        // Act
+        var info = ProfilePicture.RehydrateInfo("image/webp", 4, Now);
+
+        // Assert
+        info.Should().Be(new ProfilePictureInfo("image/webp", 4, Now));
+    }
+
+    [Fact]
     public void ProfilePictureInfo_ExposesOnlyContentTypeVersionAndUpdatedAt()
     {
         // Act

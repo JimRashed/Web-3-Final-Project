@@ -233,6 +233,183 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ReplaceAsync_WhenCommitAcknowledgementIsLost_VerifiesCommitAndCountsTheUploadOnce()
+    {
+        // Arrange: the real commit succeeds, then the acknowledgement is lost (the commit step throws afterwards).
+        await SeedAsync();
+        var commands = new CommandRecorder();
+        var lostAck = new LostCommitAcknowledgement();
+        await using var context = NewContext(commands, lostAck);
+        var store = new ProfilePictureStore(context);
+
+        // Act
+        var info = await store.ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+
+        // Assert: the store verified the committed row and reported success, so the caller has nothing to retry.
+        lostAck.Failures.Should().Be(1);
+        info.Should().Be(new ProfilePictureInfo("image/jpeg", 2, Now.AddMinutes(1)));
+        commands.Texts.Count(text => text.Contains("UPDATE [ProfilePictures]", StringComparison.Ordinal))
+            .Should().Be(1, "one logical upload issues exactly one replacement write; the store never retries it");
+        var stored = await ReadAsync();
+        stored!.Version.Should().Be(2, "the version moved from the prior 1 to exactly 2");
+        stored.Content.Should().Equal(NewBytes);
+        stored.ContentType.Should().Be("image/jpeg");
+        context.ChangeTracker.Entries<ProfilePicture>().Should().ContainSingle()
+            .Which.State.Should().Be(EntityState.Unchanged, "the committed picture stays tracked in its stored state");
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_FirstUploadWhenCommitAcknowledgementIsLost_ReturnsVersionOne()
+    {
+        // Arrange
+        var lostAck = new LostCommitAcknowledgement();
+
+        // Act
+        ProfilePictureInfo info;
+        await using (var context = NewContext(lostAck))
+        {
+            info = await new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/png", OldBytes, Now, CancellationToken.None);
+        }
+
+        // Assert
+        lostAck.Failures.Should().Be(1);
+        info.Should().Be(new ProfilePictureInfo("image/png", 1, Now));
+        var stored = await ReadAsync();
+        stored!.Version.Should().Be(1);
+        stored.Content.Should().Equal(OldBytes);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenAcknowledgementIsLostAndAnotherReplaceFollows_ThrowsConflict()
+    {
+        // Arrange: after this call commits, a competing replace commits before the outcome is verified.
+        await SeedAsync();
+        byte[] competingBytes = [0x77];
+        var lostAck = new LostCommitAcknowledgement(async () =>
+        {
+            await using var other = NewContext();
+            await new ProfilePictureStore(other).ReplaceAsync(_profileId, "image/webp", competingBytes, Now.AddMinutes(2), CancellationToken.None);
+        });
+
+        // Act
+        await using (var context = NewContext(lostAck))
+        {
+            var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+            (await act.Should().ThrowAsync<ProfilePictureConflictException>())
+                .Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be(LostCommitAcknowledgement.Message);
+        }
+
+        // Assert: the current row is not the write this call made, so the store cannot claim it.
+        var stored = await ReadAsync();
+        stored!.Version.Should().Be(3);
+        stored.Content.Should().Equal(competingBytes);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenAcknowledgementIsLostAndProfileWasDeleted_ThrowsProfileNotFound()
+    {
+        // Arrange
+        await SeedAsync();
+        var lostAck = new LostCommitAcknowledgement(DeleteProfileAsync);
+
+        // Act
+        await using var context = NewContext(lostAck);
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<PlayerProfileNotFoundException>();
+        (await ReadAsync()).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenProfileDeletedBeforeUpdate_ThrowsProfileNotFoundNotConflict()
+    {
+        // Arrange: the profile (and by cascade its picture) is deleted between the read and the UPDATE.
+        await SeedAsync();
+        await using var context = NewContext(new RunBeforeSave(DeleteProfileAsync));
+
+        // Act
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+
+        // Assert
+        (await act.Should().ThrowAsync<PlayerProfileNotFoundException>())
+            .Which.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();
+        context.ChangeTracker.Entries<ProfilePicture>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_OnFailure_DetachesOnlyThePictureEntry()
+    {
+        // Arrange
+        await SeedAsync();
+        var failure = new FailingPictureWrite();
+        await using var context = NewContext(failure);
+        var profile = await context.UserProfiles.SingleAsync(p => p.Id == _profileId);
+
+        // Act
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+        await act.Should().ThrowAsync<DbUpdateException>();
+
+        // Assert
+        context.ChangeTracker.Entries<ProfilePicture>().Should().BeEmpty();
+        context.Entry(profile).State.Should().Be(EntityState.Unchanged, "unrelated entries in the scoped context are kept");
+    }
+
+    [Theory]
+    [InlineData("image/gif", 1, 3, true)]
+    [InlineData("image/svg+xml", 1, 3, true)]
+    [InlineData("image/png", 0, 3, true)]
+    [InlineData("image/png", -4, 3, true)]
+    [InlineData("image/png", 1, 0, false)]
+    public async Task Reads_WithCorruptStoredRow_FailLoudly(string contentType, int version, int contentLength, bool infoDetects)
+    {
+        // Arrange: bypass the domain and write an invalid row directly.
+        await InsertRawAsync(contentType, version, new byte[contentLength]);
+        await using var context = NewContext();
+        var store = new ProfilePictureStore(context);
+
+        // Act
+        var get = () => store.GetAsync(_profileId, CancellationToken.None);
+        var getInfo = () => store.GetInfoAsync(_profileId, CancellationToken.None);
+
+        // Assert
+        (await get.Should().ThrowAsync<ProfilePictureCorruptException>()).Which.InnerException.Should().BeOfType<InvalidProfileException>();
+        if (infoDetects)
+        {
+            (await getInfo.Should().ThrowAsync<ProfilePictureCorruptException>()).Which.InnerException.Should().BeOfType<InvalidProfileException>();
+        }
+        else
+        {
+            // The reference read never loads the bytes, so only content type, version and timestamp are checked there.
+            (await getInfo()).Should().Be(new ProfilePictureInfo(contentType, version, Now));
+        }
+    }
+
+    [Theory]
+    [InlineData("image/gif", 1, 3)]
+    [InlineData("image/png", 0, 3)]
+    [InlineData("image/png", 1, 0)]
+    public async Task ReplaceAsync_OverCorruptStoredRow_ThrowsCorruptAndLeavesRowUnchanged(string contentType, int version, int contentLength)
+    {
+        // Arrange
+        await InsertRawAsync(contentType, version, new byte[contentLength]);
+
+        // Act
+        await using (var context = NewContext())
+        {
+            var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/png", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+            await act.Should().ThrowAsync<ProfilePictureCorruptException>();
+            context.ChangeTracker.Entries<ProfilePicture>().Should().BeEmpty();
+        }
+
+        // Assert
+        await using var fresh = NewContext();
+        var raw = await fresh.ProfilePictures.AsNoTracking().Select(p => new { p.ContentType, p.Version }).SingleAsync();
+        raw.ContentType.Should().Be(contentType);
+        raw.Version.Should().Be(version);
+    }
+
+    [Fact]
     public async Task ReplaceAsync_ConcurrentReplacements_FirstCommitterWinsOtherGetsConflict()
     {
         // Arrange
@@ -443,6 +620,19 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         await new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/png", OldBytes, Now, CancellationToken.None);
     }
 
+    private async Task DeleteProfileAsync()
+    {
+        await using var other = NewContext();
+        await other.UserProfiles.Where(p => p.Id == _profileId).ExecuteDeleteAsync();
+    }
+
+    private async Task InsertRawAsync(string contentType, int version, byte[] content)
+    {
+        await using var context = NewContext();
+        await context.Database.ExecuteSqlAsync(
+            $"INSERT INTO [ProfilePictures] ([ProfileId], [ContentType], [Content], [Version], [UpdatedAt]) VALUES ({_profileId}, {contentType}, {content}, {version}, {Now})");
+    }
+
     private async Task<ProfilePicture?> ReadAsync()
     {
         await using var context = NewContext();
@@ -506,6 +696,41 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
             }
 
             return ValueTask.FromResult(result);
+        }
+    }
+
+    /// <summary>
+    /// Simulates a lost commit acknowledgement: the real commit has already succeeded when the commit step throws.
+    /// An optional action runs in between, standing in for work another request commits before the outcome is checked.
+    /// </summary>
+    private sealed class LostCommitAcknowledgement(Func<Task>? afterCommit = null) : DbTransactionInterceptor
+    {
+        public const string Message = "Simulated lost commit acknowledgement.";
+
+        public int Failures { get; private set; }
+
+        public override async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
+        {
+            if (Failures == 0)
+            {
+                Failures++;
+                if (afterCommit is not null)
+                {
+                    await afterCommit();
+                }
+
+                throw new InvalidOperationException(Message);
+            }
+        }
+    }
+
+    /// <summary>Runs an action (on another connection) just before this context's SaveChanges.</summary>
+    private sealed class RunBeforeSave(Func<Task> action) : SaveChangesInterceptor
+    {
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            await action();
+            return result;
         }
     }
 

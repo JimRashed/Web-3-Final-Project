@@ -54,19 +54,33 @@ public sealed class ProfilePicture
         return new ProfilePicture(profileId, contentType, (byte[])content.Clone(), 1, updatedAt);
     }
 
-    /// <summary>Rehydrates a stored picture, re-checking invariants so corrupt rows fail loudly.</summary>
+    /// <summary>
+    /// Rebuilds a stored picture from persisted values, re-checking every invariant. <c>ProfilePictureStore</c> maps its
+    /// reads through this method (EF's own constructor binding does not call it), so a corrupt row throws
+    /// <see cref="InvalidProfileException"/> here instead of reaching callers. The content is copied.
+    /// </summary>
     public static ProfilePicture Rehydrate(Guid profileId, string contentType, byte[] content, int version, DateTime updatedAt)
     {
         EnsureProfileId(profileId);
-        ValidateContentType(contentType);
         ValidateContent(content);
+        _ = RehydrateInfo(contentType, version, updatedAt);
+        return new ProfilePicture(profileId, contentType, (byte[])content.Clone(), version, updatedAt);
+    }
+
+    /// <summary>
+    /// Validates the persisted reference values (content type, version, UTC timestamp) read without the bytes and
+    /// returns them as a <see cref="ProfilePictureInfo"/>. Throws <see cref="InvalidProfileException"/> for a corrupt row.
+    /// </summary>
+    public static ProfilePictureInfo RehydrateInfo(string contentType, int version, DateTime updatedAt)
+    {
+        ValidateContentType(contentType);
         EnsureUtc(updatedAt);
         if (version < 1)
         {
             throw new InvalidProfileException(nameof(version), "Picture version must be at least 1.");
         }
 
-        return new ProfilePicture(profileId, contentType, (byte[])content.Clone(), version, updatedAt);
+        return new ProfilePictureInfo(contentType, version, updatedAt);
     }
 
     /// <summary>
