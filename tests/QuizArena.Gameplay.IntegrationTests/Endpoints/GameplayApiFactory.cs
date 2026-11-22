@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,6 +18,7 @@ using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using QuizArena.Gameplay.Api.Security;
 using QuizArena.Gameplay.Api.Services;
+using QuizArena.Gameplay.Data.Context;
 using QuizArena.Gameplay.Domain.Entities;
 using QuizArena.Gameplay.Domain.Repositories;
 using QuizArena.Gameplay.IntegrationTests.Security;
@@ -24,11 +27,11 @@ namespace QuizArena.Gameplay.IntegrationTests.Endpoints;
 
 /// <summary>
 /// Runs the real Gameplay API pipeline (routing, JWT bearer validation, authorization policies,
-/// exception mapping) against in-memory ports. The two remote services are replaced at the port
+/// exception mapping) with in-memory persistence by default. The two remote services are replaced at the port
 /// boundary, which is exactly where the HTTP adapters sit, so no test depends on Lobby or
 /// QuestionBank being up.
 /// </summary>
-public sealed class GameplayApiFactory : WebApplicationFactory<QuizArena.Gameplay.Api.Program>
+public sealed class GameplayApiFactory(string? sqlConnectionString = null) : WebApplicationFactory<QuizArena.Gameplay.Api.Program>
 {
     public FakeMatchRepository Matches { get; } = new();
 
@@ -51,7 +54,7 @@ public sealed class GameplayApiFactory : WebApplicationFactory<QuizArena.Gamepla
             ["Authentication:BrowserClientId"] = TestTokens.BrowserClient,
             ["Authentication:MachineClientId"] = TestTokens.MachineClient,
             ["Authentication:RequireHttpsMetadata"] = "false",
-            ["ConnectionStrings:DefaultConnection"] = "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaGameplayEndpointTests;Trusted_Connection=True;TrustServerCertificate=True",
+            ["ConnectionStrings:DefaultConnection"] = sqlConnectionString ?? "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaGameplayEndpointTests;Trusted_Connection=True;TrustServerCertificate=True",
             ["ServiceUrls:Lobby"] = "http://lobby.invalid",
             ["ServiceUrls:QuestionBank"] = "http://questionbank.invalid",
             ["ServiceUrls:Statistics"] = "http://statistics.invalid",
@@ -60,11 +63,23 @@ public sealed class GameplayApiFactory : WebApplicationFactory<QuizArena.Gamepla
 
         builder.ConfigureTestServices(services =>
         {
-            // The outbox worker would poll a database this host does not use.
+            // Leave delivery rows unprocessed for persistence assertions.
             services.RemoveAll<IHostedService>();
 
-            services.RemoveAll<IMatchRepository>();
-            services.AddSingleton<IMatchRepository>(Matches);
+            if (sqlConnectionString is null)
+            {
+                services.RemoveAll<IMatchRepository>();
+                services.AddSingleton<IMatchRepository>(Matches);
+            }
+            else
+            {
+                // Program captures the connection string before app-configuration overrides apply.
+                var options = new DbContextOptionsBuilder<GameplayDbContext>().UseSqlServer(sqlConnectionString).Options;
+                services.RemoveAll<GameplayDbContext>();
+                services.RemoveAll<DbContextOptions<GameplayDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<GameplayDbContext>>();
+                services.AddScoped(_ => new GameplayDbContext(options));
+            }
 
             services.RemoveAll<ILobbyGateway>();
             services.AddSingleton<ILobbyGateway>(Lobby);

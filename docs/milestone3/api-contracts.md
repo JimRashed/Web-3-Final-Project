@@ -7,7 +7,7 @@
 | Service | Method / route | Operation ID | Declared outcomes |
 |---|---|---|---|
 | identity | GET `/api/users/me` | getMyProfile | 200, 401, 403, 404, 500, 503 |
-| identity | PUT `/api/users/me` | updateMyProfile | 200, 400, 401, 403, 500, 503 |
+| identity | PUT `/api/users/me` | updateMyProfile | 200, 400, 401, 403, 415, 500, 503 |
 | identity | GET `/api/users/me/picture` | getMyPicture | 200, 401, 403, 404, 500, 503 (**proposed, #144**) |
 | identity | PUT `/api/users/me/picture` | replaceMyPicture | 200, 400, 401, 403, 404, 409, 413, 415, 500, 503 (**proposed, #144**) |
 | identity | POST `/api/auth/register` | retiredRegister | 410 |
@@ -48,6 +48,8 @@ No public entity serialization: Api maps DTOs. User mutation objects reject unkn
 ## Identity
 
 GET /me reads profile or404 if no local profile. PUT /me upserts displayName, returning200 and a stable internal Guid id; issuer and subject come only from claims. displayName1..80 trimmed characters, whitespace-only invalid, case preserved. No username uniqueness requirement on display names. Client loads profile after login and prompts for display name if404; provider preferred_username may prefill locally but is not an identity mapping. All three legacy endpoints always410 and never process credentials.
+
+Profile PUT requires `application/json`. After authorization, unsupported content types receive MVC's 415 `application/problem+json` with `type`, `title`, `status` and `traceId`.
 
 **Picture (proposed, #144; team approval pending).** `GET /api/users/me/picture` (`profiles.read`) returns the caller's own image bytes with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`, or 404 when there is no profile or picture. `PUT /api/users/me/picture` (`profiles.write`) takes a raw `image/png`, `image/jpeg` or `image/webp` body of at most 2,097,152 bytes whose magic bytes match the Content-Type, replaces the single picture atomically and returns the Profile; 400 mismatch, empty or malformed header, 404 no profile, 409 lost a concurrent replacement (first committer wins), 413 too large, 415 other types (including SVG and GIF), 503 storage unavailable. `Profile` gains an optional nullable `picture {contentType, updatedAt, version}` without storage keys or URLs. Owner, storage, concurrency, caching and sign-out rules are decisions SEC-01 to SEC-09 in [security decisions](security-decisions.md).
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using QuizArena.Notification.Api.Contracts;
 using Xunit;
@@ -145,6 +146,10 @@ public sealed class NotificationEndpointsTests(NotificationApiFactory factory) :
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        const string forbidden = "Insufficient scope, actor kind or ownership";
+        problem.GetProperty("title").GetString().Should().Be(forbidden);
+        problem.GetProperty("detail").GetString().Should().Be(forbidden);
     }
 
     [Theory]

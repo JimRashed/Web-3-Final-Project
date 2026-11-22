@@ -91,5 +91,10 @@ public sealed class LobbyApiFixture : IAsyncLifetime
         traceId.Should().NotBeNullOrWhiteSpace();
         traceId!.Length.Should().BeInRange(1, 100);
         json.RootElement.GetProperty("detail").GetString().Should().Be(json.RootElement.GetProperty("title").GetString());
+        if (status == 403)
+        {
+            json.RootElement.GetProperty("title").GetString().Should().Be("Insufficient scope, actor kind or ownership");
+            response.Headers.WwwAuthenticate.Should().BeEmpty();
+        }
     }
 }
