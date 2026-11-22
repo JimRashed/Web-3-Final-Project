@@ -42,6 +42,9 @@ namespace QuizArena.Identity.Data.Repositories;
 /// never retries internally and does not de-duplicate separate calls: a second call is a new upload and gets the next
 /// version. If the verification read itself fails, the original commit exception is rethrown and the outcome stays
 /// unknown to the caller.
+/// The guarantee also assumes locking READ COMMITTED: under READ_COMMITTED_SNAPSHOT (the Azure SQL default), a broken
+/// connection mid-commit can let the verification read on a new connection see the prior row while the commit is
+/// still completing, so the call rethrows and a client retry would add one more version.
 /// </para>
 /// <para>
 /// <b>Failure cleanup.</b> On any failure only the picture entry this call tracked is detached; other entries in the

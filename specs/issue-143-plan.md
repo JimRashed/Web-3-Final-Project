@@ -358,6 +358,7 @@ Recorded by the Implement stage; behaviour and scope are unchanged.
   increments the version at most once and never reports failure for a committed write that is still current, so the
   caller has nothing to retry. Separate calls are not de-duplicated. If the verification read fails, the original
   commit exception is rethrown and the outcome stays unknown (residual risk).
+  Residual: under READ_COMMITTED_SNAPSHOT (Azure SQL default) a broken connection mid-commit can let the verification read see the prior row, so the call rethrows and a retry adds one version (code-review note, repair cycle 1).
 - **Validated reads.** `GetAsync` maps through `ProfilePicture.Rehydrate`, `GetInfoAsync` through the new
   `ProfilePicture.RehydrateInfo` (content type, version, UTC; bytes are not loaded so empty content is caught only by
   `GetAsync`), and `ReplaceAsync` validates the loaded row. A corrupt row throws the new
