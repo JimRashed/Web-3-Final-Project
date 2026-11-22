@@ -204,7 +204,9 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        generated.Should().BeEquivalentTo(Operations(ReadContract()));
+        // Only contract operations explicitly marked x-status: proposed (not implemented yet, #144) are left
+        // out; the generated document is never filtered. ProfileApplicationTests pins which items are proposed.
+        generated.Should().BeEquivalentTo(Operations(ReadContract(), excludeProposed: true));
     }
 
     private async Task<HttpResponseMessage> Send(HttpMethod method, string path, string? token, string? body = null)
@@ -230,10 +232,14 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
         return document.RootElement.Clone();
     }
 
-    private static IReadOnlyList<string> Operations(JsonElement openApi) =>
+    private static bool IsProposed(JsonElement node) =>
+        node.TryGetProperty("x-status", out var status) && status.GetString() == "proposed";
+
+    private static IReadOnlyList<string> Operations(JsonElement openApi, bool excludeProposed = false) =>
         openApi.GetProperty("paths").EnumerateObject()
             .SelectMany(path => path.Value.EnumerateObject()
                 .Where(op => op.Name is "get" or "put" or "post" or "delete" or "patch")
+                .Where(op => !excludeProposed || !IsProposed(op.Value))
                 .Select(op => $"{op.Name.ToUpperInvariant()} {path.Name.Replace("{id}", "{param}", StringComparison.Ordinal)}"))
             .ToList();
 

@@ -1,6 +1,6 @@
 # Milestone 3 architecture decisions (P02)
 
-Status: **Proposed — final team approval pending.** Issue [#17](https://github.com/JimRashed/Web-3-Final-Project/issues/17), parent #8, epic #7. These contracts describe the target, not the deployed modular monolith at baseline `4917c48`. [Plan](../../specs/issue-17-plan.md), [API contracts](api-contracts.md), [authorization](authorization-matrix.md), [migration](identity-migration.md), [evidence](p02-validation.md).
+Status: **Proposed — final team approval pending.** Issue [#17](https://github.com/JimRashed/Web-3-Final-Project/issues/17), parent #8, epic #7. These contracts describe the target, not the deployed modular monolith at baseline `4917c48`. [Plan](../../specs/issue-17-plan.md), [API contracts](api-contracts.md), [authorization](authorization-matrix.md), [migration](identity-migration.md), [evidence](p02-validation.md), [security decisions](security-decisions.md).
 
 ## Decisions
 
