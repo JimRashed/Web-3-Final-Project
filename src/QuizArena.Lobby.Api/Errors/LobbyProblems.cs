@@ -31,7 +31,7 @@ public static class LobbyProblems
         {
             400 => "Invalid input",
             401 => "Missing or invalid bearer token",
-            403 => "Insufficient permission",
+            403 => "Insufficient scope, actor kind or ownership",
             404 => "Lobby or resource not found",
             409 => "Lobby state conflicts with the operation",
             415 => "Unsupported media type",

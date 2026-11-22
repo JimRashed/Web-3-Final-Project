@@ -35,12 +35,20 @@ public sealed class GameplayExceptionHandler(IProblemDetailsService problems) : 
             return false;
         }
 
+        var problem = new ProblemDetails { Status = status };
+        if (status == StatusCodes.Status403Forbidden)
+        {
+            const string forbidden = "Insufficient scope, actor kind or ownership";
+            problem.Title = forbidden;
+            problem.Detail = forbidden;
+        }
+
         httpContext.Response.StatusCode = status;
         await problems.WriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = { Status = status },
+            ProblemDetails = problem,
         });
 
         return true;

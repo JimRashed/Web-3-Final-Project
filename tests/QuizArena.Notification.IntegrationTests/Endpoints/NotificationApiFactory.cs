@@ -1,13 +1,17 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using QuizArena.Notification.Api.Contracts;
 using QuizArena.Notification.Api.Services;
+using QuizArena.Notification.Data.Context;
 using QuizArena.TestSupport;
 
 namespace QuizArena.Notification.IntegrationTests.Endpoints;
 
 /// <summary>
 /// Runs the real Notification API (routing, bearer validation, policies, ProblemDetails) with a
-/// stub application service, so the endpoint contract can be tested without a database.
+/// stub application service by default, or the real application when given a SQL connection string.
 /// </summary>
 public sealed class NotificationApiFactory
     : AuthenticatedHostFactory<QuizArena.Notification.Api.Program>
@@ -16,16 +20,23 @@ public sealed class NotificationApiFactory
 
     // One key per test process: the host validates with the same metadata the tests sign with.
     private static readonly EphemeralTokenIssuer SharedIssuer = new();
+    private readonly string? _sqlConnectionString;
 
     public NotificationApiFactory()
+        : this(null)
+    {
+    }
+
+    internal NotificationApiFactory(string? sqlConnectionString)
         : base(
             SharedIssuer,
             new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] =
-                    "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaNotification_Endpoints;Trusted_Connection=True;TrustServerCertificate=True",
+                    sqlConnectionString ?? "Server=(localdb)\\MSSQLLocalDB;Database=QuizArenaNotification_Endpoints;Trusted_Connection=True;TrustServerCertificate=True",
             })
     {
+        _sqlConnectionString = sqlConnectionString;
     }
 
     public EphemeralTokenIssuer Tokens => SharedIssuer;
@@ -34,7 +45,19 @@ public sealed class NotificationApiFactory
 
     protected override void ConfigureServiceOverrides(IServiceCollection services)
     {
-        services.AddSingleton<IEventApplication>(Application);
+        if (_sqlConnectionString is null)
+        {
+            services.AddSingleton<IEventApplication>(Application);
+        }
+        else
+        {
+            // Program captures the connection string before app-configuration overrides apply.
+            var options = new DbContextOptionsBuilder<NotificationDbContext>().UseSqlServer(_sqlConnectionString).Options;
+            services.RemoveAll<NotificationDbContext>();
+            services.RemoveAll<DbContextOptions<NotificationDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<NotificationDbContext>>();
+            services.AddScoped(_ => new NotificationDbContext(options));
+        }
     }
 }
 
