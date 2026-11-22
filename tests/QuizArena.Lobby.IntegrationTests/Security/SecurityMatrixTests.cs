@@ -12,6 +12,7 @@ namespace QuizArena.Lobby.IntegrationTests.Security;
 public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
 {
     private const string AllowedOrigin = "http://localhost:5173";
+    private const string PeerAudience = "quizarena-identity";
 
     private readonly SecuredApiFactory _factory;
 
@@ -29,7 +30,11 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
             var data = new TheoryData<string, string>();
             foreach (var policy in LobbyPolicies.All.Keys)
             {
-                foreach (var kind in new[] { "missing", "malformed", "bad-signature", "unknown-key", "expired", "no-expiry", "wrong-issuer", "wrong-audience", "id-token-type" })
+                foreach (var kind in new[]
+                {
+                    "missing", "malformed", "bad-signature", "unknown-key", "expired", "no-expiry",
+                    "wrong-issuer", "peer-audience", "audience-trailing-slash", "legacy-credential", "id-token-type",
+                })
                 {
                     data.Add(policy, kind);
                 }
@@ -103,7 +108,9 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
             "expired" => TestTokens.Create(actor, policy, expires: DateTime.UtcNow.AddMinutes(-5)),
             "no-expiry" => TestTokens.Create(actor, policy, includeExpiry: false),
             "wrong-issuer" => TestTokens.Create(actor, policy, claims => claims["iss"] = "http://localhost:8080/realms/other"),
-            "wrong-audience" => TestTokens.Create(actor, policy, claims => claims["aud"] = "quizarena-other"),
+            "peer-audience" => TestTokens.Create(actor, policy, claims => claims["aud"] = PeerAudience),
+            "audience-trailing-slash" => TestTokens.Create(actor, policy, claims => claims["aud"] = TestTokens.Audience + "/"),
+            "legacy-credential" => TestTokens.CreateLegacyCredential(),
             "id-token-type" => TestTokens.Create(actor, policy, claims => claims["typ"] = "ID"),
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
@@ -116,6 +123,20 @@ public sealed class SecurityMatrixTests : IClassFixture<SecuredApiFactory>
         var challenge = response.Headers.WwwAuthenticate.Should().ContainSingle(header => header.Scheme == "Bearer").Subject;
         challenge.Parameter.Should().Be(kind == "missing" ? null : "error=\"invalid_token\"");
         await AssertProblemAsync(response, 401);
+    }
+
+    [Fact]
+    public async Task PolicyEndpoint_WithHostAndPeerAudiences_Returns200()
+    {
+        // Arrange
+        var (policy, actor) = LobbyPolicies.All.First(entry => entry.Value == ActorKind.User);
+        var token = TestTokens.Create(actor, policy, claims => claims["aud"] = new[] { PeerAudience, TestTokens.Audience });
+
+        // Act
+        using var response = await GetAsync(policy, token);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Theory]
