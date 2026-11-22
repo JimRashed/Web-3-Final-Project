@@ -101,6 +101,78 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
     }
 
     [Theory]
+    [InlineData("text/plain")]
+    [InlineData("text/json")]
+    [InlineData("application/problem+json")]
+    public async Task PutMe_WithUnsupportedMediaType_Returns415WithoutCreatingProfile(string mediaType)
+    {
+        // Arrange
+        var subject = NewSubject();
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token(subject));
+        using var body = new StringContent("""{ "displayName": "Alex" }""", Encoding.UTF8, mediaType);
+
+        // Act
+        using var response = await client.PutAsync("/api/users/me", body);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        var problem = await Json(response);
+        problem.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("type", "title", "status", "traceId");
+        problem.GetProperty("status").GetInt32().Should().Be(415);
+        problem.GetProperty("title").GetString().Should().Be("Unsupported Media Type");
+        problem.GetProperty("type").GetString().Should().NotBeNullOrWhiteSpace();
+        problem.GetProperty("traceId").GetString().Should().NotBeNullOrWhiteSpace();
+        await using var db = _factory.NewDbContext();
+        (await db.UserProfiles.AsNoTracking().AnyAsync(profile => profile.Subject == subject)).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("missing-token", HttpStatusCode.Unauthorized)]
+    [InlineData("missing-scope", HttpStatusCode.Forbidden)]
+    [InlineData("machine", HttpStatusCode.Forbidden)]
+    public async Task PutMe_WithoutWriteGrant_DeniesBeforeCheckingMediaType(string caller, HttpStatusCode expected)
+    {
+        // Arrange
+        var subject = NewSubject();
+        using var client = _factory.CreateClient();
+        var token = caller switch
+        {
+            "missing-token" => null,
+            "missing-scope" => Token(subject, "profiles.read"),
+            "machine" => TestTokens.Create(ActorKind.Machine, "profiles.write", claims => claims["sub"] = subject),
+            _ => throw new ArgumentOutOfRangeException(nameof(caller)),
+        };
+        if (token is not null)
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        using var body = new StringContent("""{ "displayName": "Alex" }""", Encoding.UTF8, "text/plain");
+
+        // Act
+        using var response = await client.PutAsync("/api/users/me", body);
+
+        // Assert
+        await using var db = _factory.NewDbContext();
+        (await db.UserProfiles.AsNoTracking().AnyAsync(profile => profile.Subject == subject)).Should().BeFalse();
+        response.StatusCode.Should().Be(expected);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        var problem = await Json(response);
+        problem.GetProperty("status").GetInt32().Should().Be((int)expected);
+        if (expected == HttpStatusCode.Unauthorized)
+        {
+            response.Headers.WwwAuthenticate.Select(header => header.ToString()).Should().ContainSingle("Bearer");
+        }
+        else
+        {
+            problem.GetProperty("title").GetString().Should().Be("Insufficient scope, actor kind or ownership");
+            response.Headers.WwwAuthenticate.Should().BeEmpty();
+        }
+    }
+
+    [Theory]
     [InlineData("""{ "displayName": "Alex", "userId": "someone-else" }""")]
     [InlineData("""{ "displayName": "Alex", "subject": "someone-else" }""")]
     [InlineData("""{ "displayName": "Alex" """)]
@@ -200,13 +272,18 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
     {
         // Act
         using var response = await Send(HttpMethod.Get, "/openapi/v1.json", token: null);
-        var generated = Operations(await Json(response));
+        var generated = await Json(response);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         // Only contract operations explicitly marked x-status: proposed (not implemented yet, #144) are left
         // out; the generated document is never filtered. ProfileApplicationTests pins which items are proposed.
-        generated.Should().BeEquivalentTo(Operations(ReadContract(), excludeProposed: true));
+        Operations(generated).Should().BeEquivalentTo(Operations(ReadContract(), excludeProposed: true));
+        var update = generated.GetProperty("paths").GetProperty("/api/users/me").GetProperty("put");
+        update.GetProperty("requestBody").GetProperty("content").EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("application/json", "application/*+json");
+        update.GetProperty("responses").GetProperty("415").GetProperty("content")
+            .TryGetProperty("application/problem+json", out _).Should().BeTrue();
     }
 
     private async Task<HttpResponseMessage> Send(HttpMethod method, string path, string? token, string? body = null)

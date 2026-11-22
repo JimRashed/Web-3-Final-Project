@@ -19,7 +19,7 @@ const expected = {
 const routeContracts = {
  identity: {
   'get /api/users/me': ['user','profiles.read',null,{200:'Profile'}],
-  'put /api/users/me': ['user','profiles.write','UpdateProfile',{200:'Profile'}],
+  'put /api/users/me': ['user','profiles.write','UpdateProfile',{200:'Profile',415:'UnsupportedProfileMediaType'}],
   'get /api/users/me/picture': ['user','profiles.read',null,{200:'image'}],
   'put /api/users/me/picture': ['user','profiles.write','image',{200:'Profile'}],
   'post /api/auth/register': ['public','public',null,{410:'Problem'}],
@@ -256,6 +256,7 @@ function validate(all){
 const documents=Object.fromEntries(names.map(n=>[n,JSON.parse(readFileSync(fileURLToPath(new URL('./openapi/'+n+'.yaml',import.meta.url)),'utf8'))]));
 const result=validate(documents);
 const probes=[
+ ['profile update media type outcome removed',d=>{delete d.identity.paths['/api/users/me'].put.responses[415];},/Missing normative outcome 415/],
  ['dangling ref',d=>{d.identity.paths['/api/users/me'].get.responses[200].content['application/json'].schema={$ref:'#/components/schemas/Missing'};}],
  ['missing security',d=>{delete d.gameplay.paths['/matches'].post.security;}],
  ['invalid example',d=>{d.statistics.paths['/api/results'].post.requestBody.content['application/json'].example.score=6;}],

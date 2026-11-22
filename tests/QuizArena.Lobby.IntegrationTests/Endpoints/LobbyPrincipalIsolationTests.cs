@@ -100,6 +100,30 @@ public sealed class LobbyPrincipalIsolationTests(LobbyApiFixture fixture) : ICla
         stored.Players.Select(player => player.PlayerId).Should().BeEquivalentTo("host", "guest");
     }
 
+    [Fact]
+    public async Task Lock_SameSubjectFromAnotherIssuer_Returns401AndPreservesLobby()
+    {
+        // Arrange
+        var lobby = await fixture.SeedAsync(full: true);
+        var token = TestTokens.Create(ActorKind.User, LobbyPolicies.LobbiesWrite, claims =>
+        {
+            claims["iss"] = "https://other-issuer.invalid";
+            claims["sub"] = "host";
+        });
+
+        // Act
+        using var response = await LobbyApiFixture.SendAsync(fixture.Client, HttpMethod.Post, $"/api/lobbies/{lobby.JoinCode}/lock", token);
+
+        // Assert
+        await LobbyApiFixture.AssertProblemAsync(response, 401);
+        response.Headers.WwwAuthenticate.Select(header => header.ToString()).Should().ContainSingle("Bearer error=\"invalid_token\"");
+        await using var reader = fixture.Database.CreateContext();
+        var stored = await reader.ActiveLobbies.AsNoTracking().Include(value => value.Players).SingleAsync(value => value.Id == lobby.Id);
+        stored.Status.Should().Be(LobbyStatus.Open);
+        stored.HostId.Should().Be("host");
+        stored.Players.Select(player => player.PlayerId).Should().BeEquivalentTo("host", "guest");
+    }
+
     [Theory]
     [InlineData("other-service")]
     [InlineData("browser")]

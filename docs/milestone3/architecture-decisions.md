@@ -10,7 +10,7 @@ Status: **Proposed — final team approval pending.** Issue [#17](https://github
 | ADR-02 | Pure Domain owns entities, rules, exceptions and repository abstractions; Data references only its own Domain; Api references its own Data/Domain | Api owns HTTP DTOs, application interfaces/orchestration, mapping and typed HTTP adapters. No EF/HTTP dependencies in Domain |
 | ADR-03 | One React TypeScript client, Node build tooling, no Express business API or MongoDB | Browser consumes public HTTP APIs; backend owns persistence |
 | ADR-04 | Keycloak handles registration/login/recovery; Identity owns profiles | Authorization code with PKCE S256; no QuizArena password form or token minting |
-| ADR-05 | Exact trusted issuer plus opaque subject is identity | One issuer per deployment; subject never parsed as GUID. Internal ownership and uniqueness include issuer |
+| ADR-05 | Exact trusted issuer plus opaque subject is identity | One issuer per deployment. Subjects are opaque and compared ordinally. Identity, Statistics and Notification persist issuer with subject. Lobby and Gameplay use the issuer-private stores described below. |
 | ADR-06 | Two players, five rounds, one answer each per round, one point per correct answer | Advance only after both answers; ties have no winner; no real-time transport, matchmaking or catalog administration |
 | ADR-07 | HTTP adapters and durable Gameplay outbox | Local atomic transaction + at-least-once deliveries with idempotent receivers; no broker or distributed transaction |
 | ADR-08 | Preserve old data and expose explicit transition errors | No destructive migration in P02, no silent account linking, no truncation of historical scores/IDs |
@@ -31,6 +31,8 @@ For service `S`, owned production paths are `src/QuizArena.S.{Domain,Data,Api}/`
 | Notification | SuSu-Lisu | EventLogs, UserPrefs | Immutable EventId; unique (Issuer,Subject) preferences |
 
 Each service owns its DbContext, migrations and connection configuration. No cross-service FK, join, repository, shared DbContext or shared production "Common Domain" assembly. Other service identifiers are opaque references. Api adapters deserialize into locally owned DTOs, never reference the peer's project. Constructor DI; DbContext/application services Scoped; background delivery workers create scopes per unit of work. All I/O methods accept and propagate CancellationToken; no sync-over-async. SQL transactions belong to one service only.
+
+Lobby and Gameplay share one configured, exactly validated issuer per deployment. Their host, member and participant records store opaque subject keys inside databases dedicated to that issuer. Reconfiguring either service to trust a different issuer requires a new empty store or an explicit identity migration of the existing store. [SEC-B2 ownership decision](security-decisions.md#discrepancy-register)
 
 ## Configuration contract
 

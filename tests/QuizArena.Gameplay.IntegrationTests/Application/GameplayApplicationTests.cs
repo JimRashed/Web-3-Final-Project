@@ -85,6 +85,24 @@ public sealed class GameplayApplicationTests
         (await act.Should().ThrowAsync<GameplayRequestException>()).Which.StatusCode.Should().Be(404);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("ABC12")]
+    [InlineData("abc123")]
+    [InlineData("ABC１２３")]
+    public async Task CreateAsync_WithInvalidJoinCode_Returns400WithoutCallingLobby(string joinCode)
+    {
+        // Arrange
+        var sut = Sut();
+
+        // Act
+        var act = () => sut.CreateAsync(HostActor, new CreateMatchRequest(joinCode), CancellationToken.None);
+
+        // Assert
+        (await act.Should().ThrowAsync<GameplayRequestException>()).Which.StatusCode.Should().Be(400);
+        _lobby.Requests.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task CreateAsync_WhenLobbyIsNotLocked_Returns409()
     {
@@ -98,17 +116,22 @@ public sealed class GameplayApplicationTests
         (await act.Should().ThrowAsync<GameplayRequestException>()).Which.StatusCode.Should().Be(409);
     }
 
-    [Fact]
-    public async Task CreateAsync_WhenCallerIsNotTheHost_Returns403()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CreateAsync_WhenCallerIsNotTheHost_Returns403BeforeStateValidation(bool isLocked)
     {
-        // Arrange — a fresh repository, so the host check is reached (no match exists for the lobby yet).
-        var sut = new GameplayApplication(new FakeMatches(), _lobby, _catalog);
+        // Arrange
+        var lobby = new FakeLobby(new LobbyState(LobbyId, Host, [Host, Guest], isLocked));
+        var sut = new GameplayApplication(_matches, lobby, _catalog);
 
         // Act
         var act = () => sut.CreateAsync(GuestActor, new CreateMatchRequest("ABC123"), CancellationToken.None);
 
         // Assert
         (await act.Should().ThrowAsync<GameplayRequestException>()).Which.StatusCode.Should().Be(403);
+        _matches.Saved.Should().BeEmpty();
+        _matches.Enqueued.Should().BeEmpty();
     }
 
     [Fact]
@@ -250,8 +273,13 @@ public sealed class GameplayApplicationTests
 
     private sealed class FakeLobby(LobbyState? state) : ILobbyGateway
     {
-        public Task<LobbyState?> GetAsync(string joinCode, CancellationToken cancellationToken) =>
-            Task.FromResult(state);
+        public List<string> Requests { get; } = [];
+
+        public Task<LobbyState?> GetAsync(string joinCode, CancellationToken cancellationToken)
+        {
+            Requests.Add(joinCode);
+            return Task.FromResult(state);
+        }
     }
 
     private sealed class FakeCatalog : IQuestionCatalog
