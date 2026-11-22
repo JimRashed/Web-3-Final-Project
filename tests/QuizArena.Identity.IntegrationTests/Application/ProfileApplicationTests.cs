@@ -196,6 +196,25 @@ public sealed class ProfileApplicationTests
     }
 
     [Fact]
+    public async Task ReplaceMyPictureAsync_ForSameSubjectFromOtherIssuer_DoesNotReachOtherProfile()
+    {
+        // Arrange
+        const string otherIssuer = "https://other-idp.example/realms/quizarena";
+        var other = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        var foreign = new AuthenticatedActor(otherIssuer, "player-a", ActorKind.User);
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync(other);
+        _profiles.Setup(r => r.FindByIdentityAsync(otherIssuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync((PlayerProfile?)null);
+
+        // Act
+        var act = () => _application.ReplaceMyPictureAsync(foreign, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<PlayerProfileNotFoundException>();
+        _profiles.Verify(r => r.FindByIdentityAsync(otherIssuer, "player-a", It.IsAny<CancellationToken>()), Times.Once);
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task ReplaceMyPictureAsync_WithoutProfile_ThrowsProfileNotFound()
     {
         // Arrange

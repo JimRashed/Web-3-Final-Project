@@ -211,6 +211,28 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ReplaceAsync_WhenCommitFailsAfterPictureWrite_RollsBackTheWrittenRow()
+    {
+        // Arrange
+        await SeedAsync();
+        var commands = new CommandRecorder();
+        var commit = new FailingCommit();
+
+        // Act
+        await using (var context = NewContext(commands, commit))
+        {
+            var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(FailingCommit.Message);
+        }
+
+        // Assert
+        commands.Texts.Should().Contain(text => text.Contains("UPDATE [ProfilePictures]", StringComparison.Ordinal), "the commit must come after the picture write inside the same transaction");
+        var stored = await ReadAsync();
+        stored!.Content.Should().Equal(OldBytes);
+        stored.Version.Should().Be(1);
+    }
+
+    [Fact]
     public async Task ReplaceAsync_ConcurrentReplacements_FirstCommitterWinsOtherGetsConflict()
     {
         // Arrange
