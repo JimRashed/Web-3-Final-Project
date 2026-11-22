@@ -59,6 +59,9 @@ public static class SecurityExtensions
 
     private static void ConfigureJwtBearer(JwtBearerOptions jwt, QuizArenaAuthenticationOptions settings)
     {
+        // Keycloak's iss has no trailing slash; tolerate one in configuration.
+        var trustedIssuer = settings.Authority.TrimEnd('/');
+
         jwt.Authority = settings.Authority;
         jwt.Audience = settings.Audience;
         jwt.RequireHttpsMetadata = settings.RequireHttpsMetadata;
@@ -66,10 +69,10 @@ public static class SecurityExtensions
         jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            // Keycloak's iss has no trailing slash; tolerate one in configuration.
-            ValidIssuer = settings.Authority.TrimEnd('/'),
+            ValidIssuer = trustedIssuer,
             ValidateAudience = true,
             ValidAudience = settings.Audience,
+            IgnoreTrailingSlashWhenValidatingAudience = false,
             ValidateLifetime = true,
             RequireExpirationTime = true,
             ValidateIssuerSigningKey = true,
@@ -82,6 +85,13 @@ public static class SecurityExtensions
         {
             OnTokenValidated = context =>
             {
+                // JwtBearer can also trust the issuer from discovery metadata. Enforce the configured issuer here.
+                if (!string.Equals(context.SecurityToken.Issuer, trustedIssuer, StringComparison.Ordinal))
+                {
+                    context.Fail("The token issuer does not match the configured authority.");
+                    return Task.CompletedTask;
+                }
+
                 // Keycloak marks access tokens typ=Bearer; ID and refresh tokens are rejected.
                 if (!string.Equals(context.Principal?.FindFirst(QuizArenaClaims.TokenType)?.Value, QuizArenaClaims.AccessTokenType, StringComparison.Ordinal))
                 {

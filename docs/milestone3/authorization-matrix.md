@@ -11,7 +11,7 @@ Keycloak public client `quizarena-client` receives only user scopes via authoriz
 `src/QuizArena.<Service>.Api/Security/SecurityExtensions.cs` is identical on all six hosts apart from its namespace:
 
 - **Issuer** must equal the configured `Authentication:Authority` with any trailing `/` trimmed. One issuer per deployment (local: `http://localhost:8080/realms/quizarena`).
-- **Audience** must equal the host's `Authentication:Audience` (`quizarena-<service>`).
+- **Audience** must include an exact match for the host's `Authentication:Audience` (`quizarena-<service>`). Valid tokens can carry additional audiences (SEC-12).
 - **Signature** is required; RS256 only, keys from the issuer's metadata.
 - **Lifetime**: `exp` is required and validated with 30 s clock skew. Realm access tokens live 300 s.
 - **Token type**: the `typ` claim must be `Bearer`, so ID and refresh tokens are rejected.
@@ -28,7 +28,7 @@ Each named policy equals its scope (`<Service>Policies.cs`) and is evaluated by 
 - **User policy**: `azp` equals `quizarena-client` AND `qa_actor` equals `user` AND a non-blank `sub` AND the exact scope.
 - **Machine policy**: `azp` equals `quizarena-gameplay` AND `qa_actor` equals `machine` AND a non-blank `sub` AND the exact scope.
 
-There is no configured service-account subject allowlist in the shipped code; the previous target ("a configured service-account subject belonging to that client") is tracked as DR-1.
+The machine policy treats `sub` as an opaque identity issued by the trusted realm. It relies on Keycloak's service-account configuration and the signed client and actor claims (DR-1).
 
 Both policies, as shipped:
 - Actor kind is never inferred from subject text.
@@ -37,7 +37,6 @@ Both policies, as shipped:
 
 Target rules kept from the previous matrix:
 
-- **Machine policy (target):** also require a configured service-account subject belonging to `quizarena-gameplay` (DR-1).
 - **User policy (target):** reject service-account identities. Currently moot: `quizarena-client` is a public client with `serviceAccountsEnabled: false` in `infra/oidc/quizarena-realm.json`, so no service-account token can carry `azp=quizarena-client`. Re-evaluate if that client ever gains a service account.
 
 ## Route table
@@ -83,7 +82,7 @@ The 30 shipped rows match the operation inventory in `contracts/validate-contrac
 
 ## Security cases and evaluation order
 
-For **every user row**: valid matching audience+scope+actor and required ownership reaches the documented success; absent/expired/wrong issuer/wrong audience/invalid signature token → 401; valid user token missing exact scope → 403; machine token → 403. For **every machine row**: machine token from `quizarena-gameplay` with destination scope reaches success; browser token → 403 even with accidentally granted scope; other client → 403; invalid/missing token → 401. An authentication failure includes WWW-Authenticate: Bearer. Health and retired rows require no token; health → 200 and retired → 410 even if an irrelevant bearer header is supplied. Target, not shipped: also reject machine subjects outside a configured allowlist (DR-1).
+For **every user row**: valid matching audience+scope+actor and required ownership reaches the documented success; absent/expired/wrong issuer/wrong audience/invalid signature token → 401; valid user token missing exact scope → 403; machine token → 403. For **every machine row**: a validated token with the destination audience, exact scope, a non-blank subject, `azp=quizarena-gameplay` and `qa_actor=machine` reaches success; browser token → 403 even with accidentally granted scope; other client → 403; invalid/missing token → 401. An authentication failure includes WWW-Authenticate: Bearer. Health and retired rows require no token; health → 200 and retired → 410 even if an irrelevant bearer header is supplied.
 
 For **each self-only row** (Statistics stats/history, Notification preferences, optional events userId): caller player-a requesting player-b → 403 before data lookup, including nonexistent player-b. GET /api/users/me, PUT /api/users/me and the proposed picture routes derive issuer/subject exclusively from claims. Reject extra userId/hostId/playerId properties in user mutation bodies → 400; never use them to select an actor.
 

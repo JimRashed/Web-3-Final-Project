@@ -42,7 +42,7 @@ Shipped code at `c8dcc78` compared with the previous matrix, ADRs and contracts.
 
 | ID | Shipped code (file:line) | Matrix / ADR claim | Proposed resolution | Routes to |
 |---|---|---|---|---|
-| DR-1 | `ScopeAuthorizationHandler.cs:19-28` checks only `azp`, `qa_actor`, a non-blank `sub` and exact scope. There is no service-account subject allowlist. | Machine policy requires "a configured service-account subject belonging to that client". | Add a configured service-account `sub` allowlist, or amend the matrix to the shipped rule. | #140, verified in #146 |
+| DR-1 | `ScopeAuthorizationHandler.cs:19-28` checks signed `azp`, `qa_actor`, a non-blank `sub` and exact scope after bearer validation. | Previous matrix required a configured service-account subject allowlist. | #140 aligns the matrix with the shipped policy. Keycloak issues the service-account subject and the signed client and actor claims. | #140, verification tracked in #146 |
 | DR-2 | `QuizArena.Gameplay.Api/Services/GameplayApplication.cs:42-49`: for a lobby with no match yet, `POST /matches` returns 409 (unlocked) before 403 (caller is not the host). | Matrix: "existing nonhost 403 before state validation". | Check host (403) before lock state (409). | #141 |
 | DR-3 | `QuizArena.Identity.Api/Services/IdentityExceptionHandler.cs:21-23` handles only `InvalidProfileException`; a database outage falls through to the default 500. | identity.yaml declares 503 "Dependency unavailable" for both `/api/users/me` operations. | Map transient SQL failures to 503 (as Lobby and QuestionBank do), together with SEC-06. | #143 |
 | DR-4 | 403 titles differ: `QuizArena.Lobby.Api/Errors/LobbyProblems.cs:34` "Insufficient permission" (also applied to the authorization-level 403 through `CustomizeProblemDetails`); `QuizArena.Notification.Api/Controllers/EventsController.cs:50` "Forbidden"; Gameplay ownership 403s (`GameplayExceptionHandler.cs:22-44`, which sets only `Status`) set no title, so the framework default applies. | Contract examples and `SecurityExtensions.cs:102-103` use "Insufficient scope, actor kind or ownership". | Use the uniform title on every 403. | #141 |
@@ -56,7 +56,7 @@ Shipped code at `c8dcc78` compared with the previous matrix, ADRs and contracts.
 
 - Residual access-token lifetime after sign-out: up to 300 s plus 30 s skew, no revocation (SEC-09).
 - Multi-audience browser token: one leaked token works against all six hosts (SEC-12, DR-6).
-- Machine identity rests on `azp` and `qa_actor` only, without a subject allowlist (DR-1).
+- Machine identity relies on the trusted realm issuing the correct `azp` and `qa_actor` claims for the service-account subject, without an independent API subject allowlist (DR-1).
 - Upload attack surface: polyglot and renamed files, decompression bombs (very large pixel dimensions in a small file; no dimension limit this milestone, open question in SEC-02), embedded metadata such as EXIF location, oversized bodies and slow uploads (SEC-02).
 - Private-delivery assumptions: no shared caching, no URL-embedded tokens, object URLs revoked on sign-out (SEC-08).
 - Error-mapping gaps that turn outages into 500 (DR-3, DR-8).
