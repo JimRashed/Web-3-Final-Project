@@ -65,7 +65,11 @@ const proposedOps = {
 };
 // Error outcomes a route must declare beyond the shared 401/403 rule.
 const requiredOutcomes = {
- identity: {'get /api/users/me/picture':[404],'put /api/users/me/picture':[400,404,409,413,415,503]}
+ identity: {'get /api/users/me/picture':[404,503],'put /api/users/me/picture':[400,404,409,413,415,503]}
+};
+// Response headers a route must declare, with their exact example value (SEC-08).
+const requiredHeaders = {
+ identity: {'get /api/users/me/picture':{200:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}}}
 };
 function matchesSchema(s,name) {
  if(name.endsWith('[]'))return s?.type==='array'&&s.items?.$ref==='#/components/schemas/'+name.slice(0,-2);
@@ -180,6 +184,10 @@ function validate(all){
    fail(marker(o,'operation '+name+' '+key)===Boolean(proposedBy),'Proposed marker mismatch '+name+' '+key);
    if(proposedBy)fail(o['x-implemented-by']===proposedBy,'Proposed operation must name '+proposedBy+' '+key);
    for(const code of requiredOutcomes[name]?.[key]||[])fail(o.responses?.[code],'Missing required outcome '+code+' '+key);
+   for(const [code,headers]of Object.entries(requiredHeaders[name]?.[key]||{}))for(const [h,v]of Object.entries(headers)){
+    const header=o.responses?.[code]?.headers?.[h];
+    fail(header?.schema?.type==='string'&&header.example===v,'Missing required header '+h+': '+v+' on '+code+' '+key);
+   }
    if(request==='image'){
     fail(o.requestBody?.required===true,'Missing/incorrect normative request schema');imageContent(o.requestBody.content,key+':request');
    }else if(request){
@@ -260,12 +268,17 @@ const probes=[
  ['machine scope in browser flow',d=>{d.statistics.components.securitySchemes.oauth2.flows.authorizationCode.scopes['results.write']='results.write';}],
  ['user scope in machine flow',d=>{d.lobby.components.securitySchemes.oauth2.flows.clientCredentials.scopes['lobbies.write']='lobbies.write';}],
  ['required machine scope removed',d=>{delete d.notification.components.securitySchemes.oauth2.flows.clientCredentials.scopes['events.write'];}],
- ['proposed marker removed',d=>{delete d.identity.paths['/api/users/me/picture'].put['x-status'];}],
+ ['proposed marker removed',d=>{const o=d.identity.paths['/api/users/me/picture'].put;delete o['x-status'];delete o['x-implemented-by'];},/Proposed marker mismatch/],
+ ['proposed status removed but issue kept',d=>{delete d.identity.paths['/api/users/me/picture'].put['x-status'];},/x-implemented-by without x-status/],
+ ['picture cache-control header removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[200].headers['Cache-Control'];},/Missing required header Cache-Control/],
+ ['picture nosniff header weakened',d=>{d.identity.paths['/api/users/me/picture'].get.responses[200].headers['X-Content-Type-Options'].example='sniff';},/Missing required header X-Content-Type-Options/],
+ ['picture read outage outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[503];},/Missing required outcome 503/],
  ['svg picture accepted',d=>{d.identity.paths['/api/users/me/picture'].put.requestBody.content['image/svg+xml']={schema:{type:'string',format:'binary'},example:'<svg/>'};}],
  ['picture read made public',d=>{const o=d.identity.paths['/api/users/me/picture'].get;o['x-actor']='public';o['x-policy']='public';o.security=[];}],
  ['picture size limit outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].put.responses[413];}],
  ['implemented operation marked proposed',d=>{Object.assign(d.identity.paths['/api/users/me'].get,{'x-status':'proposed','x-implemented-by':'#144'});}],
  ['proposed property made required',d=>{d.identity.components.schemas.Profile.required.push('picture');}]
 ];
-for(const [name,mutate]of probes){const copy=structuredClone(documents);mutate(copy);assert.throws(()=>validate(copy),undefined,'Failed corruption probe '+name);}
+// Optional third element: the failure reason the probe must produce.
+for(const [name,mutate,reason]of probes){const copy=structuredClone(documents);mutate(copy);assert.throws(()=>validate(copy),reason?{message:reason}:undefined,'Failed corruption probe '+name);}
 console.log(JSON.stringify({status:'PASS',...result,corruptionProbes:probes.length,limitation:'Limited used-keyword schema checks and contract invariants; not full OpenAPI certification or runtime API tests.'},null,2));

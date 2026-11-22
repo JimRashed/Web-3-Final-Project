@@ -28,7 +28,17 @@ Each named policy equals its scope (`<Service>Policies.cs`) and is evaluated by 
 - **User policy**: `azp` equals `quizarena-client` AND `qa_actor` equals `user` AND a non-blank `sub` AND the exact scope.
 - **Machine policy**: `azp` equals `quizarena-gameplay` AND `qa_actor` equals `machine` AND a non-blank `sub` AND the exact scope.
 
-There is no configured service-account subject allowlist in the shipped code; the previous target ("a configured service-account subject belonging to that client") is tracked as DR-1. Actor kind is never inferred from subject text. Extra scopes never turn machine credentials into user credentials. Scope matching is whitespace-delimited exact membership over `scope`/`scp`, never substring matching.
+There is no configured service-account subject allowlist in the shipped code; the previous target ("a configured service-account subject belonging to that client") is tracked as DR-1.
+
+Both policies, as shipped:
+- Actor kind is never inferred from subject text.
+- Extra scopes never turn machine credentials into user credentials.
+- Scope matching is whitespace-delimited exact membership over `scope`/`scp`, never substring matching.
+
+Target rules kept from the previous matrix:
+
+- **Machine policy (target):** also require a configured service-account subject belonging to `quizarena-gameplay` (DR-1).
+- **User policy (target):** reject service-account identities. Currently moot: `quizarena-client` is a public client with `serviceAccountsEnabled: false` in `infra/oidc/quizarena-realm.json`, so no service-account token can carry `azp=quizarena-client`. Re-evaluate if that client ever gains a service account.
 
 ## Route table
 
@@ -37,9 +47,9 @@ Issuer for every protected row: the configured Authority (above). "auth" in the 
 | Service | Method / route | Actor | Audience | Exact scope | Ownership / resource condition | Shipped responses (check order) | Notes |
 |---|---|---|---|---|---|---|---|
 | identity | GET `/api/users/me` | user | quizarena-identity | profiles.read | validated issuer + subject | auth → 404 no profile → 200 | DB outage 500, contract says 503 (DR-3) |
-| identity | PUT `/api/users/me` | user | quizarena-identity | profiles.write | validated issuer + subject | auth → 400 invalid body or display name → 200 (create or rename) | DB outage 500 (DR-3) |
+| identity | PUT `/api/users/me` | user | quizarena-identity | profiles.write | validated issuer + subject | auth → 415 non-JSON Content-Type (`[Consumes("application/json")]`) → 400 invalid body or display name → 200 (create or rename) | 415 is not in identity.yaml (DR-9); DB outage 500 (DR-3) |
 | identity | GET `/api/users/me/picture` | user | quizarena-identity | profiles.read | validated issuer + subject; own picture only | auth → 404 no profile or picture → 200 image bytes; 503 storage unavailable | **Proposed (#144).** `Cache-Control: private, no-store`, `nosniff` (SEC-08) |
-| identity | PUT `/api/users/me/picture` | user | quizarena-identity | profiles.write | validated issuer + subject; one picture per profile | auth → 415 type → 413 over 2,097,152 bytes → 400 empty or bytes ≠ Content-Type → 404 no profile → 409 concurrent replacement → 200 Profile; 503 storage unavailable | **Proposed (#144).** PNG/JPEG/WebP only (SEC-02, SEC-06, SEC-07) |
+| identity | PUT `/api/users/me/picture` | user | quizarena-identity | profiles.write | validated issuer + subject; one picture per profile | auth → 415 type → 413 over 2,097,152 bytes → 400 empty, malformed header or bytes ≠ Content-Type → 404 no profile → 409 lost a concurrent replacement (first committer wins; sequential requests each replace) → 200 Profile; 503 storage unavailable | **Proposed (#144).** PNG/JPEG/WebP only (SEC-02, SEC-06, SEC-07) |
 | identity | POST `/api/auth/register` | public | — | — | none | 410 always; body and bearer header ignored | Retired |
 | identity | POST `/api/auth/login` | public | — | — | none | 410 always; body and bearer header ignored | Retired |
 | identity | GET `/api/users/{id}` | public | — | — | none | 410 always | Retired |
@@ -54,7 +64,7 @@ Issuer for every protected row: the configured Authority (above). "auth" in the 
 | questionbank | GET `/health` | public | — | — | none | 200 | |
 | lobby | POST `/api/lobbies` | user | quizarena-lobby | lobbies.write | none; caller becomes host | auth → 400 body not `{}` → 201 + Location; 503 DB outage | Subject-only keys (DR-5); 403 title (DR-4) |
 | lobby | GET `/api/lobbies/{joinCode}` | user | quizarena-lobby | lobbies.read | none; response booleans relative to caller | auth → 400 join code → 404 → 200 | DR-4, DR-5 |
-| lobby | POST `/api/lobbies/{joinCode}/join` | user | quizarena-lobby | lobbies.write | none | auth → 400 → 404 → 409 full or locked → 200 (idempotent for a member) | DR-4, DR-5 |
+| lobby | POST `/api/lobbies/{joinCode}/join` | user | quizarena-lobby | lobbies.write | none | auth → 400 → 404 → 409 full or locked → 200 (idempotent for a member while the lobby is open; a member rejoining a locked lobby gets 409) | DR-4, DR-5 |
 | lobby | POST `/api/lobbies/{joinCode}/lock` | user | quizarena-lobby | lobbies.write | caller is lobby host | auth → 400 → 404 → 403 not host → 409 not two members → 200 (repeat lock 200) | DR-4, DR-5 |
 | lobby | GET `/internal/lobbies/{joinCode}` | machine | quizarena-lobby | lobbies.verify | none | auth → 400 → 404 → 200 | Exposes host and player subjects to the machine client only |
 | lobby | GET `/health` | public | — | — | none | 200 | |

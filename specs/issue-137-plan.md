@@ -257,7 +257,7 @@ Change the JSON-only request rule to "JSON unless the route contract says `'imag
 - A failed PUT keeps the previous picture.
 
 **SEC-07: Concurrent replacement.** Routes to #143, #144 and #145.
-- The last committed writer wins.
+- The first committer wins (corrected in repair cycle 1, see Section 8).
 - A `rowversion` conflict returns 409 to the losing request, which may retry.
 - `version` goes up by 1 on every replacement.
 - No `If-Match` or ETag in this milestone: CORS exposes no headers and the client has no support for them.
@@ -313,7 +313,7 @@ Change the JSON-only request rule to "JSON unless the route contract says `'imag
 ### Step 6: Update the authorization matrix (`docs/milestone3/authorization-matrix.md`)
 
 1. Change the heading to `# QuizArena authorization matrix`.
-2. Replace the status line with: "Shipped routes verified against code at `c8dcc78` (#137). Picture rows proposed; team approval pending. See [security decisions](security-decisions.md)."
+2. Replace the status line with: "Shipped routes verified against code at `c8dcc78` (#137). Picture rows proposed; team approval pending. See `[security decisions](security-decisions.md)`." (In the matrix that link is relative to `docs/milestone3/`; from this plan it is [`../docs/milestone3/security-decisions.md`](../docs/milestone3/security-decisions.md).)
 3. Add a section "Token validation (all six hosts)" that describes what `SecurityExtensions.cs` does:
    - issuer equals the Authority with any trailing `/` trimmed;
    - audience is validated; signature is RS256; a lifetime is required, with 30 s skew; `typ` must be Bearer;
@@ -442,4 +442,13 @@ node contracts/validate-contracts.mjs
 - **DR-4 widened**: Gameplay ownership 403s set no problem title, so the framework default applies; this is listed with the Lobby and Notification titles.
 - **`api-contracts.md` inventory keeps its four columns**; the two picture rows mark "proposed, #144" in the outcomes cell instead of adding a fifth column to all 30 existing rows.
 - **SEC-11 prerequisite text** reflects the live state on 2026-11-21: PR #131 merged into the milestone branch; #130 and #62 are still open (#62 awaits another member's clean-checkout run).
+- File touchpoints are unchanged.
+
+### Repair cycle 1 (code review findings)
+
+- SEC-07, identity.yaml PUT picture 409 and the matrix picture row now say the first committer wins; a concurrent request that loses the `rowversion` check or the first-upload primary-key insert race gets 409 and may retry; sequential requests each replace.
+- SEC-02 and the PUT 400 description define "malformed image" (magic bytes match but the format header is truncated or invalid) and state pixel dimensions are not checked; a dimension limit is an open question for #139/#144.
+- Validator: GET picture requires 503 and declares `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff` on 200; probes may name the expected failure reason, and new probes cover the removed Cache-Control header, a weakened nosniff header, a removed GET 503, both markers removed ("Proposed marker mismatch") and `x-status` removed alone.
+- New DR-9 (routes to #141): shipped `PUT /api/users/me` returns 415 for a non-JSON Content-Type, which identity.yaml omits. The matrix row lists it; identity.yaml is unchanged for this implemented operation so contract-test scope does not change.
+- Matrix: Lobby join idempotency limited to an open lobby; target user/machine policy lines restored (user rule moot while `quizarena-client` has no service account). DR-4 citation corrected to `GameplayExceptionHandler.cs:22-44`. Approval table marks CarterBeasse as author (n/a); JimRashed and SuSu-Lisu stay Pending.
 - File touchpoints are unchanged.
