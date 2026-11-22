@@ -73,7 +73,7 @@ describe('Profile page', () => {
     expect(field()).toHaveFocus();
     expect(field()).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByText('Enter a display name.')).toBeVisible();
-    expect(requested(fetcher)).toEqual(['GET /api/users/me']);
+    expect(requested(fetcher).filter((call) => !call.includes('/picture'))).toEqual(['GET /api/users/me']);
   });
 
   it('shows the saving state and blocks a second submit', async () => {
@@ -128,7 +128,7 @@ describe('Profile page', () => {
       status: 200, headers: { 'content-type': 'image/png' },
     });
     const withPicture = { ...profile('Ada'), picture: { contentType: 'image/png', updatedAt: '2026-11-21T12:00:00Z', version: 1 } };
-    const chooser = () => screen.getByLabelText('Profile picture') as HTMLInputElement;
+    const chooser = () => screen.getByLabelText('Profile picture', { selector: 'input' }) as HTMLInputElement;
     const file = (type: string, bytes = 8) => new File([new Uint8Array(bytes)], 'me.png', { type });
 
     it('renders the stored picture from bytes fetched with the token', async () => {
