@@ -246,6 +246,22 @@
               }
             }
           },
+          "415": {
+            "description": "Profile updates require application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsupportedProfileMediaType"
+                },
+                "example": {
+                  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.16",
+                  "title": "Unsupported Media Type",
+                  "status": 415,
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected failure; safe response",
             "content": {
@@ -900,6 +916,36 @@
             "minLength": 1,
             "maxLength": 100,
             "pattern": "\\S"
+          }
+        }
+      },
+      "UnsupportedProfileMediaType": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              415
+            ]
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },

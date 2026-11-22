@@ -47,7 +47,7 @@ public sealed class EventsController(IEventApplication events) : ControllerBase
         var actor = User.GetAuthenticatedActor();
         if (userId is not null && !string.Equals(userId, actor.Subject, StringComparison.Ordinal))
         {
-            return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden", detail: "Players can only read their own events.");
+            return Forbid();
         }
 
         return Ok(await events.GetEventsAsync(actor.Issuer, actor.Subject, page, pageSize, cancellationToken));

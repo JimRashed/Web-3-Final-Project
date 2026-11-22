@@ -25,9 +25,10 @@ public sealed class ProfilesController(IProfileApplication profiles) : Controlle
 
     [HttpPut("me")]
     [Authorize(Policy = IdentityPolicies.ProfilesWrite)]
-    [Consumes("application/json")]
+    [RequireJsonContentType]
     [ProducesResponseType<ProfileResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status415UnsupportedMediaType, "application/problem+json")]
     public async Task<ActionResult<ProfileResponse>> UpdateMe([FromBody] UpdateProfileRequest request, CancellationToken cancellationToken) =>
         Ok(await profiles.UpsertMeAsync(User.GetAuthenticatedActor(), request, cancellationToken));
 
