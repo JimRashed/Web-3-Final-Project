@@ -47,7 +47,8 @@ Seven of fifteen PRs met the independent-review gate on their merged commit. The
 2. **#158**: merged by the author at 02:20:40 before any review; CarterBeasse's CHANGES_REQUESTED followed at 02:31.
 3. **#157**, **#160** and **#161**: merged by the author with no review. #160 received a post-merge review at
    05:22:27 ([review 6016902334](https://github.com/JimRashed/Web-3-Final-Project/pull/160#pullrequestreview-6016902334)).
-4. **#159**: approved at `9d82b99`; three later review-fix commits were merged without a new approval.
+4. **#159**: approved at `9d82b99`; four later review-fix commits (`82f0d14`, `4c6907a`, `4b9def6`, `63213ec`)
+   were merged without a new approval.
 5. **#163**: merged by the author at 05:29:19 with no review; CarterBeasse's COMMENTED review followed at
    05:29:22 ([review 6016944462](https://github.com/JimRashed/Web-3-Final-Project/pull/163#pullrequestreview-6016944462)).
 6. **#165**: merged by the author at 05:29:21 with CarterBeasse's CHANGES_REQUESTED of 05:28:47 outstanding
@@ -77,10 +78,14 @@ Details and the open findings these reviews raised are in
 
 - SuSu-Lisu's decision on the SEC-01 to SEC-12 decisions (approval or requested changes), recorded on #137 or #149.
 - A human review of this PR and of the threat-model reconciliation.
-- Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #163 (1),
-  #165 (4), and a response to the #160 post-merge review.
-- A team decision on whether #157, #160, #161, #163 and #165 get a retro-review, and whether the three post-approval
+- Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #160 (4),
+  #163 (1) and #165 (4).
+- A team decision on whether #157, #160, #161, #163 and #165 get a retro-review, and whether the four post-approval
   commits on #159 need one.
 - A team view on #145 and #147, which were closed at 05:29:25 and 05:29:23 with the gaps recorded in
   [requirements-traceability.md](requirements-traceability.md#issue-state).
+- A response to CarterBeasse's CHANGES_REQUESTED review (2026-11-23 12:36:23, at `68b7ecd`) on the draft
+  milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166): its description's review record contradicts the reviews API (it lists
+  #157, #158, #163, #164 and #165 as approved) and it overstates approved contracts, matrix enforcement,
+  rejected-upload behaviour and sign-out. The record on this page is the one taken from the reviews API.
 - The live runs listed in [validation-results.md](validation-results.md) (Phase B).

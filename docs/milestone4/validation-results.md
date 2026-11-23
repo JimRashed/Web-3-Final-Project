@@ -94,7 +94,7 @@ cd tests/e2e; npm ci; npm run journey:api; npm run journey:ui; npm run journey:p
 Steps from SuSu-Lisu's [#145 comment](https://github.com/JimRashed/Web-3-Final-Project/issues/145) of 2026-11-23
 05:04:59. Screenshots from a live run on `46f847b` (stack from `scripts/start-milestone3.ps1`, signed in as
 `player-b`) were merged in [PR #165](https://github.com/JimRashed/Web-3-Final-Project/pull/165) and linked in the
-[closing comment](https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934) at 05:29:25.
+[closing comment](https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934) (05:29:24; issue closed 05:29:25).
 That is a different revision from the candidate, and PR #165 merged with changes requested
 ([review 6016941081](https://github.com/JimRashed/Web-3-Final-Project/pull/165#pullrequestreview-6016941081)).
 

@@ -21,8 +21,8 @@ code but have never been run against a live stack:
   and prepare the validation-results skeleton with exact commands and `pending` result cells.
   No production code, no test code, no CI change.
 - **Phase B (after live runs on the candidate).** Someone with the stack up runs the commands; results
-  are filled in; owners close #145/#147; then #135/#136/#148 close with evidence links; the milestone PR
-  is opened as a **draft** and is never merged without Carter's explicit go.
+  are filled in; owners close #145/#147; then #135/#136/#148 close with evidence links; the description of
+  the existing draft milestone PR #166 is updated; it is never merged without Carter's explicit go.
 
 Layer boundaries: only `docs/` and `specs/` change. Service code (`src/`), tests (`tests/`), contracts
 (`contracts/`), scripts and `.github/workflows/` are read as evidence sources and are not modified.
@@ -72,7 +72,7 @@ and `docs/milestone3`; Phase A writes the M4 table by hand from the Prime brief,
 - **Review-compliance exceptions** (neutral wording, facts only): #151 merged by its author with Carter's
   CHANGES_REQUESTED outstanding and no approval; #158 merged at 02:20:40 before any review, Carter's
   CHANGES_REQUESTED followed at 02:31; #157, #160 and #161 merged with no review; #159 approved at
-  `9d82b99`, three later review-fix commits not re-approved.
+  `9d82b99`, four later review-fix commits not re-approved.
 - **Open findings on `46f847b`** with where each stands and the proposed follow-up (see §8): #151 client
   findings, #158 matrix gaps, #159 lows, #153/#154 deferrals (SEC-10 deployment secret store, R7; #137
   approval record incomplete).
@@ -142,17 +142,17 @@ and `docs/milestone3`; Phase A writes the M4 table by hand from the Prime brief,
   screenshot itself is Phase B.
 - **Closure checklist** (order matters, each line names the evidence link required): #145 (owner SuSu,
   needs four-step check), #147 (owner SuSu, needs `journey:picture` result) → #135 → #136 → #148 → #132.
-  Plus "evidence comments posted on #133, #134, #138, #139, #140, #141" (see A7).
+  Plus "evidence comments not yet posted on #133, #134, #138, #139, #140, #141 (drafts below)" (see A7).
 - Done check: every link resolves to a file in the branch or a GitHub URL.
 
 ### A6. Reconcile `docs/milestone3/threat-model.md`
 Edit status text only; keep table structure. Mark the change as "Agent reconciliation for D3 (#148) on
 `46f847b`, not an approval" in line 3 / line 69.
 - Line 3: reviewed base `deef7c0` → candidate `46f847b`.
-- Row 41: "verification pending #142" → "verified by #158; gaps recorded (security block on protected
+- Row 41: "verification pending #142" → "covered by CI tests from #158 (merged without approval); gaps recorded (security block on protected
   operations, controller binding/`[AllowAnonymous]` check, provider-only note and CI link)".
-- Row 43: pending #142/#146 → verified by #158 and #157.
-- Row 45: pending #146 → verified by #157.
+- Row 43: pending #142/#146 → covered by CI tests from #157 and #158 (merged without approval).
+- Row 45: pending #146 → covered by CI tests from #157 (merged without approval).
 - Rows 42/44/46: reconcile with #155/#153; keep SEC-10 deployment secret store as residual.
 - Rows 47/48: add #162 CHECK constraints; replace "approval pending" with "decision approval pending
   (SuSu)", not "approved".
@@ -178,13 +178,14 @@ line. The plan stage and this PR do not write to GitHub.
 ### A8. Static validation (see §6) and hand-off to Review.
 
 ## 3b. Ordered steps — Phase B (after live runs on the candidate; not this PR's scope to execute)
-- B1. A team member with the stack runs §6 Phase B commands on `46f847b` (or a later head; if the head
+- B1. A team member with the stack runs §6 Phase B commands on `68b7ecd` (or a later head; if the head
   moves, the candidate revision is updated everywhere in one commit and every result is rerun).
 - B2. Fill `validation-results.md` result cells, CI run link and conclusion, screenshots for #145.
 - B3. Threat model rows 49/50 and line 35 → "verified (link)", only with the result link.
 - B4. Owners close #145 and #147 with evidence links; then #135, #136, #148 are closed with links.
 - B5. Board screenshot after Jim/SuSu update fields; link it in `submission.md`.
-- B6. Dispatcher opens the milestone PR milestone-4 → `main` as a **draft** using `submission.md`.
+- B6. Dispatcher updates the description of the existing draft milestone PR #166 (milestone-4 → `main`,
+  opened by SuSu-Lisu) from `submission.md`; no new PR is opened.
   It is never merged without Carter's explicit go (memory rule: no milestone close without go).
 
 ## 4. Acceptance coverage
@@ -242,7 +243,7 @@ Never copy historical counts as current results.
 ## 7. Risks and out of scope
 
 Risks:
-- **R1 Candidate drift.** If milestone-4 moves past `46f847b` before Phase B, all candidate references
+- **R1 Candidate drift.** If milestone-4 moves past `68b7ecd` before Phase B, all candidate references
   and results must move together; mixed revisions invalidate criterion 2.
 - **R2 Approval wording.** Any phrasing implying SuSu approved decisions or that the threat model was
   independently reviewed would be false. Mitigated by the grep check and neutral templates.

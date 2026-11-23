@@ -5,8 +5,14 @@ Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148), paren
 [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132). Candidate revision `68b7ecd` (first reconciled on `46f847b`).
 
 This is the evidence index for the milestone PR (`feature/milestone-4-security-and-cross-device-profiles` →
-`main`). Phase A (this file) collects the links; Phase B adds the live results, the board screenshot and opens
-the milestone PR as a **draft**. The milestone PR is not merged without Carter's explicit go.
+`main`). Phase A (this file) collects the links; Phase B adds the live results and the board screenshot and updates
+the description of the existing draft milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) (opened by SuSu-Lisu on 2026-11-23,
+head `68b7ecd`) from this file. The milestone PR is not merged without Carter's explicit go.
+
+CarterBeasse submitted CHANGES_REQUESTED on #166 at 12:36:23 on 2026-11-23: its description's review record
+contradicts the reviews API (it lists #157, #158, #163, #164 and #165 as approved) and it overstates approved
+contracts, matrix enforcement, rejected-upload behaviour and sign-out. The facts to use instead are in
+[human-gates.md](human-gates.md) and [requirements-traceability.md](requirements-traceability.md).
 
 ## Evidence links
 
@@ -46,14 +52,14 @@ considered; #148 closes last before the tracker.
 | 2 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | SuSu-Lisu | Fix PR for the #160 findings, `journey:picture` PASS and SEC-09 sign-out evidence ([validation-results.md](validation-results.md#147-cross-device-journey)) | **Closed** 05:29:23, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) pastes 17/17 PASS on `46f847b` + #163. Gaps: SEC-09 two-device sign-out not covered; other #160/#163 findings open |
 | 3 | [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) | CarterBeasse | #143, #144, #145 closed with links | Open; children closed, can be considered (gaps above) |
 | 4 | [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) | SuSu-Lisu | #146, #147, #148 closed with links | Open; #146 and #147 closed, waits for #148 |
-| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Phase B results filled in on `68b7ecd`; this bundle linked from the draft milestone PR | Open (last before the tracker) |
+| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Phase B results filled in on `68b7ecd`; this bundle linked from the description of draft milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) | Open (last before the tracker) |
 | 6 | [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) | JimRashed | All SEC parents closed; milestone PR evidence complete | Open |
-| — | #133, #134, #138, #139, #140, #141 | — | Already closed; evidence comments posted (drafts [below](#proposed-evidence-comments)) | Drafted, not posted |
+| — | #133, #134, #138, #139, #140, #141 | — | Already closed; evidence comments not yet posted (drafts [below](#proposed-evidence-comments)) | Drafted, not posted |
 
 ## Milestone PR body (draft)
 
 Follows the Milestone 3 convention from [PR #114](https://github.com/JimRashed/Web-3-Final-Project/pull/114).
-Phase B fills the `pending` parts; the PR is opened as a draft.
+Phase B fills the `pending` parts and replaces the description of draft PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) with it.
 
 ```markdown
 ## Milestone 4 — Security and Cross-Device Profiles

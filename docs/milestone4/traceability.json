@@ -318,7 +318,7 @@
         }
       ],
       "approvedBeforeMerge": "no",
-      "unrepliedThreads": 0
+      "unrepliedThreads": 4
     },
     {
       "number": 163,
@@ -398,7 +398,7 @@
     {
       "pr": 159,
       "kind": "approval-on-earlier-commit",
-      "detail": "SuSu-Lisu approved 9d82b99; three later review-fix commits not re-approved."
+      "detail": "SuSu-Lisu approved 9d82b99; four later review-fix commits (82f0d14, 4c6907a, 4b9def6, 63213ec) not re-approved."
     },
     {
       "pr": 163,
@@ -656,5 +656,24 @@
       ]
     }
   ],
-  "firstReconciledRevision": "46f847b"
+  "firstReconciledRevision": "46f847b",
+  "milestonePullRequest": {
+    "number": 166,
+    "draft": true,
+    "author": "SuSu-Lisu",
+    "base": "main",
+    "head": "68b7ecd",
+    "createdAt": "2026-11-23T05:35:08Z",
+    "reviews": [
+      {
+        "reviewer": "CarterBeasse",
+        "state": "CHANGES_REQUESTED",
+        "commit": "68b7ecd",
+        "submittedAt": "2026-11-23T12:36:23Z",
+        "id": 6021800957,
+        "summary": "Description review record contradicts the reviews API (lists #157, #158, #163, #164, #165 as approved); overstates approved contracts, matrix enforcement, rejected-upload behaviour and sign-out."
+      }
+    ],
+    "note": "Phase B updates this PR description from submission.md; not merged without Carter's explicit go."
+  }
 }
