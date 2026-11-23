@@ -29,14 +29,14 @@ public sealed class ProfilePictureFreshInstanceTests : IClassFixture<IdentityApi
     {
         // Arrange
         var actor = new AuthenticatedActor(TestTokens.Issuer, $"player-{Guid.NewGuid():N}", ActorKind.User);
-        byte[] content = [0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03];
-        ProfilePictureInfo saved;
+        var content = PictureSamples.WebpLossless;
+        ProfilePictureResponse saved;
         await using (var firstHost = _factory.WithWebHostBuilder(_ => { }))
         {
             await using var scope = firstHost.Services.CreateAsyncScope();
             var application = scope.ServiceProvider.GetRequiredService<IProfileApplication>();
             await application.UpsertMeAsync(actor, new UpdateProfileRequest("Alex"), CancellationToken.None);
-            saved = await application.ReplaceMyPictureAsync(actor, "image/webp", content, CancellationToken.None);
+            saved = (await application.ReplaceMyPictureAsync(actor, "image/webp", content, CancellationToken.None)).Picture!;
         }
 
         // Act
@@ -54,7 +54,8 @@ public sealed class ProfilePictureFreshInstanceTests : IClassFixture<IdentityApi
         picture.Version.Should().Be(1);
         picture.UpdatedAt.Should().Be(saved.UpdatedAt);
         picture.ProfileId.Should().Be(profile.Id);
-        info.Should().Be(saved);
+        info.Should().Be(new ProfilePictureInfo(saved.ContentType, saved.Version, saved.UpdatedAt));
+        profile.Picture.Should().Be(saved);
     }
 
     [Fact]
@@ -70,8 +71,8 @@ public sealed class ProfilePictureFreshInstanceTests : IClassFixture<IdentityApi
             var application = scope.ServiceProvider.GetRequiredService<IProfileApplication>();
             await application.UpsertMeAsync(lower, new UpdateProfileRequest("Lower"), CancellationToken.None);
             await application.UpsertMeAsync(upper, new UpdateProfileRequest("Upper"), CancellationToken.None);
-            await application.ReplaceMyPictureAsync(lower, "image/png", [0x01], CancellationToken.None);
-            await application.ReplaceMyPictureAsync(upper, "image/jpeg", [0x02], CancellationToken.None);
+            await application.ReplaceMyPictureAsync(lower, "image/png", PictureSamples.Png, CancellationToken.None);
+            await application.ReplaceMyPictureAsync(upper, "image/jpeg", PictureSamples.Jpeg, CancellationToken.None);
         }
 
         // Act
@@ -82,9 +83,9 @@ public sealed class ProfilePictureFreshInstanceTests : IClassFixture<IdentityApi
         var upperPicture = await reader.GetMyPictureAsync(upper, CancellationToken.None);
 
         // Assert
-        lowerPicture!.Content.Should().Equal(0x01);
+        lowerPicture!.Content.Should().Equal(PictureSamples.Png);
         lowerPicture.ContentType.Should().Be("image/png");
-        upperPicture!.Content.Should().Equal(0x02);
+        upperPicture!.Content.Should().Equal(PictureSamples.Jpeg);
         upperPicture.ContentType.Should().Be("image/jpeg");
         lowerPicture.ProfileId.Should().NotBe(upperPicture.ProfileId);
     }

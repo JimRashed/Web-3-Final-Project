@@ -17,7 +17,7 @@ public sealed class ProfileApplication(IPlayerProfileRepository profiles, IProfi
         return profile is null ? null : await pictures.GetAsync(profile.Id, cancellationToken);
     }
 
-    public async Task<ProfilePictureInfo> ReplaceMyPictureAsync(
+    public async Task<ProfileResponse> ReplaceMyPictureAsync(
         AuthenticatedActor actor,
         string contentType,
         byte[] content,
@@ -25,18 +25,22 @@ public sealed class ProfileApplication(IPlayerProfileRepository profiles, IProfi
     {
         EnsurePlayer(actor);
 
+        // Bytes must really be the declared image type; a rejected upload never reaches the database (400 before 404).
+        ProfilePictureFormat.Validate(contentType, content);
+
         // No implicit profile creation: a picture always belongs to an existing profile of exactly this identity.
         var profile = await profiles.FindByIdentityAsync(actor.Issuer, actor.Subject, cancellationToken)
             ?? throw new PlayerProfileNotFoundException();
         var now = clock.GetUtcNow().UtcDateTime;
-        return await pictures.ReplaceAsync(profile.Id, contentType, content, now, cancellationToken);
+        var picture = await pictures.ReplaceAsync(profile.Id, contentType, content, now, cancellationToken);
+        return ProfileResponse.From(profile, picture);
     }
 
     public async Task<ProfileResponse?> GetMeAsync(AuthenticatedActor actor, CancellationToken cancellationToken)
     {
         EnsurePlayer(actor);
         var profile = await profiles.FindByIdentityAsync(actor.Issuer, actor.Subject, cancellationToken);
-        return profile is null ? null : ProfileResponse.From(profile);
+        return profile is null ? null : await WithPictureAsync(profile, cancellationToken);
     }
 
     public async Task<ProfileResponse> UpsertMeAsync(AuthenticatedActor actor, UpdateProfileRequest request, CancellationToken cancellationToken)
@@ -47,23 +51,38 @@ public sealed class ProfileApplication(IPlayerProfileRepository profiles, IProfi
         var displayName = request.DisplayName ?? string.Empty;
         var now = clock.GetUtcNow().UtcDateTime;
 
-        var renamed = await profiles.RenameAsync(actor.Issuer, actor.Subject, displayName, now, cancellationToken);
-        if (renamed is not null)
+        // Picture metadata is read BEFORE any write (#144 review): RenameAsync/AddIfAbsentAsync commit on return, so a
+        // failed metadata read afterwards would report 500/503 for a name change that was already saved.
+        var existing = await profiles.FindByIdentityAsync(actor.Issuer, actor.Subject, cancellationToken);
+        if (existing is not null)
         {
-            return ProfileResponse.From(renamed);
+            var picture = await pictures.GetInfoAsync(existing.Id, cancellationToken);
+            var renamed = await profiles.RenameAsync(actor.Issuer, actor.Subject, displayName, now, cancellationToken);
+            if (renamed is not null)
+            {
+                return ProfileResponse.From(renamed, picture);
+            }
+
+            // The profile disappeared between the lookup and the rename: create it again below.
         }
 
         // Domain validation (display name rules) runs here, before anything is written.
         var candidate = PlayerProfile.Create(actor.Issuer, actor.Subject, displayName, now);
         var stored = await profiles.AddIfAbsentAsync(candidate, cancellationToken);
-        if (stored.Id != candidate.Id)
+        if (stored.Id == candidate.Id)
         {
-            // Another first save won the race; apply this request's name to the stored profile.
-            stored = await profiles.RenameAsync(actor.Issuer, actor.Subject, displayName, now, cancellationToken) ?? stored;
+            // A brand-new profile cannot have a picture yet.
+            return ProfileResponse.From(stored, null);
         }
 
-        return ProfileResponse.From(stored);
+        // Another first save won the race; read its picture metadata, then apply this request's name to it.
+        var winnerPicture = await pictures.GetInfoAsync(stored.Id, cancellationToken);
+        stored = await profiles.RenameAsync(actor.Issuer, actor.Subject, displayName, now, cancellationToken) ?? stored;
+        return ProfileResponse.From(stored, winnerPicture);
     }
+
+    private async Task<ProfileResponse> WithPictureAsync(PlayerProfile profile, CancellationToken cancellationToken) =>
+        ProfileResponse.From(profile, await pictures.GetInfoAsync(profile.Id, cancellationToken));
 
     private static void EnsurePlayer(AuthenticatedActor actor)
     {

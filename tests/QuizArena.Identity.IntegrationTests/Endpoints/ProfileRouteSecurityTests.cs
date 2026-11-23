@@ -10,8 +10,8 @@ using Xunit;
 namespace QuizArena.Identity.IntegrationTests.Endpoints;
 
 /// <summary>
-/// The full bearer rejection and grant matrix against the real /api/users/me routes (the security matrix tests
-/// only cover a probe controller), plus impersonation attempts. Rejected writes must persist nothing.
+/// The full bearer rejection and grant matrix against the real /api/users/me and /api/users/me/picture routes (the
+/// security matrix tests only cover a probe controller), plus impersonation attempts. Rejected writes persist nothing.
 /// </summary>
 public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory>
 {
@@ -23,14 +23,16 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         _factory = factory;
     }
 
+    private static readonly string[] Routes = ["GET /me", "PUT /me", "GET /me/picture", "PUT /me/picture"];
+
     public static TheoryData<string, string> UnauthenticatedCases()
     {
         var data = new TheoryData<string, string>();
-        foreach (var method in new[] { "GET", "PUT" })
+        foreach (var route in Routes)
         {
             foreach (var kind in new[] { "missing", "malformed", "bad-signature", "unknown-key", "expired", "no-expiry", "wrong-issuer", "wrong-audience", "id-token-type" })
             {
-                data.Add(method, kind);
+                data.Add(route, kind);
             }
         }
 
@@ -40,11 +42,11 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
     public static TheoryData<string, string> ForbiddenCases()
     {
         var data = new TheoryData<string, string>();
-        foreach (var method in new[] { "GET", "PUT" })
+        foreach (var route in Routes)
         {
             foreach (var kind in new[] { "no-scope", "scope-prefix", "scope-suffix", "no-subject", "blank-subject", "other-client", "no-actor-claim", "machine-actor-claim", "machine-token" })
             {
-                data.Add(method, kind);
+                data.Add(route, kind);
             }
         }
 
@@ -53,10 +55,11 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
 
     [Theory]
     [MemberData(nameof(UnauthenticatedCases))]
-    public async Task MeRoutes_WithMissingOrInvalidToken_Return401ChallengeAndWriteNothing(string method, string kind)
+    public async Task MeRoutes_WithMissingOrInvalidToken_Return401ChallengeAndWriteNothing(string route, string kind)
     {
         // Arrange
         var subject = NewSubject();
+        await ArrangeOwnerAsync(route, subject);
         var token = kind switch
         {
             "missing" => null,
@@ -72,22 +75,24 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         };
 
         // Act
-        using var response = await SendMe(method, token);
+        using var response = await SendRoute(route, token);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
         var challenge = response.Headers.WwwAuthenticate.Should().ContainSingle(header => header.Scheme == "Bearer").Subject;
         challenge.Parameter.Should().Be(kind == "missing" ? null : "error=\"invalid_token\"");
-        await ShouldHaveNoProfile(subject);
+        AssertPrivateHeadersOnPictureRoutes(route, response);
+        await ShouldHaveWrittenNothing(route, subject);
     }
 
     [Theory]
     [MemberData(nameof(ForbiddenCases))]
-    public async Task MeRoutes_WithValidTokenLackingGrantOrIdentity_Return403AndWriteNothing(string method, string kind)
+    public async Task MeRoutes_WithValidTokenLackingGrantOrIdentity_Return403AndWriteNothing(string route, string kind)
     {
         // Arrange
         var subject = NewSubject();
+        await ArrangeOwnerAsync(route, subject);
         var token = kind switch
         {
             "no-scope" => TestTokens.Create(ActorKind.User, "openid profile", claims => claims["sub"] = subject),
@@ -103,12 +108,13 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         };
 
         // Act
-        using var response = await SendMe(method, token);
+        using var response = await SendRoute(route, token);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
-        await ShouldHaveNoProfile(subject);
+        AssertPrivateHeadersOnPictureRoutes(route, response);
+        await ShouldHaveWrittenNothing(route, subject);
     }
 
     [Fact]
@@ -143,6 +149,63 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         await ShouldHaveNoProfile(subject);
     }
 
+    [Theory]
+    [InlineData("GET /me/picture", "profiles.write")]
+    [InlineData("PUT /me/picture", "profiles.read")]
+    public async Task PictureRoutes_WithOnlyTheOtherScope_Return403AndWriteNothing(string route, string scope)
+    {
+        // Arrange
+        var subject = NewSubject();
+        await ArrangeOwnerAsync(route, subject);
+        var token = TestTokens.Create(ActorKind.User, scope, claims => claims["sub"] = subject);
+
+        // Act
+        using var response = await SendRoute(route, token);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        AssertPrivateHeadersOnPictureRoutes(route, response);
+        await ShouldHaveWrittenNothing(route, subject);
+    }
+
+    [Theory]
+    [InlineData("read-only", "svg", HttpStatusCode.Forbidden)]
+    [InlineData("read-only", "oversized", HttpStatusCode.Forbidden)]
+    [InlineData("none", "oversized", HttpStatusCode.Unauthorized)]
+    [InlineData("none", "svg", HttpStatusCode.Unauthorized)]
+    public async Task PutPicture_WithoutGrant_IsRejectedBeforeMediaTypeAndSizeChecks(string grant, string body, HttpStatusCode expected)
+    {
+        // Arrange: authorization (401/403) is decided before 415 and 413 (DR-9).
+        var subject = NewSubject();
+        await ArrangeOwnerAsync("PUT /me/picture", subject);
+        var token = grant == "none" ? null : TestTokens.Create(ActorKind.User, "profiles.read", claims => claims["sub"] = subject);
+        var content = body == "svg"
+            ? Image(PictureSamples.Svg, "image/svg+xml")
+            : Image(PictureSamples.PaddedTo(PictureSamples.Png, 3 * 1024 * 1024), "image/png");
+
+        // Act
+        using var response = await SendRoute("PUT /me/picture", token, content);
+
+        // Assert
+        response.StatusCode.Should().Be(expected);
+        AssertPrivateHeadersOnPictureRoutes("PUT /me/picture", response);
+        await ShouldHaveWrittenNothing("PUT /me/picture", subject);
+    }
+
+    // Picture routes are private on every status, including authentication and authorization failures (SEC-01, SEC-08).
+    private static void AssertPrivateHeadersOnPictureRoutes(string route, HttpResponseMessage response)
+    {
+        if (!route.EndsWith("/picture", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        response.Headers.CacheControl.Should().NotBeNull();
+        response.Headers.CacheControl!.Private.Should().BeTrue();
+        response.Headers.CacheControl.NoStore.Should().BeTrue();
+        response.Headers.GetValues("X-Content-Type-Options").Should().Equal("nosniff");
+    }
+
     private static string NewSubject() => $"player-{Guid.NewGuid():N}";
 
     private static string UserToken(string subject, Action<Dictionary<string, object>>? customize = null, Microsoft.IdentityModel.Tokens.SecurityKey? key = null) =>
@@ -152,10 +215,22 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
             customize?.Invoke(claims);
         }, key);
 
-    private async Task<HttpResponseMessage> SendMe(string method, string? token, string body = """{ "displayName": "Intruder" }""")
+    private static ByteArrayContent Image(byte[] bytes, string contentType)
     {
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        return content;
+    }
+
+    private Task<HttpResponseMessage> SendMe(string method, string? token, string body = """{ "displayName": "Intruder" }""") =>
+        SendRoute($"{method} /me", token, new StringContent(body, Encoding.UTF8, "application/json"));
+
+    // Route keys are "<METHOD> /me" or "<METHOD> /me/picture"; PUT sends a JSON name or a valid PNG unless given content.
+    private async Task<HttpResponseMessage> SendRoute(string route, string? token, HttpContent? content = null)
+    {
+        var (method, path) = (route[..route.IndexOf(' ', StringComparison.Ordinal)], route[(route.IndexOf(' ', StringComparison.Ordinal) + 1)..]);
         using var client = _factory.CreateClient();
-        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/users/me");
+        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/users" + path);
         if (token is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -163,10 +238,38 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
 
         if (method == "PUT")
         {
-            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            request.Content = content ?? (path == "/me/picture"
+                ? Image(PictureSamples.Png, "image/png")
+                : new StringContent("""{ "displayName": "Intruder" }""", Encoding.UTF8, "application/json"));
         }
 
         return await client.SendAsync(request);
+    }
+
+    // Picture routes need an existing owner profile so "nothing written" can mean "no picture row" (and name kept).
+    private async Task ArrangeOwnerAsync(string route, string subject)
+    {
+        if (!route.EndsWith("/picture", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        using var created = await SendMe("PUT", UserToken(subject), """{ "displayName": "Owner" }""");
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private async Task ShouldHaveWrittenNothing(string route, string subject)
+    {
+        if (!route.EndsWith("/picture", StringComparison.Ordinal))
+        {
+            await ShouldHaveNoProfile(subject);
+            return;
+        }
+
+        await using var db = _factory.NewDbContext();
+        var profile = await db.UserProfiles.SingleAsync(p => p.Subject == subject);
+        profile.DisplayName.Should().Be("Owner");
+        (await db.ProfilePictures.AnyAsync(picture => picture.ProfileId == profile.Id)).Should().BeFalse();
     }
 
     private async Task ShouldHaveNoProfile(string subject)

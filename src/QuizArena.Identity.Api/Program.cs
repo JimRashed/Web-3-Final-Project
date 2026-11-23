@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using QuizArena.Identity.Api.Controllers;
 using QuizArena.Identity.Api.Security;
 using QuizArena.Identity.Api.Services;
 using QuizArena.Identity.Data;
@@ -15,7 +16,7 @@ public sealed class Program
         builder.Services.AddControllers()
             .AddJsonOptions(options => options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow);
         builder.Services.AddExceptionHandler<IdentityExceptionHandler>();
-        builder.Services.AddOpenApi();
+        builder.Services.AddOpenApi(options => options.AddOperationTransformer<ImageRequestBodyTransformer>());
         builder.Services.AddQuizArenaSecurity(builder.Configuration);
         builder.Services.AddIdentityPersistence(builder.Configuration.GetConnectionString("DefaultConnection"));
         builder.Services.AddSingleton(TimeProvider.System);
@@ -23,6 +24,7 @@ public sealed class Program
 
         var app = builder.Build();
         app.UseExceptionHandler();
+        app.UsePrivatePictureHeaders();
         app.UseStatusCodePages();
         app.UseQuizArenaSecurity();
 

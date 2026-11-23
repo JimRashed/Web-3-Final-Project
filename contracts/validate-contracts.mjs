@@ -59,10 +59,9 @@ const routeContracts = {
 // Accepted picture media (SEC-02). Exact set: adding SVG, GIF or anything else fails.
 const IMAGE_MEDIA = ['image/png','image/jpeg','image/webp'];
 // Operations that are documented but not implemented yet. Only these may carry
-// x-status: proposed, and each must name the issue that implements it.
-const proposedOps = {
- identity: {'get /api/users/me/picture':'#144','put /api/users/me/picture':'#144'}
-};
+// x-status: proposed, and each must name the issue that implements it. None are
+// proposed now (#144 shipped the picture routes); list a future one here with its issue.
+const proposedOps = {};
 // Error outcomes a route must declare beyond the shared 401/403 rule.
 const requiredOutcomes = {
  identity: {'get /api/users/me/picture':[404,503],'put /api/users/me/picture':[400,404,409,413,415,503]}
@@ -239,7 +238,7 @@ function validate(all){
   assert.deepEqual(actual.sort(),[...expected[name]].sort(),'Operation inventory '+name);
   perService[name]=actual.length;
  }
- fail(operations===32,'Expected 32 operations (30 implemented + 2 proposed)');
+ fail(operations===32,'Expected 32 operations');
  const qs=all.questionbank.paths['/internal/question-sets'].post.responses[200].content['application/json'].example;
  fail(new Set(qs.map(q=>q.id)).size===5,'Snapshot needs distinct IDs');
  for(const q of qs)fail(q.options.filter(a=>a===q.correctAnswer).length===1,'Snapshot answer must match one option');
@@ -269,8 +268,8 @@ const probes=[
  ['machine scope in browser flow',d=>{d.statistics.components.securitySchemes.oauth2.flows.authorizationCode.scopes['results.write']='results.write';}],
  ['user scope in machine flow',d=>{d.lobby.components.securitySchemes.oauth2.flows.clientCredentials.scopes['lobbies.write']='lobbies.write';}],
  ['required machine scope removed',d=>{delete d.notification.components.securitySchemes.oauth2.flows.clientCredentials.scopes['events.write'];}],
- ['proposed marker removed',d=>{const o=d.identity.paths['/api/users/me/picture'].put;delete o['x-status'];delete o['x-implemented-by'];},/Proposed marker mismatch/],
- ['proposed status removed but issue kept',d=>{delete d.identity.paths['/api/users/me/picture'].put['x-status'];},/x-implemented-by without x-status/],
+ ['implemented picture operation marked proposed',d=>{Object.assign(d.identity.paths['/api/users/me/picture'].put,{'x-status':'proposed','x-implemented-by':'#144'});},/Proposed marker mismatch/],
+ ['implemented-by without status',d=>{d.identity.paths['/api/users/me/picture'].put['x-implemented-by']='#144';},/x-implemented-by without x-status/],
  ['picture cache-control header removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[200].headers['Cache-Control'];},/Missing required header Cache-Control/],
  ['picture nosniff header weakened',d=>{d.identity.paths['/api/users/me/picture'].get.responses[200].headers['X-Content-Type-Options'].example='sniff';},/Missing required header X-Content-Type-Options/],
  ['picture read outage outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[503];},/Missing required outcome 503/],
@@ -278,7 +277,8 @@ const probes=[
  ['picture read made public',d=>{const o=d.identity.paths['/api/users/me/picture'].get;o['x-actor']='public';o['x-policy']='public';o.security=[];}],
  ['picture size limit outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].put.responses[413];}],
  ['implemented operation marked proposed',d=>{Object.assign(d.identity.paths['/api/users/me'].get,{'x-status':'proposed','x-implemented-by':'#144'});}],
- ['proposed property made required',d=>{d.identity.components.schemas.Profile.required.push('picture');}]
+ ['required property marked proposed',d=>{Object.assign(d.identity.components.schemas.Profile.properties.picture,{'x-status':'proposed','x-implemented-by':'#144'});},/Proposed property must not be required/],
+ ['profile example without picture',d=>{delete d.identity.paths['/api/users/me'].get.responses[200].content['application/json'].example.picture;},/missing picture/]
 ];
 // Optional third element: the failure reason the probe must produce.
 for(const [name,mutate,reason]of probes){const copy=structuredClone(documents);mutate(copy);assert.throws(()=>validate(copy),reason?{message:reason}:undefined,'Failed corruption probe '+name);}
