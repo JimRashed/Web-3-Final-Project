@@ -462,6 +462,7 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     [Theory]
     [InlineData("image/gif", 1, 3)]
     [InlineData("image/svg+xml", 1, 3)]
+    [InlineData("image/png ", 1, 3)]
     [InlineData("image/png", 0, 3)]
     [InlineData("image/png", -4, 3)]
     [InlineData("image/png", 1, 0)]
@@ -514,6 +515,9 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     [InlineData("image/gif", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
     [InlineData("image/svg+xml", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
     [InlineData("IMAGE/PNG", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData("image/png ", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData("image/jpeg  ", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData(" image/webp", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
     [InlineData("image/png", 0, 3, ProfilePictureConfiguration.VersionConstraint)]
     [InlineData("image/png", -4, 3, ProfilePictureConfiguration.VersionConstraint)]
     public async Task Database_RejectsRawWriteOfInvalidPicture_WithCheckConstraintViolation(string contentType, int version, int contentLength, string constraint)
@@ -542,6 +546,19 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         // Assert
         (await update.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(547);
         (await ReadAsync())!.Version.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("image/jpeg")]
+    [InlineData("image/png")]
+    [InlineData("image/webp")]
+    public async Task Database_AcceptsRawWriteOfEachAllowedContentType(string contentType)
+    {
+        // Act
+        await InsertRawAsync(contentType, 1, new byte[3]);
+
+        // Assert: the exact-match constraint still admits every allowed type, and the domain reads it back.
+        (await ReadAsync())!.ContentType.Should().Be(contentType);
     }
 
     [Fact]
