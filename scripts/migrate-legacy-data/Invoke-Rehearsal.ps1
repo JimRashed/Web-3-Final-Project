@@ -131,9 +131,12 @@ Expect 'no duplicate events' $again.Events 2
 Write-Host '==> Rollback of the first run'
 # alice changes her preferences in the new service after the cutover: rollback must keep that row.
 Scalar $targets.Notification "UPDATE dbo.UserPreferences SET PushEnabled = 1 WHERE Subject = 'rehearsal-alice-subject'" | Out-Null
+# alice uploads a profile picture after the cutover: rollback must keep her imported profile (and so the picture).
+Scalar $targets.Identity "INSERT dbo.ProfilePictures (ProfileId, ContentType, Content, Version, UpdatedAt) SELECT Id, 'image/png', 0x89504E470D0A1A0A, 1, SYSUTCDATETIME() FROM dbo.UserProfiles WHERE Subject = 'rehearsal-alice-subject'" | Out-Null
 Expect 'rollback exit code' (Migrate @('-Mode', 'Rollback', '-RunId', $run)) 0
 $c = Counts
-Expect 'imported profile removed, bob kept' $c.Profiles 1
+Expect 'alice kept (has a picture), bob kept' $c.Profiles 2
+Expect 'alice''s uploaded picture kept' (Scalar $targets.Identity "SELECT COUNT(*) FROM dbo.ProfilePictures p JOIN dbo.UserProfiles u ON u.Id = p.ProfileId WHERE u.Subject = 'rehearsal-alice-subject'") 1
 Expect 'imported results removed' $c.Results 0
 Expect 'bob''s untouched preference removed, alice''s changed one kept' $c.Prefs 1
 Expect 'imported events removed' $c.Events 0

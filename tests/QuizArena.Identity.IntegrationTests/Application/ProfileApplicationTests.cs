@@ -22,11 +22,12 @@ public sealed class ProfileApplicationTests
     private static readonly AuthenticatedActor Player = new(Issuer, "player-a", ActorKind.User);
 
     private readonly Mock<IPlayerProfileRepository> _profiles = new(MockBehavior.Strict);
+    private readonly Mock<IProfilePictureStore> _pictures = new(MockBehavior.Strict);
     private readonly ProfileApplication _application;
 
     public ProfileApplicationTests()
     {
-        _application = new ProfileApplication(_profiles.Object, new FixedClock(Now));
+        _application = new ProfileApplication(_profiles.Object, _pictures.Object, new FixedClock(Now));
     }
 
     [Fact]
@@ -156,6 +157,143 @@ public sealed class ProfileApplicationTests
         // Assert
         await get.Should().ThrowAsync<InvalidOperationException>();
         await put.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ReplaceMyPictureAsync_UsesProfileIdFromExactIdentity()
+    {
+        // Arrange
+        var stored = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        var content = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+        var info = new ProfilePictureInfo("image/png", 1, Now);
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+        _pictures.Setup(s => s.ReplaceAsync(stored.Id, "image/png", content, Now, It.IsAny<CancellationToken>())).ReturnsAsync(info);
+
+        // Act
+        var result = await _application.ReplaceMyPictureAsync(Player, "image/png", content, CancellationToken.None);
+
+        // Assert
+        result.Should().Be(info);
+        _pictures.Verify(s => s.ReplaceAsync(stored.Id, "image/png", content, Now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplaceMyPictureAsync_ForCaseVariantSubject_DoesNotReachOtherProfile()
+    {
+        // Arrange
+        var other = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        var variant = new AuthenticatedActor(Issuer, "Player-A", ActorKind.User);
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync(other);
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "Player-A", It.IsAny<CancellationToken>())).ReturnsAsync((PlayerProfile?)null);
+
+        // Act
+        var act = () => _application.ReplaceMyPictureAsync(variant, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<PlayerProfileNotFoundException>();
+        _profiles.Verify(r => r.FindByIdentityAsync(Issuer, "Player-A", It.IsAny<CancellationToken>()), Times.Once);
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ReplaceMyPictureAsync_ForSameSubjectFromOtherIssuer_DoesNotReachOtherProfile()
+    {
+        // Arrange
+        const string otherIssuer = "https://other-idp.example/realms/quizarena";
+        var other = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        var foreign = new AuthenticatedActor(otherIssuer, "player-a", ActorKind.User);
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync(other);
+        _profiles.Setup(r => r.FindByIdentityAsync(otherIssuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync((PlayerProfile?)null);
+
+        // Act
+        var act = () => _application.ReplaceMyPictureAsync(foreign, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<PlayerProfileNotFoundException>();
+        _profiles.Verify(r => r.FindByIdentityAsync(otherIssuer, "player-a", It.IsAny<CancellationToken>()), Times.Once);
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ReplaceMyPictureAsync_WithoutProfile_ThrowsProfileNotFound()
+    {
+        // Arrange
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync((PlayerProfile?)null);
+
+        // Act
+        var act = () => _application.ReplaceMyPictureAsync(Player, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<PlayerProfileNotFoundException>();
+        _profiles.Verify(r => r.AddIfAbsentAsync(It.IsAny<PlayerProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetMyPictureAsync_WithoutProfile_ReturnsNull()
+    {
+        // Arrange
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync((PlayerProfile?)null);
+
+        // Act
+        var result = await _application.GetMyPictureAsync(Player, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull();
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetMyPictureAsync_ReturnsOwnersPicture()
+    {
+        // Arrange
+        var stored = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        var picture = ProfilePicture.Create(stored.Id, "image/webp", [1, 2, 3], Now);
+        using var cancellation = new CancellationTokenSource();
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", cancellation.Token)).ReturnsAsync(stored);
+        _pictures.Setup(s => s.GetAsync(stored.Id, cancellation.Token)).ReturnsAsync(picture);
+
+        // Act
+        var result = await _application.GetMyPictureAsync(Player, cancellation.Token);
+
+        // Assert
+        result.Should().BeSameAs(picture);
+        _pictures.Verify(s => s.GetAsync(stored.Id, cancellation.Token), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("get")]
+    [InlineData("replace")]
+    public async Task PictureOperations_ForMachineActor_Throw(string operation)
+    {
+        // Arrange
+        var machine = new AuthenticatedActor(Issuer, "service-account-quizarena-gameplay", ActorKind.Machine);
+
+        // Act
+        Func<Task> act = operation == "get"
+            ? () => _application.GetMyPictureAsync(machine, CancellationToken.None)
+            : () => _application.ReplaceMyPictureAsync(machine, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _profiles.VerifyNoOtherCalls();
+        _pictures.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ReplaceMyPictureAsync_WhenStoreReportsConflict_PropagatesConflict()
+    {
+        // Arrange
+        var stored = PlayerProfile.Create(Issuer, "player-a", "Alex", Now.AddDays(-1));
+        _profiles.Setup(r => r.FindByIdentityAsync(Issuer, "player-a", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+        _pictures.Setup(s => s.ReplaceAsync(stored.Id, "image/png", It.IsAny<byte[]>(), Now, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProfilePictureConflictException());
+
+        // Act
+        var act = () => _application.ReplaceMyPictureAsync(Player, "image/png", [1, 2, 3], CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ProfilePictureConflictException>();
     }
 
     [Fact]

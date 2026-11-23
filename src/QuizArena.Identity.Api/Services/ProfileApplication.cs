@@ -1,12 +1,37 @@
 using QuizArena.Identity.Api.Contracts;
 using QuizArena.Identity.Api.Security;
 using QuizArena.Identity.Domain.Entities;
+using QuizArena.Identity.Domain.Exceptions;
 using QuizArena.Identity.Domain.Repositories;
 
 namespace QuizArena.Identity.Api.Services;
 
-public sealed class ProfileApplication(IPlayerProfileRepository profiles, TimeProvider clock) : IProfileApplication
+public sealed class ProfileApplication(IPlayerProfileRepository profiles, IProfilePictureStore pictures, TimeProvider clock) : IProfileApplication
 {
+    public async Task<ProfilePicture?> GetMyPictureAsync(AuthenticatedActor actor, CancellationToken cancellationToken)
+    {
+        EnsurePlayer(actor);
+
+        // The profile id always comes from the validated issuer + subject (exact, case-sensitive lookup).
+        var profile = await profiles.FindByIdentityAsync(actor.Issuer, actor.Subject, cancellationToken);
+        return profile is null ? null : await pictures.GetAsync(profile.Id, cancellationToken);
+    }
+
+    public async Task<ProfilePictureInfo> ReplaceMyPictureAsync(
+        AuthenticatedActor actor,
+        string contentType,
+        byte[] content,
+        CancellationToken cancellationToken)
+    {
+        EnsurePlayer(actor);
+
+        // No implicit profile creation: a picture always belongs to an existing profile of exactly this identity.
+        var profile = await profiles.FindByIdentityAsync(actor.Issuer, actor.Subject, cancellationToken)
+            ?? throw new PlayerProfileNotFoundException();
+        var now = clock.GetUtcNow().UtcDateTime;
+        return await pictures.ReplaceAsync(profile.Id, contentType, content, now, cancellationToken);
+    }
+
     public async Task<ProfileResponse?> GetMeAsync(AuthenticatedActor actor, CancellationToken cancellationToken)
     {
         EnsurePlayer(actor);

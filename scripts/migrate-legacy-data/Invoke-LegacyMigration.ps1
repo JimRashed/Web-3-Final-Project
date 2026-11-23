@@ -8,7 +8,8 @@
     DryRun   Plans every source row and prints what Import would do. Writes nothing anywhere.
     Import   Applies the plan in one transaction and records every row in the ledger database.
     Verify   Reconciles: source = imported + already present + quarantined + archived, and imported rows exist.
-    Rollback Removes the rows a given run imported, only where the target row is still unchanged.
+    Rollback Removes the rows a given run imported, only where the target row is still unchanged
+             (a profile with an uploaded picture is always kept).
 
   The source database is only ever read. Identities are mapped exclusively from a verified mapping file
   (legacy user id -> issuer + subject). Unmapped, invalid or conflicting rows are quarantined with their
@@ -104,15 +105,21 @@ CREATE TABLE {LEDGER}.dbo.IdentityMapping (
 # ---------------------------------------------------------------------------------------- Rollback
 if ($Mode -eq 'Rollback') {
     if ($RunId -eq [guid]::Empty) { throw '-RunId is required for Rollback (printed by Import).' }
+    # Fail closed: the profile delete below must be able to see uploaded pictures (#143).
+    if ((Sql "SELECT OBJECT_ID('{IDENTITY}.dbo.ProfilePictures') AS id").Rows[0].id -is [DBNull]) {
+        throw 'Identity database is not migrated to the latest schema (ProfilePictures missing); run dotnet-ef database update first.'
+    }
     $transaction = $connection.BeginTransaction()
     try {
         $result = Sql @'
 DECLARE @removed TABLE (SourceTable nvarchar(64) COLLATE Latin1_General_100_BIN2, SourceKey nvarchar(450) COLLATE Latin1_General_100_BIN2);
--- Profiles: only if nobody changed them since import (UpdatedAt still equals CreatedAt and the name is unchanged).
+-- Profiles: only if nobody changed them since import (UpdatedAt still equals CreatedAt and the name is unchanged)
+-- and the player has not uploaded a picture (the cascade delete would otherwise remove it).
 DELETE p OUTPUT 'Users', l.SourceKey INTO @removed
 FROM {IDENTITY}.dbo.UserProfiles p JOIN {LEDGER}.dbo.Ledger l ON l.SourceTable = 'Users' AND l.State = 'Imported' AND l.RunId = @run
  AND p.Id = TRY_CONVERT(uniqueidentifier, l.TargetKey)
-WHERE p.UpdatedAt = p.CreatedAt AND p.DisplayName COLLATE Latin1_General_100_BIN2 = JSON_VALUE(l.TargetJson, '$.DisplayName') COLLATE Latin1_General_100_BIN2;
+WHERE p.UpdatedAt = p.CreatedAt AND p.DisplayName COLLATE Latin1_General_100_BIN2 = JSON_VALUE(l.TargetJson, '$.DisplayName') COLLATE Latin1_General_100_BIN2
+  AND NOT EXISTS (SELECT 1 FROM {IDENTITY}.dbo.ProfilePictures pp WHERE pp.ProfileId = p.Id);
 -- Results are immutable once recorded.
 DELETE r OUTPUT 'MatchResults', l.SourceKey INTO @removed
 FROM {STATISTICS}.dbo.MatchResults r JOIN {LEDGER}.dbo.Ledger l ON l.SourceTable = 'MatchResults' AND l.State = 'Imported' AND l.RunId = @run
