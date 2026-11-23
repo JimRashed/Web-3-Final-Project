@@ -245,8 +245,9 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
             : new StreamContent(new GeneratedStream(Limit + 1, bytes));
         content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 
-        // Act
-        using var response = await PutPictureAsync(subject, content);
+        // Act: the stream variant is sent chunked (the test client would otherwise still add a Content-Length).
+        using var response = await SendAsync(HttpMethod.Put, PicturePath, Token(subject), content,
+            request => request.Headers.TransferEncodingChunked = !withContentLength);
 
         // Assert
         await AssertContractProblemAsync(response, HttpStatusCode.RequestEntityTooLarge);
@@ -271,11 +272,16 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
             content.Headers.ContentLength = huge;
         }
 
+        // Without an explicit chunked flag the test client still sends a Content-Length, so the cap on chunked reads
+        // would never be exercised; the counter records what the server actually saw.
+        void Chunked(HttpRequestMessage request) => request.Headers.TransferEncodingChunked = !declareContentLength;
+
         // Act
-        using var response = await SendAsync(counted, HttpMethod.Put, PicturePath, Token(subject), content);
+        using var response = await SendAsync(counted, HttpMethod.Put, PicturePath, Token(subject), content, Chunked);
 
         // Assert
         await AssertContractProblemAsync(response, HttpStatusCode.RequestEntityTooLarge);
+        counter.ContentLength.Should().Be(declareContentLength ? huge : null);
         counter.BytesRead.Should().BeLessThanOrEqualTo(declareContentLength ? 0 : Limit + 1);
         await ShouldHaveNoPictureAsync(subject);
     }
@@ -685,6 +691,9 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
 
         public long BytesRead => Interlocked.Read(ref _bytesRead);
 
+        /// <summary>The Content-Length the server saw on the last request (null for a chunked body).</summary>
+        public long? ContentLength { get; set; }
+
         public void Add(int count) => Interlocked.Add(ref _bytesRead, count);
     }
 
@@ -695,6 +704,7 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
         {
             app.Use((context, nextMiddleware) =>
             {
+                counter.ContentLength = context.Request.ContentLength;
                 context.Request.Body = new CountingStream(context.Request.Body, counter);
                 return nextMiddleware(context);
             });
