@@ -1,6 +1,6 @@
 # QuizArena authorization matrix
 
-Route inventory established at `c8dcc78` (#137). SEC-B2 (#141) reconciles authorization for the shipped routes. Picture rows are proposed under #144. [Security decisions](security-decisions.md)
+Route inventory established at `c8dcc78` (#137). SEC-B2 (#141) reconciles authorization for the shipped routes. Picture rows are implemented by #144 (SEC decisions team approval pending). [Security decisions](security-decisions.md)
 
 All paths below are relative to the owning service origin. Audience is `quizarena-<service>`. Token validation (below) runs before any scope or ownership check. Differences between the shipped code and the target rules are listed as `DR-n` in the [discrepancy register](security-decisions.md#discrepancy-register); this document records both instead of silently rewriting the target.
 
@@ -47,8 +47,8 @@ Issuer for every protected row: the configured Authority (above). "auth" in the 
 |---|---|---|---|---|---|---|---|
 | identity | GET `/api/users/me` | user | quizarena-identity | profiles.read | validated issuer + subject | auth → 404 no profile → 200 | DB outage 500, contract says 503 (DR-3) |
 | identity | PUT `/api/users/me` | user | quizarena-identity | profiles.write | validated issuer + subject | auth → 415 unsupported Content-Type → 400 invalid body or display name → 200 (create or rename) | Accepts `application/json`; DB outage 500 (DR-3) |
-| identity | GET `/api/users/me/picture` | user | quizarena-identity | profiles.read | validated issuer + subject; own picture only | auth → 404 no profile or picture → 200 image bytes; 503 storage unavailable | **Proposed (#144).** `Cache-Control: private, no-store`, `nosniff` (SEC-08) |
-| identity | PUT `/api/users/me/picture` | user | quizarena-identity | profiles.write | validated issuer + subject; one picture per profile | auth → 415 type → 413 over 2,097,152 bytes → 400 empty, malformed header or bytes ≠ Content-Type → 404 no profile → 409 lost a concurrent replacement (first committer wins; sequential requests each replace) → 200 Profile; 503 storage unavailable | **Proposed (#144).** PNG/JPEG/WebP only (SEC-02, SEC-06, SEC-07) |
+| identity | GET `/api/users/me/picture` | user | quizarena-identity | profiles.read | validated issuer + subject; own picture only | auth → 404 no profile or picture → 200 image bytes; 503 storage unavailable | **Implemented (#144).** `Cache-Control: private, no-store`, `nosniff` on every response (SEC-08); no range, ETag or HEAD support |
+| identity | PUT `/api/users/me/picture` | user | quizarena-identity | profiles.write | validated issuer + subject; one picture per profile | auth → 415 type → 413 over 2,097,152 bytes → 400 empty, malformed header or bytes ≠ Content-Type → 404 no profile → 409 lost a concurrent replacement (first committer wins; sequential requests each replace) → 200 Profile; 503 storage unavailable | **Implemented (#144).** PNG/JPEG/WebP only (SEC-02, SEC-06, SEC-07); 401/403 always precede 415/413 |
 | identity | POST `/api/auth/register` | public | — | — | none | 410 always; body and bearer header ignored | Retired |
 | identity | POST `/api/auth/login` | public | — | — | none | 410 always; body and bearer header ignored | Retired |
 | identity | GET `/api/users/{id}` | public | — | — | none | 410 always | Retired |
@@ -78,19 +78,19 @@ Issuer for every protected row: the configured Authority (above). "auth" in the 
 | notification | PUT `/users/{userId}/preferences` | user | quizarena-notification | preferences.write | path userId equals validated subject | auth → 400 body → 403 not self → 200 | |
 | notification | GET `/health` | public | — | — | none | 200 | |
 
-The 30 shipped rows match the operation inventory in `contracts/validate-contracts.mjs`; the 2 picture rows are proposed.
+The 32 shipped rows (including the 2 picture rows from #144) match the operation inventory in `contracts/validate-contracts.mjs`.
 
 ## Security cases and evaluation order
 
 For **every user row**: valid matching audience+scope+actor and required ownership reaches the documented success; absent/expired/wrong issuer/wrong audience/invalid signature token → 401; valid user token missing exact scope → 403; machine token → 403. For **every machine row**: a validated token with the destination audience, exact scope, a non-blank subject, `azp=quizarena-gameplay` and `qa_actor=machine` reaches success; browser token → 403 even with accidentally granted scope; other client → 403; invalid/missing token → 401. An authentication failure includes WWW-Authenticate: Bearer. Health and retired rows require no token; health → 200 and retired → 410 even if an irrelevant bearer header is supplied.
 
-For **each self-only row** (Statistics stats/history, Notification preferences, optional events userId): caller player-a requesting player-b → 403 before data lookup, including nonexistent player-b. GET /api/users/me, PUT /api/users/me and the proposed picture routes derive issuer/subject exclusively from claims. Reject extra userId/hostId/playerId properties in user mutation bodies → 400; never use them to select an actor.
+For **each self-only row** (Statistics stats/history, Notification preferences, optional events userId): caller player-a requesting player-b → 403 before data lookup, including nonexistent player-b. GET /api/users/me, PUT /api/users/me and the picture routes (#144) derive issuer/subject exclusively from claims. Reject extra userId/hostId/playerId properties in user mutation bodies → 400; never use them to select an actor.
 
 For **each match read/answer row**: nonexistent match → 404; existing match with outsider → 403; participant follows state rules. This intentionally reveals existence to authenticated scoped outsiders, but no match details. For **lock** and **create-match**, an unknown lobby returns 404. An existing lobby requested by a non-host returns 403 before state validation. A host with an invalid lobby state receives 409. Repeated authorized starts return the existing match. Lobby preview is available to any scoped user and exposes member count and caller-relative booleans, not member subjects. Internal Lobby lookup is machine-only and may expose identities for verification.
 
 Lobby and Gameplay enforce the same exact issuer before resolving a caller. Their stores are dedicated to that issuer and ownership uses opaque, ordinal subjects within those stores. Changing the configured issuer requires a new empty store or explicit identity migration. [ADR-05](architecture-decisions.md#owners-and-data-boundaries)
 
-Negative input examples: count=0 or 51 → 400; page=0/pageSize=101 → 400; top=101 → 400; joinCode=abc123 → 400; displayName whitespace → 400; malformed GUID questionId → 400. New result score 6 → 400; conflicting replay → 409. User token calling /internal/question-sets → 403; public Question/CurrentQuestion response containing correctAnswer fails contract validation. Duplicate/stale/finished match answer → 409; GET next-question after finish → 409. Preference GET with no row returns false/false without persisting. Proposed picture: SVG or GIF → 415; 2,097,153 bytes → 413; PNG bytes sent as `image/jpeg` → 400.
+Negative input examples: count=0 or 51 → 400; page=0/pageSize=101 → 400; top=101 → 400; joinCode=abc123 → 400; displayName whitespace → 400; malformed GUID questionId → 400. New result score 6 → 400; conflicting replay → 409. User token calling /internal/question-sets → 403; public Question/CurrentQuestion response containing correctAnswer fails contract validation. Duplicate/stale/finished match answer → 409; GET next-question after finish → 409. Preference GET with no row returns false/false without persisting. Picture (#144, tested): SVG or GIF → 415; 2,097,153 bytes → 413; PNG bytes sent as `image/jpeg` → 400; empty body → 400.
 
 Error precedence: authenticate → authorize scope/actor → validate syntax (400) → check claim-based self ownership → lookup → resource ownership → business state. Public retired routes skip all body validation; public health ignores irrelevant query/body and reports only liveness. Backend authorization is mandatory regardless of frontend guards. Database outages still return 500 on Identity, Statistics, Gameplay and Notification (DR-3/DR-8).
 

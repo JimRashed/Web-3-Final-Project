@@ -8,8 +8,8 @@
 |---|---|---|---|
 | identity | GET `/api/users/me` | getMyProfile | 200, 401, 403, 404, 500, 503 |
 | identity | PUT `/api/users/me` | updateMyProfile | 200, 400, 401, 403, 415, 500, 503 |
-| identity | GET `/api/users/me/picture` | getMyPicture | 200, 401, 403, 404, 500, 503 (**proposed, #144**) |
-| identity | PUT `/api/users/me/picture` | replaceMyPicture | 200, 400, 401, 403, 404, 409, 413, 415, 500, 503 (**proposed, #144**) |
+| identity | GET `/api/users/me/picture` | getMyPicture | 200, 401, 403, 404, 500, 503 (implemented, #144) |
+| identity | PUT `/api/users/me/picture` | replaceMyPicture | 200, 400, 401, 403, 404, 409, 413, 415, 500, 503 (implemented, #144) |
 | identity | POST `/api/auth/register` | retiredRegister | 410 |
 | identity | POST `/api/auth/login` | retiredLogin | 410 |
 | identity | GET `/api/users/{id}` | retiredProfileById | 410 |
@@ -39,7 +39,7 @@
 | notification | PUT `/users/{userId}/preferences` | updateMyPreferences | 200, 400, 401, 403, 500, 503 |
 | notification | GET `/health` | notificationHealth | 200 |
 
-Proposed operations and properties carry `x-status: proposed` plus `x-implemented-by: "#<issue>"` in the OpenAPI document. They are pending team approval and are not implemented yet; the implementing issue removes both markers. `contracts/validate-contracts.mjs` only accepts the markers on the items it lists as proposed.
+Proposed operations and properties carry `x-status: proposed` plus `x-implemented-by: "#<issue>"` in the OpenAPI document. They are pending team approval and are not implemented yet; the implementing issue removes both markers. `contracts/validate-contracts.mjs` only accepts the markers on the items it lists as proposed. No item is proposed now: #144 implemented the picture operations and removed their markers.
 
 All JSON property names camelCase; UTF-8 application/json. Safe errors use application/problem+json with type,title,status,detail,traceId; never stack traces, token/credential contents or SQL errors.400 invalid input,401 invalid/missing authentication,403 valid but forbidden,404 missing,409 duplicate/state conflict,410 retired,503 dependency unavailable,500 unexpected safe failure. Cancellation propagates; disconnected callers are not converted to500.
 
@@ -51,7 +51,7 @@ GET /me reads profile or404 if no local profile. PUT /me upserts displayName, re
 
 Profile PUT requires `application/json`. After authorization, unsupported content types receive MVC's 415 `application/problem+json` with `type`, `title`, `status` and `traceId`.
 
-**Picture (proposed, #144; team approval pending).** `GET /api/users/me/picture` (`profiles.read`) returns the caller's own image bytes with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`, or 404 when there is no profile or picture. `PUT /api/users/me/picture` (`profiles.write`) takes a raw `image/png`, `image/jpeg` or `image/webp` body of at most 2,097,152 bytes whose magic bytes match the Content-Type, replaces the single picture atomically and returns the Profile; 400 mismatch, empty or malformed header, 404 no profile, 409 lost a concurrent replacement (first committer wins), 413 too large, 415 other types (including SVG and GIF), 503 storage unavailable. `Profile` gains an optional nullable `picture {contentType, updatedAt, version}` without storage keys or URLs. Owner, storage, concurrency, caching and sign-out rules are decisions SEC-01 to SEC-09 in [security decisions](security-decisions.md).
+**Picture (implemented by #144; SEC decisions team approval pending).** `GET /api/users/me/picture` (`profiles.read`) returns the caller's own image bytes with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`, or 404 when there is no profile or picture. `PUT /api/users/me/picture` (`profiles.write`) takes a raw `image/png`, `image/jpeg` or `image/webp` body of at most 2,097,152 bytes whose magic bytes match the Content-Type, replaces the single picture atomically and returns the Profile; 400 mismatch, empty or malformed header, 404 no profile, 409 lost a concurrent replacement (first committer wins), 413 too large, 415 other types (including SVG and GIF), 503 storage unavailable. `Profile` has a required, nullable `picture {contentType, updatedAt, version}` (`null` when there is no picture) without storage keys or URLs. Every picture-route response carries both private headers, and every problem body has `type`, `title`, `status`, `detail` and `traceId`. The 400 on the picture route is a plain problem (no `errors` map). Owner, storage, concurrency, caching and sign-out rules are decisions SEC-01 to SEC-09 in [security decisions](security-decisions.md).
 
 ## Statistics
 

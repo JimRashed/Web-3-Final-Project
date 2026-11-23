@@ -20,10 +20,13 @@ public interface IProfileApplication
     Task<ProfilePicture?> GetMyPictureAsync(AuthenticatedActor actor, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Atomically creates or replaces the caller's picture and returns the approved reference (content type, version,
-    /// update time; no key, path or URL). The owning profile is resolved only from the validated issuer + subject.
-    /// Throws <see cref="Domain.Exceptions.PlayerProfileNotFoundException"/> when the caller has no profile and
-    /// <see cref="Domain.Exceptions.ProfilePictureConflictException"/> when a concurrent replace committed first.
+    /// Validates the bytes against <paramref name="contentType"/> (<see cref="ProfilePictureFormat"/>), then atomically
+    /// creates or replaces the caller's picture and returns the updated profile with its approved picture reference
+    /// (content type, version, update time; no key, path or URL). The owning profile is resolved only from the validated
+    /// issuer + subject. Throws <see cref="Domain.Exceptions.InvalidProfileException"/> (400) for empty, malformed or
+    /// mismatched content before any lookup, <see cref="Domain.Exceptions.PlayerProfileNotFoundException"/> (404) when the
+    /// caller has no profile and <see cref="Domain.Exceptions.ProfilePictureConflictException"/> (409) when a concurrent
+    /// replace committed first.
     /// </summary>
-    Task<ProfilePictureInfo> ReplaceMyPictureAsync(AuthenticatedActor actor, string contentType, byte[] content, CancellationToken cancellationToken);
+    Task<ProfileResponse> ReplaceMyPictureAsync(AuthenticatedActor actor, string contentType, byte[] content, CancellationToken cancellationToken);
 }

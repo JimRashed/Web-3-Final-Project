@@ -322,3 +322,55 @@ Out of scope (residual risks, recorded in the PR body and threat model):
 - Any change to `QuizArena.Identity.Data`, migrations or other services.
 
 Blockers: none.
+
+## 8. Implementation adjustments (Implement stage)
+
+Recorded by the Implement stage; includes the teammate plan-review comments the Dispatcher forwarded
+(@JimRashed 1-4, @SuSu-Lisu 5-9). Not approvals.
+
+Touchpoint changes:
+- **Added** `src/QuizArena.Identity.Api/Controllers/ImageRequestBodyTransformer.cs` (review 4): an OpenAPI operation
+  transformer, registered in `Program.cs` via `AddOpenApi(o => o.AddOperationTransformer<...>())`, that documents a
+  required `requestBody` with exactly `image/png`, `image/jpeg`, `image/webp` (binary string) for actions marked
+  `[RequireImageContentType]`. Documentation only: no `[Consumes]`, no change to request handling or auth precedence.
+- **Modified** `tests/QuizArena.Identity.IntegrationTests/Persistence/ProfilePictureFreshInstanceTests.cs`: it called
+  `ReplaceMyPictureAsync` with dummy bytes and the old `ProfilePictureInfo` return type; now uses `PictureSamples` and
+  the `ProfileResponse.Picture` result (same assertions).
+
+Behaviour changes versus Sections 3/5:
+- **Review 1 - name/metadata consistency.** `UpsertMeAsync` now looks up the profile first and reads
+  `GetInfoAsync` **before** `RenameAsync`; a brand-new profile returns `picture: null` without a read; when a concurrent
+  first save wins, the winner's metadata is read before the second rename. A failed metadata read therefore leaves the
+  stored name unchanged. Tests: `ProfileApplicationTests.UpsertMeAsync_WhenPictureMetadataReadFails_ThrowsBeforeRenaming`
+  (strict mocks: no rename/add) and real-DB `ProfileErrorTests.PutMe_WhenPictureMetadataReadFails_Returns503AndKeepsPersistedName`.
+  Accepted trade-off: the returned picture metadata is a snapshot taken just before the rename.
+- **Review 2 - WebP bounds.** The first chunk header, payload and its pad byte (odd sizes) must end within the RIFF end
+  (RIFF size + 8, itself within the body); bytes after the RIFF end are ignored. Tests: unit
+  `chunk-size-past-riff-end`, `missing-pad-byte`; API `webp-chunk-past-riff-end` → 400 and, in
+  `PutPicture_EachRejection_PreservesProfileAndPicture`, prior picture preserved.
+- **Review 3 - contract problem bodies.** Every picture-route problem has exactly `type, title, status, detail, traceId`:
+  415 is an explicit `ProblemDetailsFactory` problem (`RequireImageContentTypeAttribute.UnsupportedMediaType`) instead
+  of `UnsupportedMediaTypeResult`; 413 sets an explicit RFC 9110 `type` (no framework default for 413); the picture 400
+  is a plain `ProblemDetails` with `detail` = validation message (no `errors` map; `PUT /me` keeps its
+  `ValidationProblemDetails`); corrupt row and any other unexpected exception on a picture route → safe 500 with a generic
+  detail (endpoint detected via `IExceptionHandlerFeature.Endpoint` metadata); 503 now carries a generic `detail` on all
+  Identity routes. HTTP tests assert the exact field set (`AssertContractProblemAsync`, `AssertContractProblemFieldsAsync`).
+- **Review 4** - see transformer above; `ProfilePictureEndpointsTests.OpenApiDocument_PutPicture_DocumentsRequiredRawImageBody`.
+- **Review 5** - 415 for `multipart/form-data; boundary=x`, `text/plain`, `application/json` and a real
+  `MultipartFormDataContent` upload.
+- **Review 6** - `PutPicture_WithHugeBody_Returns413WithoutReadingMoreThanTheLimit`: 50 MB generated body, chunked and
+  with a declared Content-Length; a server-side `IStartupFilter` counting stream asserts bytes read ≤ limit + 1 (chunked)
+  and 0 (declared length).
+- **Review 7** - empty body → 400 (also before 404 for a caller without a profile).
+- **Review 8** - `GetPicture_WithoutProfileOrWithoutPicture_Returns404ContractProblem` covers both cases.
+- **Review 9** - no `Accept-Ranges`, `ETag`, `Content-Range` or `Last-Modified`; a `Range` request gets the full 200.
+  HEAD on the GET-only route → 405 from routing and never image bytes (TestServer keeps the status-code-pages body
+  that Kestrel strips for HEAD).
+- **@SuSu-Lisu (#143 review) - metadata-only reads.** GET/PUT `/api/users/me` read picture metadata only via
+  `IProfilePictureStore.GetInfoAsync` and never `GetAsync` (full bytes); only GET `/api/users/me/picture` uses
+  `GetAsync`. Pinned by `ProfileApplicationTests.ProfileOperations_ReadPictureMetadataOnly_NeverPictureBytes` (GetMe,
+  Upsert rename, Upsert lost first-save race; strict mock without a `GetAsync` setup plus explicit `Times.Never`) and
+  `GetMyPictureAsync_ReturnsOwnersPicture` (`VerifyNoOtherCalls`: no `GetInfoAsync`).
+- Mismatched declared type vs bytes stays 400 (not 415) and is asserted as such.
+- Unit `Validate` checks the content-type guard before emptiness (both are 400 at the API; the API always passes a
+  canonical allowed type).

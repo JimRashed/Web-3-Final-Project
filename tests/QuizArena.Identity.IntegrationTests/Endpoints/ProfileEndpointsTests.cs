@@ -54,7 +54,9 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
         profile.GetProperty("subject").GetString().Should().Be(subject);
         profile.GetProperty("displayName").GetString().Should().Be("Alex");
         profile.GetProperty("id").GetGuid().Should().Be((await Json(put)).GetProperty("id").GetGuid());
-        profile.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("id", "issuer", "subject", "displayName");
+        profile.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("id", "issuer", "subject", "displayName", "picture");
+        profile.GetProperty("picture").ValueKind.Should().Be(JsonValueKind.Null);
+        (await Json(put)).GetProperty("picture").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
@@ -276,9 +278,9 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        // Only contract operations explicitly marked x-status: proposed (not implemented yet, #144) are left
-        // out; the generated document is never filtered. ProfileApplicationTests pins which items are proposed.
-        Operations(generated).Should().BeEquivalentTo(Operations(ReadContract(), excludeProposed: true));
+        // Every contract operation is implemented (#144 shipped the picture routes); neither side is filtered.
+        Operations(generated).Should().BeEquivalentTo(Operations(ReadContract()));
+        Operations(generated).Should().Contain(["GET /api/users/me/picture", "PUT /api/users/me/picture"]);
         var update = generated.GetProperty("paths").GetProperty("/api/users/me").GetProperty("put");
         update.GetProperty("requestBody").GetProperty("content").EnumerateObject().Select(property => property.Name)
             .Should().BeEquivalentTo("application/json", "application/*+json");
@@ -309,14 +311,10 @@ public sealed class ProfileEndpointsTests : IClassFixture<IdentityApiFactory>
         return document.RootElement.Clone();
     }
 
-    private static bool IsProposed(JsonElement node) =>
-        node.TryGetProperty("x-status", out var status) && status.GetString() == "proposed";
-
-    private static IReadOnlyList<string> Operations(JsonElement openApi, bool excludeProposed = false) =>
+    private static IReadOnlyList<string> Operations(JsonElement openApi) =>
         openApi.GetProperty("paths").EnumerateObject()
             .SelectMany(path => path.Value.EnumerateObject()
                 .Where(op => op.Name is "get" or "put" or "post" or "delete" or "patch")
-                .Where(op => !excludeProposed || !IsProposed(op.Value))
                 .Select(op => $"{op.Name.ToUpperInvariant()} {path.Name.Replace("{id}", "{param}", StringComparison.Ordinal)}"))
             .ToList();
 
