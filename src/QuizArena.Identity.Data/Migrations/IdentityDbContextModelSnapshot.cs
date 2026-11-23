@@ -86,7 +86,14 @@ namespace QuizArena.Identity.Data.Migrations
 
                     b.HasKey("ProfileId");
 
-                    b.ToTable("ProfilePictures", (string)null);
+                    b.ToTable("ProfilePictures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProfilePictures_ContentLength", "DATALENGTH([Content]) BETWEEN 1 AND 2097152");
+
+                            t.HasCheckConstraint("CK_ProfilePictures_ContentType", "[ContentType] COLLATE Latin1_General_BIN2 IN (N'image/jpeg', N'image/png', N'image/webp')");
+
+                            t.HasCheckConstraint("CK_ProfilePictures_Version", "[Version] >= 1");
+                        });
                 });
 
             modelBuilder.Entity("QuizArena.Identity.Domain.Entities.ProfilePicture", b =>

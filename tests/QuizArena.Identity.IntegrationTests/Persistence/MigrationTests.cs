@@ -15,6 +15,7 @@ namespace QuizArena.Identity.IntegrationTests.Persistence;
 public sealed class MigrationTests
 {
     private const string DefaultServer = "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+    private const string PictureConstraintNames = "N'CK_ProfilePictures_ContentLength', N'CK_ProfilePictures_ContentType', N'CK_ProfilePictures_Version'";
 
     [Fact]
     public async Task Migrate_OnFreshDatabase_AppliesEveryMigrationAndLeavesNonePending()
@@ -92,6 +93,84 @@ public sealed class MigrationTests
             await context.Database.EnsureDeletedAsync();
         }
     }
+
+    [Fact]
+    public async Task AddProfilePictureCheckConstraints_PreservesValidPicturesUpAndDropsOnlyTheConstraintsDown()
+    {
+        // Arrange
+        await using var context = CreateContext($"QuizArenaIdentity_PictureChecks_{Guid.NewGuid():N}");
+        var migrator = context.GetService<IMigrator>();
+
+        try
+        {
+            await migrator.MigrateAsync("AddProfilePictures");
+            await SeedProfileWithPictureAsync(context, "image/png", [0x89, 0x50, 0x4E, 0x47], 3);
+            var before = await PictureRowsAsync(context);
+
+            // Act (up)
+            await context.Database.MigrateAsync();
+            var afterUp = await PictureRowsAsync(context);
+            var trustedAfterUp = await ScalarAsync(context, $"SELECT COUNT(*) AS Value FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.ProfilePictures') AND is_not_trusted = 0 AND is_disabled = 0 AND name IN ({PictureConstraintNames})");
+
+            // Act (down)
+            await migrator.MigrateAsync("AddProfilePictures");
+            var afterDown = await PictureRowsAsync(context);
+            var constraintsAfterDown = await ScalarAsync(context, $"SELECT COUNT(*) AS Value FROM sys.check_constraints WHERE name IN ({PictureConstraintNames})");
+
+            // Assert
+            before.Should().ContainSingle();
+            afterUp.Should().Equal(before);
+            trustedAfterUp.Should().Be(3);
+            afterDown.Should().Equal(before);
+            constraintsAfterDown.Should().Be(0);
+        }
+        finally
+        {
+            await context.Database.EnsureDeletedAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddProfilePictureCheckConstraints_WithExistingInvalidRow_FailsLoudlyAndAppliesNothing()
+    {
+        // Arrange: a row written before the constraints existed that violates one of them.
+        await using var context = CreateContext($"QuizArenaIdentity_PictureChecksFail_{Guid.NewGuid():N}");
+        var migrator = context.GetService<IMigrator>();
+
+        try
+        {
+            await migrator.MigrateAsync("AddProfilePictures");
+            await SeedProfileWithPictureAsync(context, "image/gif", [0x47, 0x49, 0x46], 1);
+
+            // Act
+            var migrate = () => context.Database.MigrateAsync();
+
+            // Assert: SQL Server validates existing rows when a constraint is added, so the upgrade stops instead of
+            // leaving untrusted constraints, and the migration's transaction rolls back every constraint it added.
+            (await migrate.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(547);
+            (await context.Database.GetAppliedMigrationsAsync()).Should().NotContain(name => name.EndsWith("_AddProfilePictureCheckConstraints", StringComparison.Ordinal));
+            (await ScalarAsync(context, $"SELECT COUNT(*) AS Value FROM sys.check_constraints WHERE name IN ({PictureConstraintNames})")).Should().Be(0);
+            (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM dbo.ProfilePictures WHERE ContentType = N'image/gif'")).Should().Be(1);
+        }
+        finally
+        {
+            await context.Database.EnsureDeletedAsync();
+        }
+    }
+
+    private static async Task SeedProfileWithPictureAsync(IdentityDbContext context, string contentType, byte[] content, int version) =>
+        await context.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO dbo.UserProfiles (Id, Issuer, Subject, DisplayName, CreatedAt, UpdatedAt) VALUES
+            ('6f1c1e9e-0d7a-4b0e-9a57-333333333333', N'http://localhost:8080/realms/quizarena', N'subject-p', N'Pic', '2026-11-01T10:00:00', '2026-11-01T10:00:00');
+            INSERT INTO dbo.ProfilePictures (ProfileId, ContentType, Content, Version, UpdatedAt) VALUES
+            ('6f1c1e9e-0d7a-4b0e-9a57-333333333333', {contentType}, {content}, {version}, '2026-11-02T10:00:00.1234567');
+            """);
+
+    private static async Task<List<string>> PictureRowsAsync(IdentityDbContext context) =>
+        await context.Database.SqlQueryRaw<string>(
+            "SELECT CONCAT(CONVERT(nvarchar(36), ProfileId), N'|', ContentType, N'|', CONVERT(nvarchar(max), Content, 1), N'|', Version, N'|', CONVERT(nvarchar(33), UpdatedAt, 126), N'|', CONVERT(nvarchar(20), CONVERT(bigint, RowVersion))) AS Value FROM dbo.ProfilePictures ORDER BY ProfileId")
+            .ToListAsync();
 
     private static async Task<List<string>> ProfileRowsAsync(IdentityDbContext context) =>
         await context.Database.SqlQueryRaw<string>(

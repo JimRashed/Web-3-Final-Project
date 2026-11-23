@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using QuizArena.Identity.Data.Configurations;
 using QuizArena.Identity.Data.Context;
 using QuizArena.Identity.Data.Repositories;
 using QuizArena.Identity.Domain.Entities;
@@ -467,7 +468,8 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     [InlineData("image/png", 1, ProfilePicture.MaxContentLength + 1)]
     public async Task Reads_WithCorruptStoredRow_FailLoudly(string contentType, int version, int contentLength)
     {
-        // Arrange: bypass the domain and write an invalid row directly.
+        // Arrange: bypass the domain and the CHECK constraints and write an invalid row directly.
+        await DisableCheckConstraintsAsync();
         await InsertRawAsync(contentType, version, new byte[contentLength]);
         await using var context = NewContext();
         var store = new ProfilePictureStore(context);
@@ -488,6 +490,7 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     public async Task ReplaceAsync_OverCorruptStoredRow_ThrowsCorruptAndLeavesRowUnchanged(string contentType, int version, int contentLength)
     {
         // Arrange
+        await DisableCheckConstraintsAsync();
         await InsertRawAsync(contentType, version, new byte[contentLength]);
 
         // Act
@@ -503,6 +506,54 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         var raw = await fresh.ProfilePictures.AsNoTracking().Select(p => new { p.ContentType, p.Version }).SingleAsync();
         raw.ContentType.Should().Be(contentType);
         raw.Version.Should().Be(version);
+    }
+
+    [Theory]
+    [InlineData("image/png", 1, 0, ProfilePictureConfiguration.ContentLengthConstraint)]
+    [InlineData("image/png", 1, ProfilePicture.MaxContentLength + 1, ProfilePictureConfiguration.ContentLengthConstraint)]
+    [InlineData("image/gif", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData("image/svg+xml", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData("IMAGE/PNG", 1, 3, ProfilePictureConfiguration.ContentTypeConstraint)]
+    [InlineData("image/png", 0, 3, ProfilePictureConfiguration.VersionConstraint)]
+    [InlineData("image/png", -4, 3, ProfilePictureConfiguration.VersionConstraint)]
+    public async Task Database_RejectsRawWriteOfInvalidPicture_WithCheckConstraintViolation(string contentType, int version, int contentLength, string constraint)
+    {
+        // Act: bypass the domain; the database itself must refuse the row.
+        var insert = () => InsertRawAsync(contentType, version, new byte[contentLength]);
+
+        // Assert
+        var error = (await insert.Should().ThrowAsync<SqlException>()).Which;
+        error.Number.Should().Be(547, "547 is SQL Server's constraint-violation error");
+        error.Message.Should().Contain(constraint);
+        await using var fresh = NewContext();
+        (await fresh.ProfilePictures.AnyAsync()).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Database_RejectsRawUpdateThatWouldCorruptAValidPicture()
+    {
+        // Arrange
+        await SeedAsync();
+        await using var context = NewContext();
+
+        // Act
+        var update = () => context.Database.ExecuteSqlAsync($"UPDATE [ProfilePictures] SET [Version] = 0 WHERE [ProfileId] = {_profileId}");
+
+        // Assert
+        (await update.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(547);
+        (await ReadAsync())!.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Database_AcceptsRawWriteAtTheMaximumSize()
+    {
+        // Act
+        await InsertRawAsync("image/webp", 1, new byte[ProfilePicture.MaxContentLength]);
+
+        // Assert
+        var stored = await ReadAsync();
+        stored!.Content.Should().HaveCount(ProfilePicture.MaxContentLength);
+        stored.ContentType.Should().Be("image/webp");
     }
 
     [Fact]
@@ -727,6 +778,18 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         await using var context = NewContext();
         await context.Database.ExecuteSqlAsync(
             $"INSERT INTO [ProfilePictures] ([ProfileId], [ContentType], [Content], [Version], [UpdatedAt]) VALUES ({_profileId}, {contentType}, {content}, {version}, {Now})");
+    }
+
+    /// <summary>
+    /// Disables the picture CHECK constraints in this test's own throwaway database. The constraints make corrupt rows
+    /// impossible to write, but read-side validation (Rehydrate/RehydrateInfo) remains a second line of defence for rows
+    /// written while checks were off, so these tests need a way to plant such a row.
+    /// </summary>
+    private async Task DisableCheckConstraintsAsync()
+    {
+        await using var context = NewContext();
+        await context.Database.ExecuteSqlRawAsync(
+            $"ALTER TABLE [ProfilePictures] NOCHECK CONSTRAINT [{ProfilePictureConfiguration.ContentLengthConstraint}], [{ProfilePictureConfiguration.ContentTypeConstraint}], [{ProfilePictureConfiguration.VersionConstraint}]");
     }
 
     private async Task<ProfilePicture?> ReadAsync()
