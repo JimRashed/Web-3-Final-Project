@@ -82,7 +82,7 @@ State checked with `gh` on 2026-11-21:
 
 | Reviewer | Approval | Evidence / date |
 |---|---|---|
-| JimRashed | Pending (required approver) | — |
+| JimRashed | Pending (required approver) | PR review approval of [PR #149](https://github.com/JimRashed/Web-3-Final-Project/pull/149) at `96fd09a` and `f2c5b0c` (2026-11-22); formal decision approval not recorded |
 | SuSu-Lisu | Pending (required approver) | — |
 | CarterBeasse | Author (n/a) | Pull request author; does not count as an approver |
 
