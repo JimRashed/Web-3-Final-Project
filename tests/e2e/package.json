@@ -6,7 +6,8 @@
   "scripts": {
     "journey:api": "node api-journey.mjs",
     "journey:ui": "node ui-journey.mjs",
-    "journey:retry": "node retry.mjs"
+    "journey:retry": "node retry.mjs",
+    "journey:picture": "node picture-journey.mjs"
   },
   "dependencies": {
     "playwright-core": "1.64.1"
