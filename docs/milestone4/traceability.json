@@ -493,9 +493,9 @@
     {
       "source": "PR #162",
       "severity": "low",
-      "status": "fix in progress (follow-up PR by CarterBeasse)",
+      "status": "fix in review (PR #167)",
       "summary": "CK_ProfilePictures_ContentType (BIN2 IN) still accepts N'image/png ' because SQL Server ignores trailing spaces in equality comparisons; the domain's ordinal comparison then rejects the stored row as corrupt on read.",
-      "followUp": "Fix branch fix/162-content-type-trailing-space in preparation; no PR yet."
+      "followUp": "PR #167 makes the check exact with a sentinel and a new migration."
     },
     {
       "source": "PR #153 / PR #154",
