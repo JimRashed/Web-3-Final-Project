@@ -17,7 +17,7 @@ Status: introduced by #24 (P09). Applies to every service test project.
   (`QuizArena<Service>_<Purpose>_<guid>`), created with `MigrateAsync()` in `InitializeAsync`.
 - `DisposeAsync` drops exactly that database. No test truncates or deletes a developer database.
 - `QUIZARENA_TEST_SQLSERVER` overrides the LocalDB default for machines or CI agents that expose
-  another server.
+  another server. Shell examples: [validation-results.md](../milestone4/validation-results.md#automated-tests-dotnet-test).
 
 ## Token fixture
 

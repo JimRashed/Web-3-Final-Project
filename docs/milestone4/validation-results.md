@@ -33,7 +33,27 @@ Run from the repository root.
 
 ## Automated tests (`dotnet test`)
 
-Integration projects need SQL Server from the local stack (`./scripts/start-milestone3.ps1`), LocalDB or CI.
+Integration projects create and drop their own SQL Server databases. The variable that picks the server
+is read by the shell that runs `dotnet test`, not by the start script:
+
+- **Default: Windows LocalDB.** With no variable set, the fixtures connect to `(localdb)\MSSQLLocalDB`.
+  The recorded same-revision run below used LocalDB.
+- **Another SQL Server:** set `QUIZARENA_TEST_SQLSERVER` to a connection string **without** a database
+  name in the same shell before `dotnet test` (placeholder values; never commit a real password):
+
+  ```powershell
+  $env:QUIZARENA_TEST_SQLSERVER = 'Server=localhost,1433;User ID=sa;Password=<your-password>;TrustServerCertificate=True'
+  ```
+
+  ```bash
+  export QUIZARENA_TEST_SQLSERVER='Server=localhost,1433;User ID=sa;Password=<your-password>;TrustServerCertificate=True'
+  ```
+
+- `QUIZARENA_SQLSERVER` is different: `./scripts/start-milestone3.ps1` uses it to point the **running APIs**
+  at a server ([runbook](../milestone3/runbook.md#prerequisites)). Setting it does not change where the tests run.
+- **CI** starts a SQL Server container per job, masks its generated password and exports
+  `QUIZARENA_TEST_SQLSERVER` to the test step ([runbook](../milestone3/runbook.md#ci)).
+
 Run one project at a time, 12:34:34Z to 12:37:19Z, all exit 0. `QuizArena.TestSupport` has no tests.
 **Total: 1,953 passed, 0 failed, 0 skipped.**
 
