@@ -73,9 +73,12 @@ Evidence index: docs/milestone4/submission.md
 
 ## Validation results
 Candidate revision: 68b7ecd. See docs/milestone4/validation-results.md.
-CI on 68b7ecd: run 45118087469, success. Local suites, client checks, contract validator: pending.
+CI on 68b7ecd: runs 45118087469 and 45118703355, success.
+Automated checks on 68b7ecd (2026-11-23): build -warnaserror and format clean; dotnet test 1,953 passed / 0 failed
+across 13 projects; contract validator PASS; client typecheck, lint, build pass; Vitest 318/318 on rerun
+(first attempt hit worker-start timeouts, 0 test failures).
 Recorded on 46f847b: journey:picture 17/17 PASS (with #163, issue #147); #145 screenshots (PR #165).
-SEC-09 two-device sign-out: not covered. Same-revision live runs on 68b7ecd: pending.
+SEC-09 two-device sign-out: not covered. Same-revision live journeys and #145 browser check on 68b7ecd: pending.
 
 ## Human review signoff
 Per-PR review record and exceptions: docs/milestone4/human-gates.md.

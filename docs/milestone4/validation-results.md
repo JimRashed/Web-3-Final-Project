@@ -1,19 +1,21 @@
 # Milestone 4 validation results
 
 Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3). The commands and expected
-outcomes are fixed, and every result cell for the candidate revision stays `pending` until someone runs it
-(Phase B of [the plan](../../specs/issue-148-plan.md)). Evidence observed on the earlier revision `46f847b`
+outcomes are fixed. The automated checks (build, format, tests, contracts, client) have been run on the
+candidate; the live journeys, the #145 browser check and SEC-09 stay `pending` until someone runs them with the
+stack (Phase B of [the plan](../../specs/issue-148-plan.md)). Evidence observed on the earlier revision `46f847b`
 (#145 screenshots, #147 journey run) is recorded in its own column and is not a result for the candidate.
 
 ## Candidate revision
 
 | Field | Value |
 |---|---|
-| Commit | `68b7ecd` (merge of [PR #165](https://github.com/JimRashed/Web-3-Final-Project/pull/165); includes #163) |
+| Commit | `68b7ecde2c534c97478c3ba3b21e8160b97e870d` (merge of [PR #165](https://github.com/JimRashed/Web-3-Final-Project/pull/165); includes #163) |
 | Branch | `feature/milestone-4-security-and-cross-device-profiles` |
-| Date run | pending |
-| Runner | pending |
-| OS, .NET SDK, Node, Edge versions | pending |
+| Date run (automated checks) | 2026-11-23, 12:33:15Z to 13:34:37Z (UTC) |
+| Runner (automated checks) | Dispatcher validate stage (agent), on a throwaway worktree checked out at the exact candidate SHA |
+| OS, tools | Windows 11 10.0.26200; .NET SDK 10.0.401; Node v22.20.0, npm 10.9.3; SQL Server LocalDB `MSSQLLocalDB` 17.0.4025.3 for the integration projects |
+| Edge version, live runs | pending |
 
 If the branch moves past `68b7ecd` before the runs, update the commit here and rerun everything; results
 from different revisions are not combined.
@@ -24,29 +26,32 @@ Run from the repository root.
 
 | # | Command | Expected | Result |
 |---|---|---|---|
-| 1 | `dotnet restore QuizArena.sln` | Restore succeeds | pending |
-| 2 | `dotnet build QuizArena.sln --no-restore -warnaserror` | 0 warnings, 0 errors | pending |
-| 3 | `node contracts/validate-contracts.mjs` | All contracts valid | pending |
+| 1 | `dotnet restore QuizArena.sln` | Restore succeeds | Exit 0 (12:33:15Z) |
+| 2 | `dotnet build QuizArena.sln --no-restore -warnaserror` | 0 warnings, 0 errors | Exit 0; 0 warnings, 0 errors (12:33:21Z) |
+| 2a | `dotnet format QuizArena.sln --verify-no-changes --no-restore` | No changes needed | Exit 0 (12:33:49Z) |
+| 3 | `node contracts/validate-contracts.mjs` | All contracts valid | Exit 0; PASS: 32 operations, 201 examples, 24 corruption probes (12:37:35Z) |
 
 ## Automated tests (`dotnet test`)
 
-Integration projects need SQL Server from the local stack (`./scripts/start-milestone3.ps1`) or CI.
+Integration projects need SQL Server from the local stack (`./scripts/start-milestone3.ps1`), LocalDB or CI.
+Run one project at a time, 12:34:34Z to 12:37:19Z, all exit 0. `QuizArena.TestSupport` has no tests.
+**Total: 1,953 passed, 0 failed, 0 skipped.**
 
 | # | Command | Expected | Result |
 |---|---|---|---|
-| 4 | `dotnet test tests/QuizArena.ArchitectureTests --no-build` | All pass | pending |
-| 5 | `dotnet test tests/QuizArena.Gameplay.UnitTests --no-build` | All pass | pending |
-| 6 | `dotnet test tests/QuizArena.Gameplay.IntegrationTests --no-build` | All pass | pending |
-| 7 | `dotnet test tests/QuizArena.Identity.UnitTests --no-build` | All pass | pending |
-| 8 | `dotnet test tests/QuizArena.Identity.IntegrationTests --no-build` | All pass | pending |
-| 9 | `dotnet test tests/QuizArena.Lobby.UnitTests --no-build` | All pass | pending |
-| 10 | `dotnet test tests/QuizArena.Lobby.IntegrationTests --no-build` | All pass | pending |
-| 11 | `dotnet test tests/QuizArena.Notification.UnitTests --no-build` | All pass | pending |
-| 12 | `dotnet test tests/QuizArena.Notification.IntegrationTests --no-build` | All pass | pending |
-| 13 | `dotnet test tests/QuizArena.QuestionBank.UnitTests --no-build` | All pass | pending |
-| 14 | `dotnet test tests/QuizArena.QuestionBank.IntegrationTests --no-build` | All pass | pending |
-| 15 | `dotnet test tests/QuizArena.Statistics.UnitTests --no-build` | All pass | pending |
-| 16 | `dotnet test tests/QuizArena.Statistics.IntegrationTests --no-build` | All pass | pending |
+| 4 | `dotnet test tests/QuizArena.ArchitectureTests --no-build` | All pass | Exit 0; 28 passed, 0 failed |
+| 5 | `dotnet test tests/QuizArena.Gameplay.UnitTests --no-build` | All pass | Exit 0; 81 passed, 0 failed |
+| 6 | `dotnet test tests/QuizArena.Gameplay.IntegrationTests --no-build` | All pass | Exit 0; 187 passed, 0 failed |
+| 7 | `dotnet test tests/QuizArena.Identity.UnitTests --no-build` | All pass | Exit 0; 127 passed, 0 failed |
+| 8 | `dotnet test tests/QuizArena.Identity.IntegrationTests --no-build` | All pass | Exit 0; 356 passed, 0 failed |
+| 9 | `dotnet test tests/QuizArena.Lobby.UnitTests --no-build` | All pass | Exit 0; 174 passed, 0 failed |
+| 10 | `dotnet test tests/QuizArena.Lobby.IntegrationTests --no-build` | All pass | Exit 0; 302 passed, 0 failed |
+| 11 | `dotnet test tests/QuizArena.Notification.UnitTests --no-build` | All pass | Exit 0; 29 passed, 0 failed |
+| 12 | `dotnet test tests/QuizArena.Notification.IntegrationTests --no-build` | All pass | Exit 0; 154 passed, 0 failed |
+| 13 | `dotnet test tests/QuizArena.QuestionBank.UnitTests --no-build` | All pass | Exit 0; 70 passed, 0 failed |
+| 14 | `dotnet test tests/QuizArena.QuestionBank.IntegrationTests --no-build` | All pass | Exit 0; 173 passed, 0 failed |
+| 15 | `dotnet test tests/QuizArena.Statistics.UnitTests --no-build` | All pass | Exit 0; 49 passed, 0 failed |
+| 16 | `dotnet test tests/QuizArena.Statistics.IntegrationTests --no-build` | All pass | Exit 0; 223 passed, 0 failed |
 
 ## Client (`src/QuizArena.Client`)
 
@@ -56,11 +61,11 @@ cd src/QuizArena.Client; npm ci; npm run typecheck; npm run lint; npx vitest run
 
 | # | Step | Expected | Result |
 |---|---|---|---|
-| 17 | `npm ci` | Clean install | pending |
-| 18 | `npm run typecheck` | No errors | pending |
-| 19 | `npm run lint` | 0 warnings (`--max-warnings 0`) | pending |
-| 20 | `npx vitest run` | All pass | pending |
-| 21 | `npm run build` | Build succeeds | pending |
+| 17 | `npm ci` | Clean install | Exit 0 (9 moderate audit advisories reported; not a gate) |
+| 18 | `npm run typecheck` | No errors | Exit 0 |
+| 19 | `npm run lint` | 0 warnings (`--max-warnings 0`) | Exit 0 |
+| 20 | `npx vitest run` | All pass | First attempt exit 1: 11 of 25 files failed to start workers ("[vitest-pool]: Failed to start forks worker … Timeout waiting for worker to respond"); 115 tests ran, 0 failed (environmental). One rerun at 13:34:37Z: exit 0, 25/25 files, 318/318 tests passed |
+| 21 | `npm run build` | Build succeeds | Exit 0 |
 
 ## CI
 
@@ -71,6 +76,7 @@ are manual evidence.
 | Commit | Run | Conclusion |
 |---|---|---|
 | `46f847b` | [run 45115561119](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45115561119) | success (read with `gh run view` on 2026-11-23; head SHA `46f847b`) |
+| `68b7ecd` | [run 45118703355](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45118703355) | success (`pull_request` event for #166; read with `gh run view` on 2026-11-23) |
 | `68b7ecd` | [run 45118087469](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45118087469) | success (read with `gh run list` on 2026-11-23; head SHA `68b7ecd`). Run 45118083732 on `94bc2e3` was cancelled when `68b7ecd` superseded it |
 
 ## Live end-to-end journeys

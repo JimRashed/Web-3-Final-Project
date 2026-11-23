@@ -643,7 +643,7 @@
       "state": "open",
       "evidenceLinked": false,
       "waitsFor": [
-        "Phase B validation results"
+        "live journeys, #145 browser check and SEC-09 evidence on 68b7ecd"
       ]
     },
     {
@@ -675,5 +675,69 @@
       }
     ],
     "note": "Phase B updates this PR description from submission.md; not merged without Carter's explicit go."
+  },
+  "validation": {
+    "revision": "68b7ecde2c534c97478c3ba3b21e8160b97e870d",
+    "date": "2026-11-23",
+    "runner": "Dispatcher validate stage (agent), throwaway worktree",
+    "environment": {
+      "os": "Windows 11 10.0.26200",
+      "dotnetSdk": "10.0.401",
+      "node": "v22.20.0",
+      "npm": "10.9.3",
+      "sql": "LocalDB MSSQLLocalDB 17.0.4025.3"
+    },
+    "automated": {
+      "restore": "exit 0",
+      "build": "exit 0, 0 warnings, 0 errors",
+      "format": "exit 0",
+      "dotnetTest": {
+        "total": {
+          "passed": 1953,
+          "failed": 0,
+          "skipped": 0
+        },
+        "projects": {
+          "ArchitectureTests": 28,
+          "Gameplay.UnitTests": 81,
+          "Identity.UnitTests": 127,
+          "Lobby.UnitTests": 174,
+          "Notification.UnitTests": 29,
+          "QuestionBank.UnitTests": 70,
+          "Statistics.UnitTests": 49,
+          "Gameplay.IntegrationTests": 187,
+          "Identity.IntegrationTests": 356,
+          "Lobby.IntegrationTests": 302,
+          "Notification.IntegrationTests": 154,
+          "QuestionBank.IntegrationTests": 173,
+          "Statistics.IntegrationTests": 223
+        }
+      },
+      "contracts": "PASS: 32 operations, 201 examples, 24 corruption probes",
+      "client": {
+        "npmCi": "exit 0 (9 moderate audit advisories, not a gate)",
+        "typecheck": "exit 0",
+        "lint": "exit 0",
+        "vitest": "first attempt exit 1 (11/25 files failed to start workers, 115 tests ran, 0 failed; environmental); rerun exit 0, 25/25 files, 318/318 tests",
+        "build": "exit 0"
+      }
+    },
+    "ci": [
+      {
+        "run": 45118703355,
+        "conclusion": "success"
+      },
+      {
+        "run": 45118087469,
+        "conclusion": "success"
+      }
+    ],
+    "pending": [
+      "journey:api",
+      "journey:ui",
+      "journey:picture on 68b7ecd",
+      "#145 browser check",
+      "SEC-09 two-device sign-out"
+    ]
   }
 }
