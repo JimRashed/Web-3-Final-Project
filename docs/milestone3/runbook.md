@@ -223,6 +223,7 @@ cd tests/e2e; npm ci
 npm run journey:ui     # two players through the React screens
 npm run journey:api    # the same game through the APIs with real Keycloak tokens
 npm run journey:retry  # Statistics down while the match finishes, then back: the outbox must redeliver
+npm run journey:picture # #147: two sessions for one account, upload on A, read on B, a third account refused
 ```
 
 The scripts sign in as `player-a` (host) and `player-b` (guest) using `QUIZARENA_DEMO_PASSWORD` from `.env` and never print it. `journey:retry` stops and restarts the Statistics API itself and updates `.run/pids.json`, so `stop-milestone3.ps1` still stops it.
