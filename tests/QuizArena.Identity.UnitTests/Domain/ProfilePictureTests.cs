@@ -214,13 +214,15 @@ public sealed class ProfilePictureTests
     }
 
     [Theory]
-    [InlineData("image/png", 0, DateTimeKind.Utc)]
-    [InlineData("image/png", 1, DateTimeKind.Local)]
-    [InlineData("image/gif", 1, DateTimeKind.Utc)]
-    public void RehydrateInfo_WithCorruptValues_Throws(string contentType, int version, DateTimeKind kind)
+    [InlineData("image/png", 3, 0, DateTimeKind.Utc)]
+    [InlineData("image/png", 3, 1, DateTimeKind.Local)]
+    [InlineData("image/gif", 3, 1, DateTimeKind.Utc)]
+    [InlineData("image/png", 0, 1, DateTimeKind.Utc)]
+    [InlineData("image/png", ProfilePicture.MaxContentLength + 1L, 1, DateTimeKind.Utc)]
+    public void RehydrateInfo_WithCorruptValues_Throws(string contentType, long contentLength, int version, DateTimeKind kind)
     {
         // Act
-        var act = () => ProfilePicture.RehydrateInfo(contentType, version, DateTime.SpecifyKind(Now, kind));
+        var act = () => ProfilePicture.RehydrateInfo(contentType, contentLength, version, DateTime.SpecifyKind(Now, kind));
 
         // Assert
         act.Should().Throw<InvalidProfileException>();
@@ -230,7 +232,7 @@ public sealed class ProfilePictureTests
     public void RehydrateInfo_WithValidValues_ReturnsReference()
     {
         // Act
-        var info = ProfilePicture.RehydrateInfo("image/webp", 4, Now);
+        var info = ProfilePicture.RehydrateInfo("image/webp", ProfilePicture.MaxContentLength, 4, Now);
 
         // Assert
         info.Should().Be(new ProfilePictureInfo("image/webp", 4, Now));

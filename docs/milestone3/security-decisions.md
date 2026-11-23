@@ -39,6 +39,9 @@ No secret value appears in this document. Never paste one into an issue, pull re
 Implementation note (#143, not an approval): the store validates every row it reads and treats a corrupt row as a
 server fault. If a commit's acknowledgement is lost, it re-reads the row and reports success only when the row is its
 own write (matching rowversion, version, content type and content hash), so one upload never increments `version` twice.
+That check uses locking reads (`READCOMMITTEDLOCK`), so it stays correct under READ_COMMITTED_SNAPSHOT. If the check itself
+fails, the store reports an unknown outcome (a retry may double-count) instead of a retry-safe failure. The metadata read
+checks the stored byte length (1 to 2,097,152) without loading the bytes.
 
 ## Discrepancy register
 

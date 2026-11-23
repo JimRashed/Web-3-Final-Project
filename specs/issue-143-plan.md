@@ -358,7 +358,7 @@ Recorded by the Implement stage; behaviour and scope are unchanged.
   increments the version at most once and never reports failure for a committed write that is still current, so the
   caller has nothing to retry. Separate calls are not de-duplicated. If the verification read fails, the original
   commit exception is rethrown and the outcome stays unknown (residual risk).
-  Residual: under READ_COMMITTED_SNAPSHOT (Azure SQL default) a broken connection mid-commit can let the verification read see the prior row, so the call rethrows and a retry adds one version (code-review note, repair cycle 1).
+  (Superseded by repair cycle 2: the verification is now a locking read and an inconclusive read throws its own exception.)
 - **Validated reads.** `GetAsync` maps through `ProfilePicture.Rehydrate`, `GetInfoAsync` through the new
   `ProfilePicture.RehydrateInfo` (content type, version, UTC; bytes are not loaded so empty content is caught only by
   `GetAsync`), and `ReplaceAsync` validates the loaded row. A corrupt row throws the new
@@ -372,3 +372,27 @@ Recorded by the Implement stage; behaviour and scope are unchanged.
   (not found); profile deleted before the UPDATE; unrelated tracked entries kept; corrupt rows inserted with raw SQL for
   reads and replace; domain tests for `RehydrateInfo` and empty content. HTTP 409/404 mapping stays with #144.
 
+### Repair cycle 2 (review on PR #154 at 9c74b0d)
+
+- **Locking verification read.** The commit-outcome check reads the picture through `FromSql` with the
+  `WITH (READCOMMITTEDLOCK)` table hint (parameterized `{profileId}`), and the profile-existence check uses the same
+  hint through `Database.SqlQuery<int>`. The hint forces locking read-committed even when READ_COMMITTED_SNAPSHOT is
+  on, so a commit still being completed (holding its exclusive row lock) is waited for instead of the prior row
+  version being read. The repair-cycle-1 RCSI residual no longer applies and was removed from the store remarks.
+- **Inconclusive vs. confirmed rollback.** Confirmed rollback (prior rowversion still current, or no row on a first
+  upload while the profile exists) rethrows the original commit exception (retry safe). A failed or timed-out
+  verification read now throws the new `ProfilePictureCommitOutcomeUnknownException` (extra touchpoint,
+  `IdentityDomainException`, inner = original commit exception), documented as "retry may double-count". It is not
+  mapped to an HTTP status here (#144).
+- **First upload deleted during verification.** With no prior rowversion and no row, the store checks the profile
+  first: missing profile throws `PlayerProfileNotFoundException`; profile present means confirmed rollback.
+- **Metadata read rejects unreadable rows.** `GetInfoAsync` projects `picture.Content.Length`
+  (`CAST(DATALENGTH([p].[Content]) AS int)`, bytes not selected) and `ProfilePicture.RehydrateInfo` now takes the
+  stored length and enforces 1..2,097,152, so empty and oversized rows are rejected by both reads.
+- **Tests added/changed:** RCSI enabled per test database (`ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON
+  WITH ROLLBACK IMMEDIATE` after clearing the pool) for lost-acknowledgement first upload + replace (success, locking
+  SQL asserted), genuine commit failure (rethrow) and an in-flight writer before verification (a snapshot read sees
+  version 1; the locking read waits and reports a conflict; this test fails if the hint is removed); verification read
+  failure (`ProfilePictureCommitOutcomeUnknownException`); first-upload lost acknowledgement with the profile deleted
+  (not found); corrupt-row reads now expect both reads to reject empty and oversized content; the metadata read SQL
+  contains `DATALENGTH` and no other `[Content]`; domain `RehydrateInfo` length cases.

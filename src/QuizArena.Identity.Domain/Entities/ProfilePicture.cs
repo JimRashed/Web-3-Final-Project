@@ -63,17 +63,20 @@ public sealed class ProfilePicture
     {
         EnsureProfileId(profileId);
         ValidateContent(content);
-        _ = RehydrateInfo(contentType, version, updatedAt);
+        _ = RehydrateInfo(contentType, content.Length, version, updatedAt);
         return new ProfilePicture(profileId, contentType, (byte[])content.Clone(), version, updatedAt);
     }
 
     /// <summary>
-    /// Validates the persisted reference values (content type, version, UTC timestamp) read without the bytes and
-    /// returns them as a <see cref="ProfilePictureInfo"/>. Throws <see cref="InvalidProfileException"/> for a corrupt row.
+    /// Validates the persisted reference values (content type, stored byte length, version, UTC timestamp) read without
+    /// the bytes and returns them as a <see cref="ProfilePictureInfo"/>. The length lets a metadata read reject an empty
+    /// or oversized stored image exactly as <see cref="Rehydrate"/> does. Throws <see cref="InvalidProfileException"/>
+    /// for a corrupt row.
     /// </summary>
-    public static ProfilePictureInfo RehydrateInfo(string contentType, int version, DateTime updatedAt)
+    public static ProfilePictureInfo RehydrateInfo(string contentType, long contentLength, int version, DateTime updatedAt)
     {
         ValidateContentType(contentType);
+        ValidateContentLength(contentLength);
         EnsureUtc(updatedAt);
         if (version < 1)
         {
@@ -120,14 +123,19 @@ public sealed class ProfilePicture
 
     private static void ValidateContent(byte[] content)
     {
-        if (content is null || content.Length == 0)
+        ValidateContentLength(content?.Length ?? 0);
+    }
+
+    private static void ValidateContentLength(long contentLength)
+    {
+        if (contentLength <= 0)
         {
-            throw new InvalidProfileException(nameof(content), "Picture content is required.");
+            throw new InvalidProfileException("content", "Picture content is required.");
         }
 
-        if (content.Length > MaxContentLength)
+        if (contentLength > MaxContentLength)
         {
-            throw new InvalidProfileException(nameof(content), $"Picture content must be at most {MaxContentLength} bytes.");
+            throw new InvalidProfileException("content", $"Picture content must be at most {MaxContentLength} bytes.");
         }
     }
 

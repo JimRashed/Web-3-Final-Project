@@ -18,6 +18,8 @@ public interface IProfilePictureStore
     /// Atomically creates or replaces the profile's picture. Readers see the previous picture or the new one, never a
     /// partial write. Throws <see cref="Exceptions.ProfilePictureConflictException"/> when a concurrent replace
     /// committed first and <see cref="Exceptions.PlayerProfileNotFoundException"/> when the profile does not exist.
+    /// Throws <see cref="Exceptions.ProfilePictureCommitOutcomeUnknownException"/> when the commit step failed and the
+    /// outcome could not be verified; a retry may then add one more version.
     /// </summary>
     Task<ProfilePictureInfo> ReplaceAsync(Guid profileId, string contentType, byte[] content, DateTime updatedAt, CancellationToken cancellationToken);
 

@@ -128,7 +128,10 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
 
         // Assert
         info.Should().Be(new ProfilePictureInfo("image/png", 1, Now));
-        commands.Texts.Should().ContainSingle().Which.Should().NotContain("[Content]");
+        var sql = commands.Texts.Should().ContainSingle().Subject;
+        sql.Should().Contain("DATALENGTH([p].[Content])", "the byte length is checked in SQL");
+        sql.Replace("DATALENGTH([p].[Content])", string.Empty, StringComparison.Ordinal)
+            .Should().NotContain("[Content]", "the reference read never selects the image bytes");
     }
 
     [Fact]
@@ -322,6 +325,106 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ReplaceAsync_FirstUploadWhenAcknowledgementIsLostAndProfileWasDeleted_ThrowsProfileNotFound()
+    {
+        // Arrange: the first upload commits, then the profile (and by cascade the new row) is deleted before verification.
+        var lostAck = new LostCommitAcknowledgement(DeleteProfileAsync);
+
+        // Act
+        await using var context = NewContext(lostAck);
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/png", OldBytes, Now, CancellationToken.None);
+
+        // Assert: no row is not a confirmed rollback when the profile itself is gone.
+        (await act.Should().ThrowAsync<PlayerProfileNotFoundException>())
+            .Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be(LostCommitAcknowledgement.Message);
+        (await ReadAsync()).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenAcknowledgementIsLostAndVerificationReadFails_ThrowsCommitOutcomeUnknown()
+    {
+        // Arrange: the write commits, the acknowledgement is lost and the verification read fails too.
+        await SeedAsync();
+        var verificationFailure = new FailingVerificationRead();
+        await using var context = NewContext(new LostCommitAcknowledgement(), verificationFailure);
+
+        // Act
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+
+        // Assert: inconclusive is not reported as the retry-safe original failure.
+        (await act.Should().ThrowAsync<ProfilePictureCommitOutcomeUnknownException>())
+            .Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be(LostCommitAcknowledgement.Message);
+        verificationFailure.Attempts.Should().Be(1);
+        (await ReadAsync())!.Version.Should().Be(2, "the write did commit, which is why a retry could double-count");
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_UnderReadCommittedSnapshot_LostAcknowledgementIsVerifiedWithLockingRead()
+    {
+        // Arrange
+        await EnableReadCommittedSnapshotAsync();
+        var commands = new CommandRecorder();
+
+        // Act: a first upload, then a replacement, each losing its commit acknowledgement.
+        ProfilePictureInfo first;
+        ProfilePictureInfo second;
+        await using (var context = NewContext(commands, new LostCommitAcknowledgement()))
+        {
+            first = await new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/png", OldBytes, Now, CancellationToken.None);
+        }
+
+        await using (var context = NewContext(commands, new LostCommitAcknowledgement()))
+        {
+            second = await new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+        }
+
+        // Assert
+        first.Should().Be(new ProfilePictureInfo("image/png", 1, Now));
+        second.Should().Be(new ProfilePictureInfo("image/jpeg", 2, Now.AddMinutes(1)));
+        commands.Texts.Count(IsVerificationRead).Should().Be(2);
+        (await ReadAsync())!.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_UnderReadCommittedSnapshot_CommitFailureIsConfirmedRollbackAndRethrown()
+    {
+        // Arrange
+        await EnableReadCommittedSnapshotAsync();
+        await SeedAsync();
+        await using var context = NewContext(new FailingCommit());
+
+        // Act
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+
+        // Assert
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Message.Should().Be(FailingCommit.Message);
+        (await ReadAsync())!.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_UnderReadCommittedSnapshot_VerificationWaitsForInFlightWriteInsteadOfReadingPriorRow()
+    {
+        // Arrange: this call's commit fails (rolled back). Just before verification, another transaction changes the row
+        // and commits a moment later. A snapshot read at that point still returns the prior row.
+        await EnableReadCommittedSnapshotAsync();
+        await SeedAsync();
+        var inFlight = new InFlightWriteBeforeVerification(_connectionString, _profileId);
+        await using var context = NewContext(new FailingCommit(), inFlight);
+
+        // Act
+        var act = () => new ProfilePictureStore(context).ReplaceAsync(_profileId, "image/jpeg", NewBytes, Now.AddMinutes(1), CancellationToken.None);
+        var thrown = await act.Should().ThrowAsync<ProfilePictureConflictException>();
+        await inFlight.Completion;
+
+        // Assert: a snapshot read saw version 1 (a confirmed rollback by mistake); the locking read waited and saw the commit.
+        thrown.Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be(FailingCommit.Message);
+        inFlight.SnapshotVersion.Should().Be(1);
+        var stored = await ReadAsync();
+        stored!.Version.Should().Be(2);
+        stored.Content.Should().Equal(InFlightWriteBeforeVerification.Bytes);
+    }
+
+    [Fact]
     public async Task ReplaceAsync_WhenProfileDeletedBeforeUpdate_ThrowsProfileNotFoundNotConflict()
     {
         // Arrange: the profile (and by cascade its picture) is deleted between the read and the UPDATE.
@@ -356,12 +459,13 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("image/gif", 1, 3, true)]
-    [InlineData("image/svg+xml", 1, 3, true)]
-    [InlineData("image/png", 0, 3, true)]
-    [InlineData("image/png", -4, 3, true)]
-    [InlineData("image/png", 1, 0, false)]
-    public async Task Reads_WithCorruptStoredRow_FailLoudly(string contentType, int version, int contentLength, bool infoDetects)
+    [InlineData("image/gif", 1, 3)]
+    [InlineData("image/svg+xml", 1, 3)]
+    [InlineData("image/png", 0, 3)]
+    [InlineData("image/png", -4, 3)]
+    [InlineData("image/png", 1, 0)]
+    [InlineData("image/png", 1, ProfilePicture.MaxContentLength + 1)]
+    public async Task Reads_WithCorruptStoredRow_FailLoudly(string contentType, int version, int contentLength)
     {
         // Arrange: bypass the domain and write an invalid row directly.
         await InsertRawAsync(contentType, version, new byte[contentLength]);
@@ -372,17 +476,9 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         var get = () => store.GetAsync(_profileId, CancellationToken.None);
         var getInfo = () => store.GetInfoAsync(_profileId, CancellationToken.None);
 
-        // Assert
+        // Assert: both reads reject the row; the reference read checks the stored length without loading the bytes.
         (await get.Should().ThrowAsync<ProfilePictureCorruptException>()).Which.InnerException.Should().BeOfType<InvalidProfileException>();
-        if (infoDetects)
-        {
-            (await getInfo.Should().ThrowAsync<ProfilePictureCorruptException>()).Which.InnerException.Should().BeOfType<InvalidProfileException>();
-        }
-        else
-        {
-            // The reference read never loads the bytes, so only content type, version and timestamp are checked there.
-            (await getInfo()).Should().Be(new ProfilePictureInfo(contentType, version, Now));
-        }
+        (await getInfo.Should().ThrowAsync<ProfilePictureCorruptException>()).Which.InnerException.Should().BeOfType<InvalidProfileException>();
     }
 
     [Theory]
@@ -651,6 +747,31 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
         }
     }
 
+    /// <summary>Turns on READ_COMMITTED_SNAPSHOT (the Azure SQL default) for this test's database.</summary>
+    private async Task EnableReadCommittedSnapshotAsync()
+    {
+        // The ALTER needs the database to itself: drop idle pooled connections first and use an unpooled one.
+        await using (var pooled = new SqlConnection(_connectionString))
+        {
+            SqlConnection.ClearPool(pooled);
+        }
+
+        await using var connection = new SqlConnection(new SqlConnectionStringBuilder(_connectionString) { Pooling = false }.ConnectionString);
+        await connection.OpenAsync();
+        await using (var alter = connection.CreateCommand())
+        {
+            alter.CommandText = "ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE";
+            await alter.ExecuteNonQueryAsync();
+        }
+
+        await using var check = connection.CreateCommand();
+        check.CommandText = "SELECT is_read_committed_snapshot_on FROM sys.databases WHERE database_id = DB_ID()";
+        ((bool)(await check.ExecuteScalarAsync())!).Should().BeTrue();
+    }
+
+    private static bool IsVerificationRead(string commandText) =>
+        commandText.Contains("[ProfilePictures] WITH (READCOMMITTEDLOCK)", StringComparison.Ordinal);
+
     private static bool IsPictureWrite(DbCommand command) =>
         command.CommandText.Contains("INSERT INTO [ProfilePictures]", StringComparison.Ordinal)
         || command.CommandText.Contains("UPDATE [ProfilePictures]", StringComparison.Ordinal);
@@ -721,6 +842,78 @@ public sealed class ProfilePictureStoreTests : IAsyncLifetime
 
                 throw new InvalidOperationException(Message);
             }
+        }
+    }
+
+    /// <summary>Fails the commit-outcome verification read, leaving the outcome inconclusive.</summary>
+    private sealed class FailingVerificationRead : DbCommandInterceptor
+    {
+        public int Attempts { get; private set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (IsVerificationRead(command.CommandText))
+            {
+                Attempts++;
+                throw new TimeoutException("Simulated verification read timeout.");
+            }
+
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    /// <summary>
+    /// Just before the verification read, another connection updates the picture inside an open transaction and commits
+    /// it a moment later, standing in for a commit SQL Server is still completing. Records what a snapshot read sees then.
+    /// </summary>
+    private sealed class InFlightWriteBeforeVerification(string connectionString, Guid profileId) : DbCommandInterceptor
+    {
+        public static readonly byte[] Bytes = [0x77, 0x78];
+
+        private Task _completion = Task.CompletedTask;
+
+        public int? SnapshotVersion { get; private set; }
+
+        public Task Completion => _completion;
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (!IsVerificationRead(command.CommandText) || SnapshotVersion is not null)
+            {
+                return result;
+            }
+
+            var writer = new SqlConnection(connectionString);
+            await writer.OpenAsync(CancellationToken.None);
+            var transaction = (SqlTransaction)await writer.BeginTransactionAsync(CancellationToken.None);
+            await using (var update = writer.CreateCommand())
+            {
+                update.Transaction = transaction;
+                update.CommandText = "UPDATE [ProfilePictures] SET [ContentType] = 'image/webp', [Content] = @content, [Version] = 2 WHERE [ProfileId] = @id";
+                update.Parameters.AddWithValue("@content", Bytes);
+                update.Parameters.AddWithValue("@id", profileId);
+                await update.ExecuteNonQueryAsync(CancellationToken.None);
+            }
+
+            // Under READ_COMMITTED_SNAPSHOT a plain read does not wait for the open transaction: it sees the prior row.
+            await using (var reader = new SqlConnection(connectionString))
+            {
+                await reader.OpenAsync(CancellationToken.None);
+                await using var select = reader.CreateCommand();
+                select.CommandText = "SELECT [Version] FROM [ProfilePictures] WHERE [ProfileId] = @id";
+                select.CommandTimeout = 5;
+                select.Parameters.AddWithValue("@id", profileId);
+                SnapshotVersion = (int)(await select.ExecuteScalarAsync(CancellationToken.None))!;
+            }
+
+            _completion = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await transaction.CommitAsync();
+                await transaction.DisposeAsync();
+                await writer.DisposeAsync();
+            });
+            return result;
         }
     }
 

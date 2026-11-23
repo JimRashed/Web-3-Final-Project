@@ -19,32 +19,35 @@ namespace QuizArena.Identity.Data.Repositories;
 /// <para>
 /// <b>Reads are validated.</b> <see cref="GetAsync"/> maps the row through <see cref="ProfilePicture.Rehydrate"/> and
 /// <see cref="GetInfoAsync"/> through <see cref="ProfilePicture.RehydrateInfo"/>; a row that breaks an invariant throws
-/// <see cref="ProfilePictureCorruptException"/> instead of being returned. <see cref="ReplaceAsync"/> checks the loaded
-/// row the same way before replacing it.
+/// <see cref="ProfilePictureCorruptException"/> instead of being returned. The metadata read projects the stored byte
+/// length in SQL (<c>DATALENGTH</c>) without loading the bytes, so both reads reject an empty or oversized stored
+/// image. <see cref="ReplaceAsync"/> checks the loaded row the same way before replacing it.
 /// </para>
 /// <para>
 /// <b>Unknown commit outcome.</b> SQL Server can commit the transaction and then lose the acknowledgement, so an
 /// exception from the commit step does not prove the write was rolled back. When <c>CommitAsync</c> throws, the store
-/// disposes the transaction and re-reads the row with a fresh no-tracking query (without the caller's token, so a
-/// cancelled caller still gets a resolved outcome), then compares it with the write it attempted:
+/// disposes the transaction and verifies the outcome without the caller's token (a cancelled caller still gets a
+/// resolved outcome). The verification reads use the <c>READCOMMITTEDLOCK</c> table hint, which forces a locking
+/// read-committed read even when READ_COMMITTED_SNAPSHOT is on (the Azure SQL default): a commit SQL Server is still
+/// completing holds its exclusive row locks, so the read waits for it instead of returning the prior row version.
+/// The store then compares the current row with the write it attempted:
 /// </para>
 /// <list type="bullet">
 /// <item>the row carries the rowversion this call's UPDATE/INSERT produced, the expected version, content type and the
 /// same SHA-256 of the content: the commit happened, and the call returns the new reference as a success;</item>
-/// <item>the row is still the prior state (the same prior rowversion, or no row for a first upload): the commit did
-/// not happen, the original commit exception is rethrown, nothing changed and the caller may retry;</item>
+/// <item>confirmed rollback, meaning the row is still the prior state (the same prior rowversion, or, for a first
+/// upload, no row while the profile still exists): the original commit exception is rethrown, nothing changed and the
+/// caller may retry;</item>
 /// <item>the profile no longer exists: <see cref="PlayerProfileNotFoundException"/>;</item>
-/// <item>anything else (another request changed the row): <see cref="ProfilePictureConflictException"/>.</item>
+/// <item>another request changed the row: <see cref="ProfilePictureConflictException"/>;</item>
+/// <item>inconclusive, meaning a verification read failed or timed out:
+/// <see cref="ProfilePictureCommitOutcomeUnknownException"/> wrapping the original commit exception. The write may
+/// have committed, so a retry may double-count.</item>
 /// </list>
 /// <para>
 /// Guarantee: one <see cref="ReplaceAsync"/> call increments the stored version at most once, and it never reports a
-/// failure for a write that committed and is still the current row, so the caller has no failure to retry. The store
-/// never retries internally and does not de-duplicate separate calls: a second call is a new upload and gets the next
-/// version. If the verification read itself fails, the original commit exception is rethrown and the outcome stays
-/// unknown to the caller.
-/// The guarantee also assumes locking READ COMMITTED: under READ_COMMITTED_SNAPSHOT (the Azure SQL default), a broken
-/// connection mid-commit can let the verification read on a new connection see the prior row while the commit is
-/// still completing, so the call rethrows and a client retry would add one more version.
+/// retry-safe failure for a write that committed. The store never retries internally and does not de-duplicate
+/// separate calls: a second call is a new upload and gets the next version.
 /// </para>
 /// <para>
 /// <b>Failure cleanup.</b> On any failure only the picture entry this call tracked is detached; other entries in the
@@ -64,9 +67,11 @@ public sealed class ProfilePictureStore(IdentityDbContext context) : IProfilePic
         var row = await context.Set<ProfilePicture>()
             .AsNoTracking()
             .Where(picture => picture.ProfileId == profileId)
-            .Select(picture => new { picture.ContentType, picture.Version, picture.UpdatedAt })
+            .Select(picture => new { picture.ContentType, ContentLength = picture.Content.Length, picture.Version, picture.UpdatedAt })
             .SingleOrDefaultAsync(cancellationToken);
-        return row is null ? null : Validated(() => ProfilePicture.RehydrateInfo(row.ContentType, row.Version, row.UpdatedAt));
+        return row is null
+            ? null
+            : Validated(() => ProfilePicture.RehydrateInfo(row.ContentType, row.ContentLength, row.Version, row.UpdatedAt));
     }
 
     public async Task<ProfilePicture?> GetAsync(Guid profileId, CancellationToken cancellationToken)
@@ -174,24 +179,44 @@ public sealed class ProfilePictureStore(IdentityDbContext context) : IProfilePic
 
     private async Task<ProfilePictureInfo> ResolveCommitOutcomeAsync(Guid profileId, AttemptedWrite attempted, ExceptionDispatchInfo commitFailure)
     {
-        StoredRow? stored = null;
+        CommitOutcome outcome;
         try
         {
-            stored = await context.Set<ProfilePicture>()
-                .AsNoTracking()
-                .Where(picture => picture.ProfileId == profileId)
-                .Select(picture => new StoredRow(
-                    picture.ContentType,
-                    picture.Version,
-                    picture.Content,
-                    EF.Property<byte[]>(picture, ProfilePictureConfiguration.RowVersionProperty)))
-                .SingleOrDefaultAsync(CancellationToken.None);
+            outcome = await ClassifyCommitOutcomeAsync(profileId, attempted);
         }
         catch (Exception)
         {
-            // The outcome cannot be determined; surface the original commit failure.
+            // Inconclusive: the write may have committed, so a retry is not known to be safe.
+            throw new ProfilePictureCommitOutcomeUnknownException(commitFailure.SourceException);
+        }
+
+        if (outcome == CommitOutcome.RolledBack)
+        {
+            // Confirmed rollback: the prior state is intact and the caller may retry.
             commitFailure.Throw();
         }
+
+        return outcome switch
+        {
+            CommitOutcome.Committed => attempted.Info,
+            CommitOutcome.ProfileMissing => throw new PlayerProfileNotFoundException(commitFailure.SourceException),
+            _ => throw new ProfilePictureConflictException(commitFailure.SourceException),
+        };
+    }
+
+    private async Task<CommitOutcome> ClassifyCommitOutcomeAsync(Guid profileId, AttemptedWrite attempted)
+    {
+        // READCOMMITTEDLOCK waits for an in-flight commit on the row instead of returning its prior version under RCSI.
+        var stored = await context.Set<ProfilePicture>()
+            .FromSql(
+                $"SELECT [ProfileId], [ContentType], [Content], [Version], [UpdatedAt], [RowVersion] FROM [ProfilePictures] WITH (READCOMMITTEDLOCK) WHERE [ProfileId] = {profileId}")
+            .AsNoTracking()
+            .Select(picture => new StoredRow(
+                picture.ContentType,
+                picture.Version,
+                picture.Content,
+                EF.Property<byte[]>(picture, ProfilePictureConfiguration.RowVersionProperty)))
+            .SingleOrDefaultAsync(CancellationToken.None);
 
         if (stored is not null
             && stored.RowVersion.AsSpan().SequenceEqual(attempted.RowVersion)
@@ -199,28 +224,31 @@ public sealed class ProfilePictureStore(IdentityDbContext context) : IProfilePic
             && string.Equals(stored.ContentType, attempted.Info.ContentType, StringComparison.Ordinal)
             && SHA256.HashData(stored.Content).AsSpan().SequenceEqual(attempted.ContentHash))
         {
-            return attempted.Info;
+            return CommitOutcome.Committed;
         }
 
-        var unchanged = attempted.PriorRowVersion is null
-            ? stored is null
-            : stored is not null && stored.RowVersion.AsSpan().SequenceEqual(attempted.PriorRowVersion);
-        if (unchanged)
+        if (stored is not null
+            && attempted.PriorRowVersion is not null
+            && stored.RowVersion.AsSpan().SequenceEqual(attempted.PriorRowVersion))
         {
-            // Not committed: the prior state is intact and the caller may retry.
-            commitFailure.Throw();
+            return CommitOutcome.RolledBack;
         }
 
         if (!await ProfileExistsAsync(profileId))
         {
-            throw new PlayerProfileNotFoundException(commitFailure.SourceException);
+            return CommitOutcome.ProfileMissing;
         }
 
-        throw new ProfilePictureConflictException(commitFailure.SourceException);
+        // A first upload that left no row while the profile still exists was rolled back; anything else is a competitor.
+        return attempted.PriorRowVersion is null && stored is null ? CommitOutcome.RolledBack : CommitOutcome.Conflict;
     }
 
-    private Task<bool> ProfileExistsAsync(Guid profileId) =>
-        context.UserProfiles.AsNoTracking().AnyAsync(profile => profile.Id == profileId, CancellationToken.None);
+    // Locking read for the same reason as the verification read: an in-flight profile delete is waited for.
+    private async Task<bool> ProfileExistsAsync(Guid profileId) =>
+        await context.Database
+            .SqlQuery<int>(
+                $"SELECT CASE WHEN EXISTS (SELECT 1 FROM [UserProfiles] WITH (READCOMMITTEDLOCK) WHERE [Id] = {profileId}) THEN 1 ELSE 0 END AS [Value]")
+            .SingleAsync(CancellationToken.None) == 1;
 
     private static byte[] RowVersionOf(EntityEntry<ProfilePicture> entry) =>
         entry.Property<byte[]>(ProfilePictureConfiguration.RowVersionProperty).CurrentValue;
@@ -243,4 +271,12 @@ public sealed class ProfilePictureStore(IdentityDbContext context) : IProfilePic
     private sealed record AttemptedWrite(ProfilePictureInfo Info, byte[] ContentHash, byte[] RowVersion, byte[]? PriorRowVersion);
 
     private sealed record StoredRow(string ContentType, int Version, byte[] Content, byte[] RowVersion);
+
+    private enum CommitOutcome
+    {
+        Committed,
+        RolledBack,
+        ProfileMissing,
+        Conflict,
+    }
 }
