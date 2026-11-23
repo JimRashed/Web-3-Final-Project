@@ -12,7 +12,7 @@ describe('identity api', () => {
   it('reads the signed-in profile', async () => {
     const request = vi.fn().mockResolvedValue(profile);
 
-    await expect(apiWith(request).me('player-a', signal)).resolves.toEqual({ displayName: 'Ada' });
+    await expect(apiWith(request).me('player-a', signal)).resolves.toEqual({ displayName: 'Ada', picture: null });
     expect(request).toHaveBeenCalledWith('/api/users/me', { signal });
   });
 
@@ -31,7 +31,7 @@ describe('identity api', () => {
   it('saves the trimmed display name with PUT', async () => {
     const request = vi.fn().mockResolvedValue({ ...profile, displayName: 'Grace' });
 
-    await expect(apiWith(request).save('player-a', '  Grace  ', signal)).resolves.toEqual({ displayName: 'Grace' });
+    await expect(apiWith(request).save('player-a', '  Grace  ', signal)).resolves.toEqual({ displayName: 'Grace', picture: null });
     expect(request).toHaveBeenCalledWith('/api/users/me', { method: 'PUT', body: { displayName: 'Grace' }, signal });
   });
 

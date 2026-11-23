@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { createClients } from '../../api/clients';
 import { ApiError } from '../../api/httpClient';
-import { createIdentityApi, displayNameError, maxDisplayNameLength, type Profile } from '../../api/identity';
+import {
+  createIdentityApi, displayNameError, maxDisplayNameLength, pictureFileError, pictureTypes, type Profile,
+} from '../../api/identity';
 import { Session } from '../../auth/session';
 import { RequestState } from '../../components/RequestState';
 import { SignedInOnly } from '../../components/SignedInOnly';
@@ -20,6 +22,7 @@ export function ProfilePage() {
 }
 
 function isAbort(error: unknown) { return error instanceof DOMException && error.name === 'AbortError'; }
+function retryable(error: unknown) { return error instanceof ApiError && ['unavailable', 'network', 'unexpected'].includes(error.kind); }
 
 function PlayerProfile({ session, subject }: { session: Session; subject: string }) {
   const api = useMemo(() => createIdentityApi(createClients(readConfig(import.meta.env), session)), [session]);
@@ -28,18 +31,115 @@ function PlayerProfile({ session, subject }: { session: Session; subject: string
 
   if (profile.status === 'loading') return <RequestState state="loading" title="Loading your profile…" />;
   if (profile.status === 'error') {
-    const retry = profile.error instanceof ApiError && ['unavailable', 'network', 'unexpected'].includes(profile.error.kind);
-    return <RequestState state="error" error={profile.error} onRetry={retry ? profile.reload : undefined} />;
+    return <RequestState state="error" error={profile.error} onRetry={retryable(profile.error) ? profile.reload : undefined} />;
   }
 
   const current = saved ?? profile.value;
   return <div className="profile-card">
     {current ? <p>Signed in as <strong>{current.displayName}</strong>.</p>
       : <p>You have not chosen a display name yet. Save one to create your profile.</p>}
+    <ProfilePicture api={api} subject={subject} session={session} />
     <DisplayNameForm initial={current?.displayName ?? session.getSnapshot().displayName ?? ''}
       save={(name, signal) => api.save(subject, name, signal)} onSaved={setSaved} />
     <button className="button secondary" onClick={() => session.logout()}>Sign out</button>
   </div>;
+}
+
+type PictureState = 'loading' | 'ready' | 'empty' | 'error';
+
+/**
+ * The player's own picture. The bytes are fetched with the bearer token and rendered from a
+ * short-lived object URL held in memory, so nothing cacheable or shareable is left on the device;
+ * the URL is revoked when the picture is replaced and when this component goes away (sign-out).
+ */
+function ProfilePicture({ api, subject, session }: {
+  api: ReturnType<typeof createIdentityApi>; subject: string; session: Session;
+}) {
+  const [state, setState] = useState<PictureState>('loading');
+  const [url, setUrl] = useState<string>();
+  const [error, setError] = useState<unknown>();
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const objectUrl = useRef<string | undefined>(undefined);
+
+  const release = useCallback(() => {
+    if (objectUrl.current) {
+      URL.revokeObjectURL(objectUrl.current);
+      objectUrl.current = undefined;
+    }
+  }, []);
+
+  // Sign-out unmounts this component: drop the local handle to the image bytes.
+  useEffect(() => release, [release]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const bytes = await api.picture(controller.signal);
+        if (controller.signal.aborted) return;
+        release();
+        if (!bytes) {
+          setUrl(undefined);
+          setState('empty');
+          setError(undefined);
+          return;
+        }
+        objectUrl.current = URL.createObjectURL(bytes);
+        setUrl(objectUrl.current);
+        setState('ready');
+        setError(undefined);
+      } catch (failure) {
+        if (controller.signal.aborted || isAbort(failure)) return;
+        setError(failure);
+        setState('error');
+      }
+    })();
+    return () => controller.abort();
+  }, [api, attempt, release]);
+
+  async function choose(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || busy) return;
+
+    const problem = pictureFileError(file);
+    if (problem) {
+      setNote(problem);
+      return;
+    }
+
+    setNote('');
+    setError(undefined);
+    setBusy(true);
+    try {
+      await api.replacePicture(subject, file, session.signal);
+      setNote('Picture saved.');
+      setAttempt((value) => value + 1);
+    } catch (failure) {
+      if (isAbort(failure)) return;
+      setError(failure);
+      setState('error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <section className="profile-picture" aria-labelledby="profile-picture-heading">
+    <h2 id="profile-picture-heading">Profile picture</h2>
+    {state === 'loading' && <p className="muted" role="status">Loading your picture…</p>}
+    {state === 'ready' && url && <img className="profile-picture-image" src={url} alt="Your profile picture" />}
+    {state === 'empty' && <p className="muted">No picture yet. Choose a PNG, JPEG or WebP image up to 2 MB.</p>}
+    {state === 'error' && error !== undefined &&
+      <RequestState state="error" error={error} onRetry={retryable(error) ? () => setAttempt((value) => value + 1) : undefined} />}
+    <label className="profile-picture-upload">
+      <span>{busy ? 'Uploading…' : state === 'ready' ? 'Replace picture' : 'Choose picture'}</span>
+      <input type="file" accept={pictureTypes.join(',')} disabled={busy} aria-label="Profile picture"
+        onChange={(event) => { void choose(event); }} />
+    </label>
+    <p role="status">{note}</p>
+  </section>;
 }
 
 function DisplayNameForm({ initial, save, onSaved }: {
