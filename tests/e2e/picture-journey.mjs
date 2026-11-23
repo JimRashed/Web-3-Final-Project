@@ -15,7 +15,7 @@ const env = Object.fromEntries(readFileSync(`${root}/.env`, 'utf8').split(/\r?\n
 
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ' - ' + detail : ''}`); };
-const digest = (bytes) => createHash('sha256').update(Buffer.from(bytes)).digest('hex').slice(0, 16);
+const digest = (bytes) => (bytes ? createHash('sha256').update(Buffer.from(bytes)).digest('hex').slice(0, 16) : 'missing');
 
 // A real 1x1 PNG, generated so the fixture is guaranteed valid rather than hand-copied.
 function crc32(buffer) {
@@ -76,6 +76,16 @@ async function signIn(username) {
 }
 
 const identity = 'http://localhost:5101';
+
+/** A picture needs a profile first: the contract answers 404 for "no profile" and "no picture" alike. */
+async function ensureProfile(token) {
+  const response = await fetch(`${identity}/api/users/me`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ displayName: 'Journey Player' }),
+  });
+  return response.status;
+}
 async function call(token, method, path, body, contentType) {
   const response = await fetch(`${identity}${path}`, {
     method,
@@ -99,6 +109,11 @@ try {
   const other = await signIn('player-b');
   check('Two independent sessions for one account, plus a third account', Boolean(deviceA && deviceB && other));
   check('Device A and device B hold different tokens', deviceA !== deviceB);
+
+  const profileA = await ensureProfile(deviceA);
+  const profileOther = await ensureProfile(other);
+  check('Both accounts have a profile before any picture work', profileA === 200 && profileOther === 200,
+    `a=${profileA} other=${profileOther}`);
 
   const before = await call(deviceA, 'GET', '/api/users/me/picture');
   check('A player without a picture gets 404, not an error', [200, 404].includes(before.status), `status=${before.status}`);
