@@ -158,14 +158,88 @@ public sealed class MigrationTests
         }
     }
 
-    private static async Task SeedProfileWithPictureAsync(IdentityDbContext context, string contentType, byte[] content, int version) =>
+    [Fact]
+    public async Task TightenProfilePictureContentTypeCheck_PreservesValidPicturesUpAndRestoresPreviousCheckDown()
+    {
+        // Arrange
+        await using var context = CreateContext($"QuizArenaIdentity_PictureTypeCheck_{Guid.NewGuid():N}");
+        var migrator = context.GetService<IMigrator>();
+
+        try
+        {
+            await migrator.MigrateAsync("AddProfilePictureCheckConstraints");
+            await SeedProfileWithPictureAsync(context, "image/jpeg", [0xFF, 0xD8, 0xFF], 1, '4');
+            await SeedProfileWithPictureAsync(context, "image/png", [0x89, 0x50, 0x4E, 0x47], 2, '5');
+            await SeedProfileWithPictureAsync(context, "image/webp", [0x52, 0x49, 0x46, 0x46], 3, '6');
+            var before = await PictureRowsAsync(context);
+
+            // Act (up)
+            await context.Database.MigrateAsync();
+            var afterUp = await PictureRowsAsync(context);
+            var exactCheckAfterUp = await ScalarAsync(context, ContentTypeCheckCountSql(exact: true));
+
+            // Act (down)
+            await migrator.MigrateAsync("AddProfilePictureCheckConstraints");
+            var afterDown = await PictureRowsAsync(context);
+            var previousCheckAfterDown = await ScalarAsync(context, ContentTypeCheckCountSql(exact: false));
+
+            // Assert
+            before.Should().HaveCount(3);
+            afterUp.Should().Equal(before);
+            exactCheckAfterUp.Should().Be(1, "the sentinel-based exact check is trusted and enabled after up");
+            afterDown.Should().Equal(before);
+            previousCheckAfterDown.Should().Be(1, "down restores the previous IN-list check");
+        }
+        finally
+        {
+            await context.Database.EnsureDeletedAsync();
+        }
+    }
+
+    [Fact]
+    public async Task TightenProfilePictureContentTypeCheck_WithExistingTrailingSpaceRow_FailsLoudlyAndKeepsPreviousCheck()
+    {
+        // Arrange: the previous check pads trailing spaces, so it admitted this row; the domain rejects it as corrupt.
+        await using var context = CreateContext($"QuizArenaIdentity_PictureTypeCheckFail_{Guid.NewGuid():N}");
+        var migrator = context.GetService<IMigrator>();
+
+        try
+        {
+            await migrator.MigrateAsync("AddProfilePictureCheckConstraints");
+            await SeedProfileWithPictureAsync(context, "image/png ", [0x89, 0x50, 0x4E, 0x47], 1);
+
+            // Act
+            var migrate = () => context.Database.MigrateAsync();
+
+            // Assert: re-adding the constraint validates existing rows, and the transaction restores the old check.
+            (await migrate.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(547);
+            (await context.Database.GetAppliedMigrationsAsync()).Should().NotContain(name => name.EndsWith("_TightenProfilePictureContentTypeCheck", StringComparison.Ordinal));
+            (await ScalarAsync(context, ContentTypeCheckCountSql(exact: false))).Should().Be(1);
+            (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM dbo.ProfilePictures WHERE DATALENGTH(ContentType) = DATALENGTH(N'image/png ')")).Should().Be(1);
+        }
+        finally
+        {
+            await context.Database.EnsureDeletedAsync();
+        }
+    }
+
+    /// <summary>Counts the trusted, enabled content-type check in its exact (sentinel) or previous (padded IN) form.</summary>
+    private static string ContentTypeCheckCountSql(bool exact) =>
+        "SELECT COUNT(*) AS Value FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.ProfilePictures') AND name = N'CK_ProfilePictures_ContentType' AND is_not_trusted = 0 AND is_disabled = 0 AND definition "
+        + (exact ? "LIKE" : "NOT LIKE") + " N'%image/png|%'";
+
+    private static async Task SeedProfileWithPictureAsync(IdentityDbContext context, string contentType, byte[] content, int version, char idDigit = '3')
+    {
+        var profileId = Guid.Parse($"6f1c1e9e-0d7a-4b0e-9a57-{new string(idDigit, 12)}");
+        var subject = $"subject-p{idDigit}";
         await context.Database.ExecuteSqlAsync(
             $"""
             INSERT INTO dbo.UserProfiles (Id, Issuer, Subject, DisplayName, CreatedAt, UpdatedAt) VALUES
-            ('6f1c1e9e-0d7a-4b0e-9a57-333333333333', N'http://localhost:8080/realms/quizarena', N'subject-p', N'Pic', '2026-11-01T10:00:00', '2026-11-01T10:00:00');
+            ({profileId}, N'http://localhost:8080/realms/quizarena', {subject}, N'Pic', '2026-11-01T10:00:00', '2026-11-01T10:00:00');
             INSERT INTO dbo.ProfilePictures (ProfileId, ContentType, Content, Version, UpdatedAt) VALUES
-            ('6f1c1e9e-0d7a-4b0e-9a57-333333333333', {contentType}, {content}, {version}, '2026-11-02T10:00:00.1234567');
+            ({profileId}, {contentType}, {content}, {version}, '2026-11-02T10:00:00.1234567');
             """);
+    }
 
     private static async Task<List<string>> PictureRowsAsync(IdentityDbContext context) =>
         await context.Database.SqlQueryRaw<string>(

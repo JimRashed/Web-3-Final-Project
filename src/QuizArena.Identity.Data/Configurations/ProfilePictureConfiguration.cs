@@ -56,10 +56,12 @@ public sealed class ProfilePictureConfiguration : IEntityTypeConfiguration<Profi
     /// <summary>
     /// Exactly one of <see cref="ProfilePicture.AllowedContentTypes"/>. A binary collation keeps the comparison
     /// case-sensitive like the domain's ordinal check (the database default collation is case-insensitive).
+    /// SQL Server pads trailing spaces before every <c>=</c>/<c>IN</c> comparison, even under a binary collation, so
+    /// <c>N'image/png '</c> would otherwise match; appending a <c>|</c> sentinel to both sides makes the match exact.
     /// The list is sorted so the generated model, and therefore migrations, stay deterministic.
     /// </summary>
     private static string ContentTypeSql =>
-        "[ContentType] COLLATE Latin1_General_BIN2 IN ("
-        + string.Join(", ", ProfilePicture.AllowedContentTypes.Order(StringComparer.Ordinal).Select(type => $"N'{type}'"))
+        "([ContentType] + N'|') COLLATE Latin1_General_BIN2 IN ("
+        + string.Join(", ", ProfilePicture.AllowedContentTypes.Order(StringComparer.Ordinal).Select(type => $"N'{type}|'"))
         + ")";
 }
