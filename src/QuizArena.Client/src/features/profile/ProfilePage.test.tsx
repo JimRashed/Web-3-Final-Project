@@ -209,6 +209,19 @@ describe('Profile page', () => {
       expect(await screen.findByText('You do not have permission to do this.')).toBeVisible();
     });
 
+    it('drops the picture and its bytes when the player signs out', async () => {
+      const urls = objectUrls();
+      routeFetch({ 'GET /api/users/me/picture': png(), 'GET /api/users/me': profile('Ada') });
+      const { navigate } = await mount();
+      await screen.findByRole('img', { name: 'Your profile picture' });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+
+      expect(navigate).toHaveBeenCalledWith('https://provider.example/logout');
+      expect(urls.revoke).toHaveBeenCalledWith(urls.create.mock.results[0].value);
+      await waitFor(() => expect(screen.queryByRole('img', { name: 'Your profile picture' })).toBeNull());
+    });
+
     it('revokes the object URL when the page goes away, so sign-out leaves no image handle', async () => {
       const urls = objectUrls();
       routeFetch({ 'GET /api/users/me/picture': png(), 'GET /api/users/me': profile('Ada') });
