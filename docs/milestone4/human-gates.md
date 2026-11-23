@@ -1,7 +1,7 @@
 # Milestone 4 — human gate record
 
 Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3), parent
-[#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136). Candidate revision `46f847b`.
+[#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136). Candidate revision `68b7ecd` (first reconciled on `46f847b`).
 
 This page records what the GitHub reviews API showed on 2026-11-23 for every PR merged into
 `feature/milestone-4-security-and-cross-device-profiles`. It was assembled by the Dispatcher pipeline: it is
@@ -33,12 +33,14 @@ A `COMMENTED` or `CHANGES_REQUESTED` review is not an approval.
 | [#159](https://github.com/JimRashed/Web-3-Final-Project/pull/159) (#144) | CarterBeasse | JimRashed, SuSu-Lisu COMMENTED; SuSu-Lisu APPROVED @ `9d82b99` | Before, on an earlier commit | 1953/1953 tests |
 | [#151](https://github.com/JimRashed/Web-3-Final-Project/pull/151) (#145) | SuSu-Lisu | CarterBeasse CHANGES_REQUESTED @ `4c4ad3f`; COMMENTED @ `1ff2345`; COMMENTED @ `a83b7a0` (05:01:25) | Last comment after merge (merged 04:59:24) | Vitest |
 | [#160](https://github.com/JimRashed/Web-3-Final-Project/pull/160) (#147) | SuSu-Lisu | CarterBeasse COMMENTED @ `652ea23` (05:22:27) | After (merged 05:04:57) | CI only; no journey run output |
+| [#163](https://github.com/JimRashed/Web-3-Final-Project/pull/163) (#147) | SuSu-Lisu | CarterBeasse COMMENTED @ `ae142e6` (05:29:22) | After (merged 05:29:19, 3 s earlier) | PR body reports 17/17 with 13 lines pasted; full run on the #147 issue |
+| [#165](https://github.com/JimRashed/Web-3-Final-Project/pull/165) (#145, evidence docs) | SuSu-Lisu | CarterBeasse CHANGES_REQUESTED @ `7bfa9f1` (05:28:47) | Before, outstanding at merge (merged 05:29:21, 34 s later) | Screenshots of a live run on `46f847b` |
 
-The test counts are what each PR body reported at the time. They are historical, not results for `46f847b`.
+The test counts are what each PR body reported at the time. They are historical, not results for the candidate revision.
 
 ## Exceptions
 
-Seven of thirteen PRs met the independent-review gate on their merged commit. The others:
+Seven of fifteen PRs met the independent-review gate on their merged commit. The others:
 
 1. **#151**: merged by the author with CarterBeasse's CHANGES_REQUESTED (at `4c4ad3f`) outstanding and no
    approval. CarterBeasse's comment on the head commit came at 05:01:25, two minutes after the merge at 04:59:24.
@@ -46,6 +48,12 @@ Seven of thirteen PRs met the independent-review gate on their merged commit. Th
 3. **#157**, **#160** and **#161**: merged by the author with no review. #160 received a post-merge review at
    05:22:27 ([review 6016902334](https://github.com/JimRashed/Web-3-Final-Project/pull/160#pullrequestreview-6016902334)).
 4. **#159**: approved at `9d82b99`; three later review-fix commits were merged without a new approval.
+5. **#163**: merged by the author at 05:29:19 with no review; CarterBeasse's COMMENTED review followed at
+   05:29:22 ([review 6016944462](https://github.com/JimRashed/Web-3-Final-Project/pull/163#pullrequestreview-6016944462)).
+6. **#165**: merged by the author at 05:29:21 with CarterBeasse's CHANGES_REQUESTED of 05:28:47 outstanding
+   and no approval ([review 6016941081](https://github.com/JimRashed/Web-3-Final-Project/pull/165#pullrequestreview-6016941081)).
+
+Eight PRs in total: #151, #157, #158, #159, #160, #161, #163 and #165.
 
 Details and the open findings these reviews raised are in
 [requirements-traceability.md](requirements-traceability.md#review-compliance-exceptions).
@@ -62,15 +70,17 @@ Details and the open findings these reviews raised are in
 
 ## Threat model review
 
-[`docs/milestone3/threat-model.md`](../milestone3/threat-model.md) was reconciled against `46f847b` by this
-PR. That reconciliation is agent work. Independent human review of the threat model is still pending.
+[`docs/milestone3/threat-model.md`](../milestone3/threat-model.md) was reconciled against `46f847b` and then
+`68b7ecd` by this PR. That reconciliation is agent work. Independent human review of the threat model is still pending.
 
 ## What is still needed from humans
 
 - SuSu-Lisu's decision on the SEC-01 to SEC-12 decisions (approval or requested changes), recorded on #137 or #149.
 - A human review of this PR and of the threat-model reconciliation.
-- Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), and a
-  response to the #160 post-merge review.
-- A team decision on whether #157, #160 and #161 get a retro-review, and whether the three post-approval
+- Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #163 (1),
+  #165 (4), and a response to the #160 post-merge review.
+- A team decision on whether #157, #160, #161, #163 and #165 get a retro-review, and whether the three post-approval
   commits on #159 need one.
+- A team view on #145 and #147, which were closed at 05:29:25 and 05:29:23 with the gaps recorded in
+  [requirements-traceability.md](requirements-traceability.md#issue-state).
 - The live runs listed in [validation-results.md](validation-results.md) (Phase B).

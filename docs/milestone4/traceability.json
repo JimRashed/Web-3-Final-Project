@@ -2,88 +2,659 @@
   "repository": "JimRashed/Web-3-Final-Project",
   "milestone": "Security and Cross-Device Profiles",
   "branch": "feature/milestone-4-security-and-cross-device-profiles",
-  "candidateRevision": "46f847b",
-  "generated": { "date": "2026-11-23", "method": "hand-built from the Dispatcher Prime brief (gh pr view / reviews API), refreshed for PR #151 and PR #160", "note": "agent reconciliation, not an approval" },
+  "candidateRevision": "68b7ecd",
+  "generated": {
+    "date": "2026-11-23",
+    "method": "hand-built from the Dispatcher Prime brief (gh pr view / reviews API), refreshed for PRs #151, #160, #163, #165 and issues #145, #147",
+    "note": "agent reconciliation, not an approval"
+  },
   "pullRequests": [
-    { "number": 149, "issues": [137], "author": "CarterBeasse", "mergedBy": "CarterBeasse", "mergedAt": "2026-11-22T05:09Z", "head": "f2c5b0c", "merge": "fb60334",
-      "reviews": [ { "reviewer": "JimRashed", "state": "APPROVED", "commit": "96fd09a" }, { "reviewer": "JimRashed", "state": "APPROVED", "commit": "f2c5b0c" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 0 },
-    { "number": 152, "issues": [140], "author": "JimRashed", "mergedBy": "JimRashed", "mergedAt": "2026-11-22T18:14Z", "head": "a368a1a", "merge": "b37b8c1",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "COMMENTED", "commit": "a87ef1f" }, { "reviewer": "CarterBeasse", "state": "APPROVED", "commit": "a368a1a" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 2 },
-    { "number": 155, "issues": [141], "author": "JimRashed", "mergedBy": "CarterBeasse", "mergedAt": "2026-11-22T20:06Z", "head": "c94da40", "merge": "deef7c0",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "APPROVED", "commit": "c94da40" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 2 },
-    { "number": 156, "issues": [139], "author": "JimRashed", "mergedBy": "CarterBeasse", "mergedAt": "2026-11-22T21:54Z", "head": "45dbbb1", "merge": "7a45643",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "COMMENTED", "commit": null }, { "reviewer": "CarterBeasse", "state": "APPROVED", "commit": "45dbbb1" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 4 },
-    { "number": 153, "issues": [138], "author": "CarterBeasse", "mergedBy": "JimRashed", "mergedAt": "2026-11-22T22:49Z", "head": "15731b2", "merge": "4cf75a5",
-      "reviews": [ { "reviewer": "JimRashed", "state": "COMMENTED", "commit": null }, { "reviewer": "JimRashed", "state": "APPROVED", "commit": "15731b2" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 0 },
-    { "number": 154, "issues": [143], "author": "CarterBeasse", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T02:05Z", "head": "d7a1848", "merge": "312271e",
-      "reviews": [ { "reviewer": "JimRashed", "state": "COMMENTED", "commit": null }, { "reviewer": "JimRashed", "state": "COMMENTED", "commit": null }, { "reviewer": "SuSu-Lisu", "state": "APPROVED", "commit": "d7a1848" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 0 },
-    { "number": 157, "issues": [146], "author": "SuSu-Lisu", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T02:12Z", "head": "6083ca5", "merge": "a35d4f6",
-      "reviews": [], "approvedBeforeMerge": "no", "unrepliedThreads": 0 },
-    { "number": 158, "issues": [142], "author": "SuSu-Lisu", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T02:20:40Z", "head": "61d5ba3", "merge": "e7bc675",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "CHANGES_REQUESTED", "commit": null, "submittedAt": "2026-11-23T02:31Z", "afterMerge": true } ],
-      "approvedBeforeMerge": "no", "unrepliedThreads": 2 },
-    { "number": 161, "issues": [136], "issueRelation": "part of (docs)", "author": "SuSu-Lisu", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T03:00Z", "head": "3925530", "merge": "5e26d5d",
-      "reviews": [], "approvedBeforeMerge": "no", "unrepliedThreads": 0 },
-    { "number": 162, "issues": [143], "issueRelation": "follow-up", "author": "CarterBeasse", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T04:04Z", "head": "9cc8ee6", "merge": "1dd14d9",
-      "reviews": [ { "reviewer": "SuSu-Lisu", "state": "APPROVED", "commit": "9cc8ee6" } ],
-      "approvedBeforeMerge": "yes", "unrepliedThreads": 0 },
-    { "number": 159, "issues": [144], "author": "CarterBeasse", "mergedBy": "CarterBeasse", "mergedAt": "2026-11-23T04:34Z", "head": "63213ec", "merge": "bc5a71e",
-      "reviews": [ { "reviewer": "JimRashed", "state": "COMMENTED", "commit": null }, { "reviewer": "SuSu-Lisu", "state": "COMMENTED", "commit": null }, { "reviewer": "SuSu-Lisu", "state": "APPROVED", "commit": "9d82b99" } ],
-      "approvedBeforeMerge": "earlier-commit", "unrepliedThreads": 0 },
-    { "number": 151, "issues": [145], "issueRelation": "part of", "author": "SuSu-Lisu", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T04:59:24Z", "head": "a83b7a0", "merge": "0bfbe11",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "CHANGES_REQUESTED", "commit": "4c4ad3f", "submittedAt": "2026-11-22T17:58:41Z" }, { "reviewer": "CarterBeasse", "state": "COMMENTED", "commit": "1ff2345", "submittedAt": "2026-11-23T02:53:06Z" }, { "reviewer": "CarterBeasse", "state": "COMMENTED", "commit": "a83b7a0", "submittedAt": "2026-11-23T05:01:25Z", "afterMerge": true } ],
-      "approvedBeforeMerge": "no", "unrepliedThreads": 5 },
-    { "number": 160, "issues": [147], "issueRelation": "part of", "author": "SuSu-Lisu", "mergedBy": "SuSu-Lisu", "mergedAt": "2026-11-23T05:04:57Z", "head": "652ea23", "merge": "46f847b",
-      "reviews": [ { "reviewer": "CarterBeasse", "state": "COMMENTED", "commit": "652ea23", "submittedAt": "2026-11-23T05:22:27Z", "afterMerge": true, "id": 6016902334 } ],
-      "approvedBeforeMerge": "no", "unrepliedThreads": 0 }
+    {
+      "number": 149,
+      "issues": [
+        137
+      ],
+      "author": "CarterBeasse",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-22T05:09Z",
+      "head": "f2c5b0c",
+      "merge": "fb60334",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "APPROVED",
+          "commit": "96fd09a"
+        },
+        {
+          "reviewer": "JimRashed",
+          "state": "APPROVED",
+          "commit": "f2c5b0c"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 152,
+      "issues": [
+        140
+      ],
+      "author": "JimRashed",
+      "mergedBy": "JimRashed",
+      "mergedAt": "2026-11-22T18:14Z",
+      "head": "a368a1a",
+      "merge": "b37b8c1",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": "a87ef1f"
+        },
+        {
+          "reviewer": "CarterBeasse",
+          "state": "APPROVED",
+          "commit": "a368a1a"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 2
+    },
+    {
+      "number": 155,
+      "issues": [
+        141
+      ],
+      "author": "JimRashed",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-22T20:06Z",
+      "head": "c94da40",
+      "merge": "deef7c0",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "APPROVED",
+          "commit": "c94da40"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 2
+    },
+    {
+      "number": 156,
+      "issues": [
+        139
+      ],
+      "author": "JimRashed",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-22T21:54Z",
+      "head": "45dbbb1",
+      "merge": "7a45643",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "CarterBeasse",
+          "state": "APPROVED",
+          "commit": "45dbbb1"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 4
+    },
+    {
+      "number": 153,
+      "issues": [
+        138
+      ],
+      "author": "CarterBeasse",
+      "mergedBy": "JimRashed",
+      "mergedAt": "2026-11-22T22:49Z",
+      "head": "15731b2",
+      "merge": "4cf75a5",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "JimRashed",
+          "state": "APPROVED",
+          "commit": "15731b2"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 154,
+      "issues": [
+        143
+      ],
+      "author": "CarterBeasse",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T02:05Z",
+      "head": "d7a1848",
+      "merge": "312271e",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "JimRashed",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "SuSu-Lisu",
+          "state": "APPROVED",
+          "commit": "d7a1848"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 157,
+      "issues": [
+        146
+      ],
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T02:12Z",
+      "head": "6083ca5",
+      "merge": "a35d4f6",
+      "reviews": [],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 158,
+      "issues": [
+        142
+      ],
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T02:20:40Z",
+      "head": "61d5ba3",
+      "merge": "e7bc675",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "CHANGES_REQUESTED",
+          "commit": null,
+          "submittedAt": "2026-11-23T02:31Z",
+          "afterMerge": true
+        }
+      ],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 2
+    },
+    {
+      "number": 161,
+      "issues": [
+        136
+      ],
+      "issueRelation": "part of (docs)",
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T03:00Z",
+      "head": "3925530",
+      "merge": "5e26d5d",
+      "reviews": [],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 162,
+      "issues": [
+        143
+      ],
+      "issueRelation": "follow-up",
+      "author": "CarterBeasse",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T04:04Z",
+      "head": "9cc8ee6",
+      "merge": "1dd14d9",
+      "reviews": [
+        {
+          "reviewer": "SuSu-Lisu",
+          "state": "APPROVED",
+          "commit": "9cc8ee6"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 159,
+      "issues": [
+        144
+      ],
+      "author": "CarterBeasse",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-23T04:34Z",
+      "head": "63213ec",
+      "merge": "bc5a71e",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "SuSu-Lisu",
+          "state": "COMMENTED",
+          "commit": null
+        },
+        {
+          "reviewer": "SuSu-Lisu",
+          "state": "APPROVED",
+          "commit": "9d82b99"
+        }
+      ],
+      "approvedBeforeMerge": "earlier-commit",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 151,
+      "issues": [
+        145
+      ],
+      "issueRelation": "part of",
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T04:59:24Z",
+      "head": "a83b7a0",
+      "merge": "0bfbe11",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "CHANGES_REQUESTED",
+          "commit": "4c4ad3f",
+          "submittedAt": "2026-11-22T17:58:41Z"
+        },
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": "1ff2345",
+          "submittedAt": "2026-11-23T02:53:06Z"
+        },
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": "a83b7a0",
+          "submittedAt": "2026-11-23T05:01:25Z",
+          "afterMerge": true
+        }
+      ],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 5
+    },
+    {
+      "number": 160,
+      "issues": [
+        147
+      ],
+      "issueRelation": "part of",
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T05:04:57Z",
+      "head": "652ea23",
+      "merge": "46f847b",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": "652ea23",
+          "submittedAt": "2026-11-23T05:22:27Z",
+          "afterMerge": true,
+          "id": 6016902334
+        }
+      ],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 163,
+      "issues": [
+        147
+      ],
+      "issueRelation": "part of",
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T05:29:19Z",
+      "head": "ae142e6",
+      "merge": "94bc2e3",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "COMMENTED",
+          "commit": "ae142e6",
+          "submittedAt": "2026-11-23T05:29:22Z",
+          "afterMerge": true,
+          "id": 6016944462
+        }
+      ],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 1
+    },
+    {
+      "number": 165,
+      "issues": [
+        145
+      ],
+      "issueRelation": "part of (evidence docs)",
+      "author": "SuSu-Lisu",
+      "mergedBy": "SuSu-Lisu",
+      "mergedAt": "2026-11-23T05:29:21Z",
+      "head": "7bfa9f1",
+      "merge": "68b7ecd",
+      "reviews": [
+        {
+          "reviewer": "CarterBeasse",
+          "state": "CHANGES_REQUESTED",
+          "commit": "7bfa9f1",
+          "submittedAt": "2026-11-23T05:28:47Z",
+          "afterMerge": false,
+          "id": 6016941081
+        }
+      ],
+      "approvedBeforeMerge": "no",
+      "unrepliedThreads": 4
+    }
   ],
   "exceptions": [
-    { "pr": 151, "kind": "merged-with-changes-requested", "detail": "Merged by author at 04:59:24 with CarterBeasse CHANGES_REQUESTED at 4c4ad3f outstanding and no approval; CarterBeasse commented on the head at 05:01:25; 5 threads unreplied." },
-    { "pr": 158, "kind": "merged-before-review", "detail": "Merged by author at 02:20:40; CarterBeasse CHANGES_REQUESTED at 02:31; 2 threads unreplied." },
-    { "pr": 157, "kind": "merged-without-review", "detail": "Implementation for #146 merged by author with no review." },
-    { "pr": 160, "kind": "merged-without-review", "detail": "Implementation for #147 merged by author with no review; post-merge review 6016902334 at 05:22:27." },
-    { "pr": 161, "kind": "merged-without-review", "detail": "Docs for #136 merged by author with no review." },
-    { "pr": 159, "kind": "approval-on-earlier-commit", "detail": "SuSu-Lisu approved 9d82b99; three later review-fix commits not re-approved." }
+    {
+      "pr": 151,
+      "kind": "merged-with-changes-requested",
+      "detail": "Merged by author at 04:59:24 with CarterBeasse CHANGES_REQUESTED at 4c4ad3f outstanding and no approval; CarterBeasse commented on the head at 05:01:25; 5 threads unreplied."
+    },
+    {
+      "pr": 158,
+      "kind": "merged-before-review",
+      "detail": "Merged by author at 02:20:40; CarterBeasse CHANGES_REQUESTED at 02:31; 2 threads unreplied."
+    },
+    {
+      "pr": 157,
+      "kind": "merged-without-review",
+      "detail": "Implementation for #146 merged by author with no review."
+    },
+    {
+      "pr": 160,
+      "kind": "merged-without-review",
+      "detail": "Implementation for #147 merged by author with no review; post-merge review 6016902334 at 05:22:27."
+    },
+    {
+      "pr": 161,
+      "kind": "merged-without-review",
+      "detail": "Docs for #136 merged by author with no review."
+    },
+    {
+      "pr": 159,
+      "kind": "approval-on-earlier-commit",
+      "detail": "SuSu-Lisu approved 9d82b99; three later review-fix commits not re-approved."
+    },
+    {
+      "pr": 163,
+      "kind": "merged-without-review",
+      "detail": "Journey fix for #147 merged by author at 05:29:19; CarterBeasse COMMENTED at 05:29:22 (3 s after merge); 1 thread unreplied."
+    },
+    {
+      "pr": 165,
+      "kind": "merged-with-changes-requested",
+      "detail": "#145 evidence docs merged by author at 05:29:21 with CarterBeasse CHANGES_REQUESTED at 05:28:47 (34 s before merge) outstanding and no approval; 4 threads unreplied."
+    }
   ],
   "openFindings": [
-    { "source": "PR #160 review 6016902334", "severity": "high", "summary": "Journey cannot pass on a fresh stack: no profiles are created, picture PUT without profile returns 404.", "followUp": "Fix PR on milestone branch; blocks #147." },
-    { "source": "PR #160 review 6016902334", "severity": "high", "summary": "SEC-09 sign-out across devices neither automated nor documented as manual Keycloak steps.", "followUp": "Automate A-only sign-out or document manual steps; blocks #147." },
-    { "source": "PR #160 review 6016902334", "severity": "high", "summary": "No run evidence: merged with no PASS/FAIL output and no review.", "followUp": "PASS/FAIL run on a fresh stack (Phase B)." },
-    { "source": "PR #160 review 6016902334", "severity": "medium", "summary": "B never checks the new reference (picture.version and contentType via GET /api/users/me).", "followUp": "Add assertion in fix PR." },
-    { "source": "PR #160 review 6016902334", "severity": "medium", "summary": "Mismatched-magic case accepts 400 or 415; contract and server return 400.", "followUp": "Assert 400 only." },
-    { "source": "PR #160 review 6016902334", "severity": "low", "summary": "404 check accepts 200; weak third-account assertions; digest(undefined) aborts remaining checks; token capture race.", "followUp": "Fix PR as time allows." },
-    { "source": "PR #151", "severity": "high", "summary": "413/415 show generic Try again message.", "followUp": "Proposed #151 client error-handling issue." },
-    { "source": "PR #151", "severity": "high", "summary": "Failed upload hides the current picture.", "followUp": "Proposed #151 client error-handling issue." },
-    { "source": "PR #151", "severity": "medium", "summary": "409 no refetch; sign-out test lacks no-GET-after assertion; replace revoke not tested.", "followUp": "Proposed #151 client error-handling issue." },
-    { "source": "PR #151", "severity": "low", "summary": "aria label-in-name; 2 MB wording; duplicate Content-Type; readPicture accepts missing picture.", "followUp": "Proposed #151 client error-handling issue." },
-    { "source": "PR #158", "severity": "not graded", "summary": "Security block on protected operations and controller binding / AllowAnonymous unchecked; provider-only note and CI link missing.", "followUp": "Proposed #158 matrix-gaps issue." },
-    { "source": "PR #159", "severity": "low", "summary": "Kestrel BadHttpRequestException returns 500 on picture routes; duplicated PictureSamples; PUT /me picture snapshot may be one version old.", "followUp": "Proposed #159 lows issue." },
-    { "source": "PR #153 / PR #154", "severity": "deferred", "summary": "Deployment secret store undecided (SEC-10, R7).", "followUp": "Team decision; threat-model residual." },
-    { "source": "Issue #137", "severity": "deferred", "summary": "Security-decision approval record incomplete (SuSu-Lisu pending).", "followUp": "Human approval on record." }
+    {
+      "source": "PR #160 review 6016902334",
+      "severity": "high",
+      "summary": "Journey cannot pass on a fresh stack: no profiles are created, picture PUT without profile returns 404.",
+      "followUp": "Fixed by PR #163.",
+      "status": "fixed"
+    },
+    {
+      "source": "PR #160 review 6016902334; PR #163 review 6016944462",
+      "severity": "high",
+      "summary": "SEC-09 sign-out across devices neither automated nor documented as manual Keycloak steps.",
+      "followUp": "Automate A-only sign-out or run documented manual steps; #147 closed without it.",
+      "status": "open"
+    },
+    {
+      "source": "PR #160 review 6016902334",
+      "severity": "high",
+      "summary": "No run evidence when #160 merged; a 17/17 PASS run on 46f847b plus #163 is pasted on #147 without exact head SHA or database state.",
+      "followUp": "Rerun on 68b7ecd with SHA and database state recorded.",
+      "status": "partly addressed"
+    },
+    {
+      "source": "PR #160 review 6016902334",
+      "severity": "medium",
+      "summary": "B never checks the new reference (picture.version and contentType via GET /api/users/me).",
+      "followUp": "Add assertion in fix PR.",
+      "status": "open"
+    },
+    {
+      "source": "PR #160 review 6016902334",
+      "severity": "medium",
+      "summary": "Mismatched-magic case accepts 400 or 415; contract and server return 400.",
+      "followUp": "Assert 400 only.",
+      "status": "open"
+    },
+    {
+      "source": "PR #160 review 6016902334",
+      "severity": "low",
+      "summary": "404 check accepts 200; A version/updatedAt not asserted unchanged after third-account upload; image Content-Type not asserted; token capture race; every run renames both demo accounts (new in #163). digest(undefined) abort fixed by #163.",
+      "followUp": "Fix PR as time allows.",
+      "status": "open"
+    },
+    {
+      "source": "PR #151",
+      "severity": "high",
+      "summary": "413/415 show generic Try again message.",
+      "followUp": "Proposed #151 client error-handling issue."
+    },
+    {
+      "source": "PR #151",
+      "severity": "high",
+      "summary": "Failed upload hides the current picture.",
+      "followUp": "Proposed #151 client error-handling issue."
+    },
+    {
+      "source": "PR #151",
+      "severity": "medium",
+      "summary": "409 no refetch; sign-out test lacks no-GET-after assertion; replace revoke not tested.",
+      "followUp": "Proposed #151 client error-handling issue."
+    },
+    {
+      "source": "PR #151",
+      "severity": "low",
+      "summary": "aria label-in-name; 2 MB wording; duplicate Content-Type; readPicture accepts missing picture.",
+      "followUp": "Proposed #151 client error-handling issue."
+    },
+    {
+      "source": "PR #158",
+      "severity": "not graded",
+      "summary": "Security block on protected operations and controller binding / AllowAnonymous unchecked; provider-only note and CI link missing.",
+      "followUp": "Proposed #158 matrix-gaps issue."
+    },
+    {
+      "source": "PR #159",
+      "severity": "low",
+      "summary": "Kestrel BadHttpRequestException returns 500 on picture routes; duplicated PictureSamples; PUT /me picture snapshot may be one version old.",
+      "followUp": "Proposed #159 lows issue."
+    },
+    {
+      "source": "PR #153 / PR #154",
+      "severity": "deferred",
+      "summary": "Deployment secret store undecided (SEC-10, R7).",
+      "followUp": "Team decision; threat-model residual."
+    },
+    {
+      "source": "Issue #137",
+      "severity": "deferred",
+      "summary": "Security-decision approval record incomplete (SuSu-Lisu pending).",
+      "followUp": "Human approval on record."
+    },
+    {
+      "source": "PR #165 review 6016941081",
+      "severity": "medium",
+      "status": "open",
+      "summary": "Evidence README overstates rejected-upload-keeps-picture (local pre-check only); says four live steps vs three states captured; sign-out and private-access claims not evidenced; open #151 findings unmentioned.",
+      "followUp": "Correct the README; show headers and sign-out in a rerun of the #145 check."
+    }
   ],
   "issues": [
-    { "number": 137, "state": "closed", "evidenceLinked": true, "waitsFor": [] },
-    { "number": 142, "state": "closed", "evidenceLinked": true, "waitsFor": [] },
-    { "number": 143, "state": "closed", "evidenceLinked": true, "waitsFor": [] },
-    { "number": 144, "state": "closed", "evidenceLinked": true, "waitsFor": [] },
-    { "number": 146, "state": "closed", "evidenceLinked": true, "waitsFor": [] },
-    { "number": 133, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 134, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 138, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 139, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 140, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 141, "state": "closed", "evidenceLinked": false, "waitsFor": ["evidence comment"] },
-    { "number": 145, "state": "open", "evidenceLinked": false, "waitsFor": ["live four-step check with screenshots"] },
-    { "number": 147, "state": "open", "evidenceLinked": false, "waitsFor": ["fix PR for PR #160 review findings", "PASS/FAIL journey run on a fresh stack"] },
-    { "number": 135, "state": "open", "evidenceLinked": false, "waitsFor": [145] },
-    { "number": 136, "state": "open", "evidenceLinked": false, "waitsFor": [147, 148] },
-    { "number": 148, "state": "open", "evidenceLinked": false, "waitsFor": ["Phase B validation results"] },
-    { "number": 132, "state": "open", "evidenceLinked": false, "waitsFor": [135, 136] }
-  ]
+    {
+      "number": 137,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": []
+    },
+    {
+      "number": 142,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": []
+    },
+    {
+      "number": 143,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": []
+    },
+    {
+      "number": 144,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": []
+    },
+    {
+      "number": 146,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": []
+    },
+    {
+      "number": 133,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 134,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 138,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 139,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 140,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 141,
+      "state": "closed",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "evidence comment"
+      ]
+    },
+    {
+      "number": 145,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "closedAt": "2026-11-23T05:29:25Z",
+      "closedBy": "SuSu-Lisu",
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934",
+      "gaps": [
+        "PR #165 merged with changes requested",
+        "PR #165 README claims not evidenced",
+        "PR #151 findings open"
+      ]
+    },
+    {
+      "number": 147,
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "closedAt": "2026-11-23T05:29:23Z",
+      "closedBy": "SuSu-Lisu",
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545",
+      "run": {
+        "result": "17/17 PASS",
+        "revision": "46f847b plus PR #163",
+        "stack": "scripts/start-milestone3.ps1 (Keycloak, six APIs, client)"
+      },
+      "gaps": [
+        "SEC-09 two-device sign-out not covered",
+        "PR #160/#163 review findings open",
+        "PR #163 merged without review"
+      ]
+    },
+    {
+      "number": 135,
+      "state": "open",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "closure decision (children closed, gaps recorded)"
+      ]
+    },
+    {
+      "number": 136,
+      "state": "open",
+      "evidenceLinked": false,
+      "waitsFor": [
+        148
+      ]
+    },
+    {
+      "number": 148,
+      "state": "open",
+      "evidenceLinked": false,
+      "waitsFor": [
+        "Phase B validation results"
+      ]
+    },
+    {
+      "number": 132,
+      "state": "open",
+      "evidenceLinked": false,
+      "waitsFor": [
+        135,
+        136
+      ]
+    }
+  ],
+  "firstReconciledRevision": "46f847b"
 }
