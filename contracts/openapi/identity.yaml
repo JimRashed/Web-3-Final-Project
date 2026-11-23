@@ -479,7 +479,7 @@
           "identity"
         ],
         "summary": "replaceMyPicture",
-        "description": "Implemented by #144 (SEC-01, SEC-02, SEC-06, SEC-07): replaces the caller's single picture atomically; under concurrency the first committer wins and the loser gets 409. Raw request body (not multipart) of at most 2,097,152 bytes (2 MiB); PNG, JPEG or WebP only and the magic bytes must match the Content-Type; SVG and GIF are rejected. A failed request keeps the previous picture.",
+        "description": "Implemented by #144 (SEC-01, SEC-02, SEC-06, SEC-07): replaces the caller's single picture atomically; under concurrency the first committer wins and the loser gets 409. Raw request body (not multipart) of at most 2,097,152 bytes (2 MiB); PNG, JPEG or WebP only and the magic bytes must match the Content-Type; SVG and GIF are rejected. Confirmed rejections and rollbacks (400, 401, 403, 404, 409, 413, 415, 503) keep the previous picture. Exception: a 500 titled 'Upload outcome unknown' means the commit could not be confirmed, so the replacement may have been stored; clients must reload the profile (GET /api/users/me) before retrying instead of assuming the previous picture remains.",
         "security": [
           {
             "oauth2": [
@@ -670,7 +670,7 @@
             }
           },
           "500": {
-            "description": "Unexpected failure; safe response",
+            "description": "Unexpected failure; safe response. When titled 'Upload outcome unknown' the commit could not be confirmed and the replacement may have been stored (not covered by the previous-picture guarantee): reload the profile before retrying.",
             "content": {
               "application/problem+json": {
                 "schema": {

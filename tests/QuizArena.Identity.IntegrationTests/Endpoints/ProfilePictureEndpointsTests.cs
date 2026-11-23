@@ -359,6 +359,8 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
     [InlineData("truncated-jpeg")]
     [InlineData("truncated-webp")]
     [InlineData("webp-chunk-past-riff-end")]
+    [InlineData("jpeg-sof-zero-components")]
+    [InlineData("jpeg-sof-missing-descriptors")]
     public async Task PutPicture_WithEmptyOrMalformedImage_Returns400(string variant)
     {
         // Arrange
@@ -419,6 +421,8 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
     [InlineData("mismatch", HttpStatusCode.BadRequest)]
     [InlineData("empty", HttpStatusCode.BadRequest)]
     [InlineData("webp-chunk-past-riff-end", HttpStatusCode.BadRequest)]
+    [InlineData("jpeg-sof-zero-components", HttpStatusCode.BadRequest)]
+    [InlineData("jpeg-sof-missing-descriptors", HttpStatusCode.BadRequest)]
     [InlineData("oversized", HttpStatusCode.RequestEntityTooLarge)]
     [InlineData("unsupported", HttpStatusCode.UnsupportedMediaType)]
     [InlineData("no-token", HttpStatusCode.Unauthorized)]
@@ -439,7 +443,8 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
             "malformed" => Image(PictureSamples.Jpeg[..10], "image/jpeg"),
             "mismatch" => Image(PictureSamples.Png, "image/webp"),
             "empty" => Image([], "image/png"),
-            "webp-chunk-past-riff-end" => Image(Malformed("webp-chunk-past-riff-end").Bytes, "image/webp"),
+            "webp-chunk-past-riff-end" or "jpeg-sof-zero-components" or "jpeg-sof-missing-descriptors" =>
+                Image(Malformed(rejection).Bytes, Malformed(rejection).Type),
             "oversized" => Image(PictureSamples.PaddedTo(PictureSamples.WebpLossy, Limit + 1), "image/webp"),
             "unsupported" => Image(PictureSamples.Gif, "image/gif"),
             _ => Image(PictureSamples.WebpLossy, "image/webp"),
@@ -521,6 +526,23 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
             && media.Value.GetProperty("schema").GetProperty("format").GetString() == "binary");
     }
 
+    [Fact]
+    public async Task OpenApiDocument_PutPicture_Documents400AsPlainProblemWithoutErrors()
+    {
+        // Act
+        using var response = await SendAsync(HttpMethod.Get, "/openapi/v1.json", token: null);
+        var document = await Json(response);
+        var badRequest = document.GetProperty("paths").GetProperty(PicturePath).GetProperty("put")
+            .GetProperty("responses").GetProperty("400").GetProperty("content");
+
+        // Assert
+        badRequest.EnumerateObject().Select(media => media.Name).Should().Equal("application/problem+json");
+        var reference = badRequest.GetProperty("application/problem+json").GetProperty("schema").GetProperty("$ref").GetString();
+        reference.Should().Be("#/components/schemas/ProblemDetails");
+        var schema = document.GetProperty("components").GetProperty("schemas").GetProperty("ProblemDetails");
+        schema.GetProperty("properties").TryGetProperty("errors", out _).Should().BeFalse();
+    }
+
     private static string NewSubject() => $"player-{Guid.NewGuid():N}";
 
     private static string Token(string subject, string scope = "profiles.read profiles.write") =>
@@ -541,6 +563,11 @@ public sealed class ProfilePictureEndpointsTests : IClassFixture<IdentityApiFact
         "truncated-webp" => (PictureSamples.WebpLossless[..24], "image/webp"),
         // A VP8L chunk whose declared size runs past the RIFF end into trailing body bytes.
         "webp-chunk-past-riff-end" => (WebpChunkPastRiffEnd(), "image/webp"),
+        // ITU-T T.81 B.2.2: a frame header with Nf = 0, and one declaring three components but carrying none.
+        "jpeg-sof-zero-components" =>
+            ([.. PictureSamples.Jpeg[..20], 0xFF, 0xC0, 0x00, 0x08, 0x08, 0x00, 0x01, 0x00, 0x01, 0x00, 0xFF, 0xD9], "image/jpeg"),
+        "jpeg-sof-missing-descriptors" =>
+            ([.. PictureSamples.Jpeg[..20], 0xFF, 0xC0, 0x00, 0x08, 0x08, 0x00, 0x01, 0x00, 0x01, 0x03, 0xFF, 0xD9], "image/jpeg"),
         _ => throw new ArgumentOutOfRangeException(nameof(variant)),
     };
 

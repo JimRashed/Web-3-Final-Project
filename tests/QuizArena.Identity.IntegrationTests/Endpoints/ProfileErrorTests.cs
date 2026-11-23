@@ -93,6 +93,8 @@ public sealed class ProfileErrorTests : IClassFixture<IdentityApiFactory>
     [InlineData("GET", "sql-throttled", HttpStatusCode.ServiceUnavailable)]
     [InlineData("GET", "corrupt", HttpStatusCode.InternalServerError)]
     [InlineData("GET", "unexpected", HttpStatusCode.InternalServerError)]
+    [InlineData("PUT", "unexpected-wrapping-domain-wrapping-transient", HttpStatusCode.InternalServerError)]
+    [InlineData("GET", "unexpected-wrapping-domain-wrapping-transient", HttpStatusCode.InternalServerError)]
     public async Task PictureRoutes_WhenApplicationFails_ReturnSafeContractProblem(string method, string scenario, HttpStatusCode expected)
     {
         // Arrange: domain outcomes wrap a transient SQL cause; it must not turn them into 503 (#144).
@@ -103,6 +105,9 @@ public sealed class ProfileErrorTests : IClassFixture<IdentityApiFactory>
             "corrupt" => new ProfilePictureCorruptException(new InvalidProfileException("content", Sentinel)),
             "outcome-unknown" => new ProfilePictureCommitOutcomeUnknownException(SqlFailure(-2)),
             "unexpected" => new InvalidOperationException(Sentinel),
+            // The 503 walk stops at the domain exception, so the transient SQL error beneath it never yields 503.
+            "unexpected-wrapping-domain-wrapping-transient" =>
+                new InvalidOperationException(Sentinel, new ProfilePictureConflictException(SqlFailure(-2))),
             "timeout" => new TimeoutException(Sentinel),
             "sql-timeout" => SqlFailure(-2),
             "sql-throttled" => SqlFailure(40613),

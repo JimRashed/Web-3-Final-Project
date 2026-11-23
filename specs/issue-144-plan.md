@@ -374,3 +374,29 @@ Behaviour changes versus Sections 3/5:
 - Mismatched declared type vs bytes stays 400 (not 415) and is asserted as such.
 - Unit `Validate` checks the content-type guard before emptiness (both are 400 at the API; the API always passes a
   canonical allowed type).
+
+### Repair cycle 1 (PR #159 review)
+
+No new files; touchpoints stay within Section 2 plus the docs already listed.
+- **@JimRashed 1 - JPEG frame header.** `ProfilePictureFormat.IsJpeg` now requires, for the first SOF segment
+  (ITU-T T.81 B.2.2), Nf (segment byte 7: after Lf, P, Y, X) > 0 and Lf == 8 + 3 x Nf, with the segment already
+  bounds-checked against the body. Unit variants `sof-zero-components`, `sof-components-without-descriptors`,
+  `sof-length-short-of-descriptors`, `sof-length-beyond-descriptors`, `sof-descriptors-truncated` and a valid
+  `jpeg-three-components`; API `jpeg-sof-zero-components` / `jpeg-sof-missing-descriptors` → 400 with no picture, and
+  in `PutPicture_EachRejection_PreservesProfileAndPicture` → 400 with the previous picture preserved.
+- **@JimRashed 2 - 400 schema.** PUT picture declares `ProblemDetails` (not `ValidationProblemDetails`) for 400;
+  `OpenApiDocument_PutPicture_Documents400AsPlainProblemWithoutErrors` asserts the generated `$ref` and no `errors`.
+- **@JimRashed 3 - previous-picture exception.** `identity.yaml` PUT picture description and 500 response: confirmed
+  rejections/rollbacks (400/401/403/404/409/413/415/503) keep the previous picture; a 500 `Upload outcome unknown` may
+  have stored the replacement, so reload the profile before retrying. Mirrored in `api-contracts.md` and the
+  `authorization-matrix.md` client-handling paragraph. SEC-06 decision text left unchanged (it already carries the
+  implementation note; decision wording is the team's approval item).
+- **@SuSu-Lisu 4** - `threat-model.md` SEC-02 residual: signature + first structural chunk only (no CRC, dimensions or
+  decode); a header-valid/garbage-body file can be stored and is served only with its validated type and `nosniff`.
+- **@SuSu-Lisu 5** - `ProfileRouteSecurityTests` asserts `Cache-Control: private, no-store` and `nosniff` on every
+  picture-route 401/403 (GET and PUT, full rejection matrices, other-scope and before-415/413 cases).
+- **Testing 6** - `PictureRoutes_WhenApplicationFails_ReturnSafeContractProblem` scenario
+  `unexpected-wrapping-domain-wrapping-transient` (`InvalidOperationException(ProfilePictureConflictException(SqlFailure(-2)))`)
+  → 500 on GET and PUT. Mutation (domain stop removed from `IsDependencyUnavailable`) failed exactly these 2 cases; restored.
+- **Testing 7** - mutation (`nosniff` only below 400) failed 95/159 picture/security/error tests (42/80 in
+  `ProfileRouteSecurityTests`); restored.

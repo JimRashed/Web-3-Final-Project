@@ -12,6 +12,7 @@ public sealed class ProfilePictureFormatTests
         { "png", "image/png" },
         { "jpeg-baseline", "image/jpeg" },
         { "jpeg-progressive", "image/jpeg" },
+        { "jpeg-three-components", "image/jpeg" },
         { "webp-vp8", "image/webp" },
         { "webp-vp8l", "image/webp" },
         { "webp-vp8x", "image/webp" },
@@ -124,6 +125,11 @@ public sealed class ProfilePictureFormatTests
     [InlineData("dht-not-sof")]
     [InlineData("jpg-not-sof")]
     [InlineData("dac-not-sof")]
+    [InlineData("sof-zero-components")]
+    [InlineData("sof-components-without-descriptors")]
+    [InlineData("sof-length-short-of-descriptors")]
+    [InlineData("sof-length-beyond-descriptors")]
+    [InlineData("sof-descriptors-truncated")]
     public void Validate_WithMalformedJpeg_Throws(string variant)
     {
         // Arrange
@@ -139,6 +145,12 @@ public sealed class ProfilePictureFormatTests
             "non-ff-marker" => [.. soiApp0, 0x12, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00],
             "dht-not-sof" => [.. soiApp0, 0xFF, 0xC4, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00],
             "jpg-not-sof" => [.. soiApp0, 0xFF, 0xC8, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00],
+            // ITU-T T.81 B.2.2: Nf must be nonzero and Lf must equal 8 + 3 * Nf.
+            "sof-zero-components" => [.. soiApp0, 0xFF, 0xC0, 0x00, 0x08, 0x08, 0x00, 0x01, 0x00, 0x01, 0x00, 0xFF, 0xD9],
+            "sof-components-without-descriptors" => [.. soiApp0, 0xFF, 0xC0, 0x00, 0x08, 0x08, 0x00, 0x01, 0x00, 0x01, 0x03, 0xFF, 0xD9],
+            "sof-length-short-of-descriptors" => [.. soiApp0, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x03, 0x01, 0x22, 0x00, 0xFF, 0xD9],
+            "sof-length-beyond-descriptors" => [.. soiApp0, 0xFF, 0xC0, 0x00, 0x0C, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0x00, 0xFF, 0xD9],
+            "sof-descriptors-truncated" => [.. soiApp0, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x01, 0x00, 0x01, 0x03, 0x01, 0x22, 0x00],
             _ => [.. soiApp0, 0xFF, 0xCC, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00],
         };
 
@@ -210,6 +222,12 @@ public sealed class ProfilePictureFormatTests
         "png" => PictureSamples.Png,
         "jpeg-baseline" => PictureSamples.Jpeg,
         "jpeg-progressive" => PictureSamples.JpegProgressive,
+        "jpeg-three-components" =>
+        [
+            .. PictureSamples.Jpeg[..20],
+            0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x01, 0x00, 0x01, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+            0xFF, 0xD9,
+        ],
         "webp-vp8" => PictureSamples.WebpLossy,
         "webp-vp8l" => PictureSamples.WebpLossless,
         "webp-vp8x" => PictureSamples.WebpExtended,

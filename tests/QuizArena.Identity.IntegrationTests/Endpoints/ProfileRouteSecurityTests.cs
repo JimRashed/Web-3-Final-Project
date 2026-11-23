@@ -82,6 +82,7 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
         var challenge = response.Headers.WwwAuthenticate.Should().ContainSingle(header => header.Scheme == "Bearer").Subject;
         challenge.Parameter.Should().Be(kind == "missing" ? null : "error=\"invalid_token\"");
+        AssertPrivateHeadersOnPictureRoutes(route, response);
         await ShouldHaveWrittenNothing(route, subject);
     }
 
@@ -112,6 +113,7 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        AssertPrivateHeadersOnPictureRoutes(route, response);
         await ShouldHaveWrittenNothing(route, subject);
     }
 
@@ -162,6 +164,7 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        AssertPrivateHeadersOnPictureRoutes(route, response);
         await ShouldHaveWrittenNothing(route, subject);
     }
 
@@ -185,7 +188,22 @@ public sealed class ProfileRouteSecurityTests : IClassFixture<IdentityApiFactory
 
         // Assert
         response.StatusCode.Should().Be(expected);
+        AssertPrivateHeadersOnPictureRoutes("PUT /me/picture", response);
         await ShouldHaveWrittenNothing("PUT /me/picture", subject);
+    }
+
+    // Picture routes are private on every status, including authentication and authorization failures (SEC-01, SEC-08).
+    private static void AssertPrivateHeadersOnPictureRoutes(string route, HttpResponseMessage response)
+    {
+        if (!route.EndsWith("/picture", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        response.Headers.CacheControl.Should().NotBeNull();
+        response.Headers.CacheControl!.Private.Should().BeTrue();
+        response.Headers.CacheControl.NoStore.Should().BeTrue();
+        response.Headers.GetValues("X-Content-Type-Options").Should().Equal("nosniff");
     }
 
     private static string NewSubject() => $"player-{Guid.NewGuid():N}";

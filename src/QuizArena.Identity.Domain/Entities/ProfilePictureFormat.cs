@@ -120,7 +120,15 @@ public static class ProfilePictureFormat
 
             if (IsStartOfFrame(marker))
             {
-                return length >= 8;
+                // ITU-T T.81 B.2.2: Lf(2) P(1) Y(2) X(2) Nf(1), then Nf three-byte component descriptors.
+                // Nf must be nonzero and Lf must equal 8 + 3 * Nf (already checked to lie within the body).
+                if (length < 8)
+                {
+                    return false;
+                }
+
+                var componentCount = content[offset + 7];
+                return componentCount > 0 && length == 8 + (3 * componentCount);
             }
 
             offset += length;
