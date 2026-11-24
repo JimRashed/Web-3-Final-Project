@@ -55,5 +55,23 @@ internal static class TestTokens
         return new JsonWebTokenHandler { SetDefaultTimesOnTokenCreation = false }.CreateToken(descriptor);
     }
 
+    public static string CreateLegacyCredential()
+    {
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "QuizArena",
+            Claims = new Dictionary<string, object>
+            {
+                ["sub"] = "00000000-0000-0000-0000-000000000001",
+                ["name"] = "legacy-test-player",
+            },
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32)), SecurityAlgorithms.HmacSha256),
+        };
+
+        return new JsonWebTokenHandler { SetDefaultTimesOnTokenCreation = false }.CreateToken(descriptor);
+    }
+
     private static RsaSecurityKey CreateKey(string keyId) => new(RSA.Create(2048)) { KeyId = keyId };
 }

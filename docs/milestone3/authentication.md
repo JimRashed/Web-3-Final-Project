@@ -130,7 +130,7 @@ app.MapControllers();
 | Actor | `User.GetAuthenticatedActor()` returns `(Issuer, Subject, Kind)` from validated claims only. Endpoints use it for ownership checks; never take the acting user from body, query or headers |
 | Errors | 401 `application/problem+json` with `WWW-Authenticate: Bearer`; 403 problem for missing scope/actor; both include `traceId` |
 | CORS | Policy `frontend` from `Cors:AllowedOrigins` (Development: `http://localhost:5173`); preflight succeeds without a token |
-| Startup | Fails fast if `Authentication:Authority` (absolute URI), `Audience`, `BrowserClientId` or `MachineClientId` is missing. `appsettings.json` leaves Authority blank; `appsettings.Development.json` points at local Keycloak with `RequireHttpsMetadata=false` |
+| Startup | Fails fast if `Authentication:Authority` (absolute http/https URI), `Audience`, `BrowserClientId` or `MachineClientId` is missing. `appsettings.json` leaves Authority blank; `appsettings.Development.json` points at local Keycloak with `RequireHttpsMetadata=false`. Stricter rules apply outside Development (below) |
 
 Usage in a future endpoint task (e.g. #35):
 
@@ -144,6 +144,10 @@ public async Task<IActionResult> GetStats(string userId, CancellationToken ct)
     ...
 }
 ```
+
+### Startup validation (SEC-A2, #138)
+
+The shared `Security/SecurityExtensions.cs` (identical on all six hosts) validates the bound options when the host starts. Outside the Development environment it also requires an https `Authentication:Authority`, `Authentication:RequireHttpsMetadata=true` and at least one entry in `Cors:AllowedOrigins`, each a pure origin (http or https scheme, host and optional port; no path, trailing slash, query, fragment or user info), because CORS compares entries with the browser `Origin` header. The policy is configured from the same values that are validated. In every environment each service refuses a blank `ConnectionStrings:DefaultConnection` or one that `SqlConnectionStringBuilder` cannot parse; the parse runs at registration without connecting, and the parser error is not chained because it can quote part of the value. Gameplay additionally requires absolute http/https `ServiceUrls:Lobby`, `QuestionBank`, `Statistics` and `Notification` in every environment, and `Authentication:MachineClientSecret` outside Development. Every message names the key, never the configured value. `StartupConfigurationTests` in the Gameplay and Identity integration tests cover each rule. Environment setup, key matrix and rotation: [runbook](runbook.md#environment-configuration-sec-a2-138).
 
 ### Security test matrix
 

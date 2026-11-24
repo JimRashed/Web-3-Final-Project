@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,5 +51,28 @@ public sealed class GameplayExceptionHandlerTests
 
         // Assert
         handled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_WithOwnershipDenial_WritesCanonicalProblem()
+    {
+        // Arrange
+        using var services = new ServiceCollection().AddLogging().AddProblemDetails().BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = services };
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var sut = new GameplayExceptionHandler(services.GetRequiredService<IProblemDetailsService>());
+
+        // Act
+        var handled = await sut.TryHandleAsync(context, new MatchAccessDeniedException("match-1", "player-x"), CancellationToken.None);
+
+        // Assert
+        handled.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        body.Position = 0;
+        using var json = await JsonDocument.ParseAsync(body);
+        const string forbidden = "Insufficient scope, actor kind or ownership";
+        json.RootElement.GetProperty("title").GetString().Should().Be(forbidden);
+        json.RootElement.GetProperty("detail").GetString().Should().Be(forbidden);
     }
 }

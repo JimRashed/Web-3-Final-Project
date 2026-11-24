@@ -18,35 +18,37 @@ public sealed class GameplayApplication(
     /// <summary>How often an answer is re-applied when the other player's answer was saved first.</summary>
     public const int MaxAnswerAttempts = 3;
 
+    private const int LobbyJoinCodeLength = 6;
+
     public async Task<(MatchResponse Match, bool Created)> CreateAsync(
         AuthenticatedActor actor,
         CreateMatchRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.JoinCode))
+        if (request.JoinCode is not { Length: LobbyJoinCodeLength } ||
+            !request.JoinCode.All(character => char.IsAsciiLetterUpper(character) || char.IsAsciiDigit(character)))
         {
-            throw new GameplayRequestException(StatusCodes.Status400BadRequest, "A join code is required.");
+            throw new GameplayRequestException(StatusCodes.Status400BadRequest, "Join code must contain six uppercase ASCII letters or digits.");
         }
 
         var lobby = await lobbies.GetAsync(request.JoinCode, cancellationToken)
             ?? throw new GameplayRequestException(StatusCodes.Status404NotFound, "The join code is unknown.");
 
-        // A repeated start must be idempotent: the lobby already owns a match. Authorization is
-        // rechecked, so only the host gets the existing match back.
+        if (!string.Equals(lobby.HostSubject, actor.Subject, StringComparison.Ordinal))
+        {
+            throw new GameplayRequestException(StatusCodes.Status403Forbidden, "Only the lobby host can start the match.");
+        }
+
+        // A repeated start by the verified host returns the match the lobby already owns.
         var existing = await matches.FindByLobbyAsync(lobby.LobbyId, cancellationToken);
         if (existing is not null)
         {
-            return (ExistingForHost(actor, lobby, existing), false);
+            return (MatchResponse.FromDomain(existing), false);
         }
 
         if (!lobby.IsLocked)
         {
             throw new GameplayRequestException(StatusCodes.Status409Conflict, "The lobby must be locked before a match can start.");
-        }
-
-        if (!string.Equals(lobby.HostSubject, actor.Subject, StringComparison.Ordinal))
-        {
-            throw new GameplayRequestException(StatusCodes.Status403Forbidden, "Only the lobby host can start the match.");
         }
 
         if (lobby.Members.Count != 2 || !lobby.Members.Contains(actor.Subject, StringComparer.Ordinal))
@@ -74,15 +76,10 @@ public sealed class GameplayApplication(
             // A concurrent start for the same lobby won the race: answer like a repeated start.
             var winner = await matches.FindByLobbyAsync(lobby.LobbyId, cancellationToken)
                 ?? throw new InvalidOperationException("The lobby's match was reported but could not be loaded.");
-            return (ExistingForHost(actor, lobby, winner), false);
+            return (MatchResponse.FromDomain(winner), false);
         }
         return (MatchResponse.FromDomain(match), true);
     }
-
-    private static MatchResponse ExistingForHost(AuthenticatedActor actor, LobbyState lobby, Match existing) =>
-        string.Equals(lobby.HostSubject, actor.Subject, StringComparison.Ordinal)
-            ? MatchResponse.FromDomain(existing)
-            : throw new GameplayRequestException(StatusCodes.Status403Forbidden, "Only the lobby host can start the match.");
 
     public async Task<MatchResponse> GetAsync(AuthenticatedActor actor, string matchId, CancellationToken cancellationToken) =>
         MatchResponse.FromDomain(await LoadForParticipantAsync(actor, matchId, cancellationToken));

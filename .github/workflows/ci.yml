@@ -22,20 +22,9 @@ jobs:
     name: backend build and tests
     runs-on: ubuntu-latest
 
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          ACCEPT_EULA: "Y"
-          MSSQL_SA_PASSWORD: "QuizArena!Ci123456"
-        ports:
-          - 1433:1433
-
     env:
       DOTNET_NOLOGO: "true"
       DOTNET_CLI_TELEMETRY_OPTOUT: "true"
-      # The per-test databases are created from this server connection string.
-      QUIZARENA_TEST_SQLSERVER: "Server=127.0.0.1,1433;User Id=sa;Password=QuizArena!Ci123456;TrustServerCertificate=True;Encrypt=False"
 
     steps:
       - uses: actions/checkout@v4
@@ -51,6 +40,21 @@ jobs:
         run: >
           dotnet build QuizArena.sln --no-restore -warnaserror
           -p:NuGetAudit=false
+
+      # SEC-10 (#138): no SQL password is committed. A per-job password is generated, masked before
+      # any use and handed to the container by variable name only. The per-test databases are created
+      # from QUIZARENA_TEST_SQLSERVER, which is exported for the later steps through GITHUB_ENV.
+      - name: Start SQL Server
+        shell: bash
+        run: |
+          set -euo pipefail
+          random="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9')"
+          # Fixed prefix guarantees SQL Server's complexity policy; it is not the secret.
+          MSSQL_SA_PASSWORD="Qa1!${random}"
+          echo "::add-mask::${MSSQL_SA_PASSWORD}"
+          export MSSQL_SA_PASSWORD
+          docker run -d --name sqlserver -p 1433:1433 -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD mcr.microsoft.com/mssql/server:2022-latest >/dev/null
+          echo "QUIZARENA_TEST_SQLSERVER=Server=127.0.0.1,1433;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False" >> "$GITHUB_ENV"
 
       - name: Wait for SQL Server
         run: |
@@ -75,6 +79,10 @@ jobs:
           name: backend-test-results
           path: "**/TestResults/**/*.trx"
           if-no-files-found: ignore
+
+      - name: Stop SQL Server
+        if: always()
+        run: docker rm -f sqlserver >/dev/null 2>&1 || true
 
   frontend:
     name: frontend typecheck, lint, tests and build

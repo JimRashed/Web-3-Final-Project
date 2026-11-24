@@ -14,6 +14,10 @@ export class ApiError extends Error {
 }
 export type RequestOptions = Omit<RequestInit, 'body' | 'headers' | 'credentials' | 'redirect'> & {
   body?: unknown; headers?: Record<string, string>;
+  /** Read the success body as bytes instead of JSON (private pictures, for example). */
+  responseType?: 'json' | 'blob';
+  /** Overrides the Accept header; the default is `application/json`. */
+  accept?: string;
 };
 
 function hasControlCharacters(value: string): boolean {
@@ -74,17 +78,26 @@ export function createHttpClient(base: string, session: Session, fetcher: typeof
         const token = await session.accessToken();
         controller.signal.throwIfAborted();
         const headers = new Headers(options.headers);
-        headers.set('Accept', 'application/json');
+        headers.set('Accept', options.accept ?? 'application/json');
         headers.set('Authorization', `Bearer ${token}`);
-        if (options.body !== undefined) headers.set('Content-Type', 'application/json');
+        // A Blob body is sent as raw bytes with its own media type; anything else is JSON.
+        const isBlob = options.body instanceof Blob;
+        if (isBlob) headers.set('Content-Type', (options.body as Blob).type);
+        else if (options.body !== undefined) headers.set('Content-Type', 'application/json');
         const response = await fetcher(url, {
-          ...options, headers, body: options.body === undefined ? undefined : JSON.stringify(options.body),
+          ...options, headers,
+          body: options.body === undefined ? undefined : isBlob ? options.body as Blob : JSON.stringify(options.body),
           signal: controller.signal, credentials: 'omit', redirect: 'error',
         });
         controller.signal.throwIfAborted();
         if (!response.ok) {
           if (response.status === 401) session.invalidate('expired');
           throw new ApiError(kindFor(response.status), response.status, await fieldErrors(response));
+        }
+        if (options.responseType === 'blob') {
+          const bytes = await response.blob();
+          controller.signal.throwIfAborted();
+          return bytes as T;
         }
         if (response.status === 204 || response.status === 205) return undefined as T;
         const body = await response.text();

@@ -52,7 +52,7 @@ Run from the repository root. The source and target databases must be on the sam
 
 ## Rollback
 
-- **Before the new services accept writes:** `-Mode Rollback -RunId <id>` removes exactly the rows that run imported and marks them `RolledBack`. It only removes a row that is **unchanged since import**: a profile that was renamed, or preferences the player changed afterwards, are kept and reported. The source was never modified, so routing back to the old host is enough.
+- **Before the new services accept writes:** `-Mode Rollback -RunId <id>` removes exactly the rows that run imported and marks them `RolledBack`. It only removes a row that is **unchanged since import**: a profile that was renamed, a profile that has an uploaded picture (so the profile cascade cannot delete it), or preferences the player changed afterwards, are kept and reported. Rollback refuses to run until the Identity database is migrated to the latest schema (the `ProfilePictures` table must exist). The source was never modified, so routing back to the old host is enough.
 - **After the new services have accepted writes:** do not route back to the stale legacy data. Freeze writes, snapshot the service databases and reconcile forward, as in [identity migration](identity-migration.md#ordered-transfer-and-reconciliation).
 - **Deleting the source database or the backup** is outside this tool and needs separate, explicit approval from the owners.
 
@@ -71,7 +71,7 @@ Run from the repository root. The source and target databases must be on the sam
 | Import | 1 profile imported, 1 existing live profile kept unchanged, 1 unmapped user quarantined; 3 results (including a historical 7) with lowercase match ids, 1 quarantined; preferences resolved by GUID and by username; created/completed events imported with the winner mapped, an unknown type and a non-JSON payload quarantined; questions quarantined (no options); 6 lobby and match rows archived; 2 bad mapping rows rejected; no password hash anywhere in the ledger |
 | Verify | nothing unaccounted, imported rows present, per-player totals equal |
 | Second import | no duplicates in any target |
-| Rollback | imported rows removed, a preference the player changed after import kept, the pre-existing profile kept, verify still passes |
+| Rollback | imported rows removed, a preference the player changed after import kept, an imported profile with an uploaded picture kept together with its picture, the pre-existing profile kept, verify still passes |
 | Source | checksum identical before and after |
 
 The rehearsal also caught three defects in the tool before any real use: temp tables lost inside parameterised batches, collation conflicts between tempdb and the binary-collated service columns, and the same conflict in rollback. All three were fixed and rerun.

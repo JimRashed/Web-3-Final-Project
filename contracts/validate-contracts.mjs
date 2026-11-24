@@ -1,11 +1,11 @@
-// P02 contract checker: intentionally a limited OpenAPI/JSON Schema subset.
+// Contract checker: intentionally a limited OpenAPI/JSON Schema subset.
 // No network, dependencies, writes, or claims of full OpenAPI certification.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 const names = ['identity','statistics','questionbank','lobby','gameplay','notification'];
 const expected = {
- identity: ['get /api/users/me','put /api/users/me','post /api/auth/register','post /api/auth/login','get /api/users/{id}','get /health'],
+ identity: ['get /api/users/me','put /api/users/me','get /api/users/me/picture','put /api/users/me/picture','post /api/auth/register','post /api/auth/login','get /api/users/{id}','get /health'],
  statistics: ['post /api/results','get /api/players/{userId}/stats','get /api/players/{userId}/matches','get /api/leaderboard','get /health'],
  questionbank: ['get /api/questions/generate','post /internal/question-sets','get /health'],
  lobby: ['post /api/lobbies','get /api/lobbies/{joinCode}','post /api/lobbies/{joinCode}/join','post /api/lobbies/{joinCode}/lock','get /internal/lobbies/{joinCode}','get /health'],
@@ -15,10 +15,13 @@ const expected = {
 // Independent normative expectations: changing a document's metadata together
 // must not turn a protected route public or replace its required response body.
 // Tuple: actor, exact policy, request schema (null = none), outcome schemas.
+// 'image' means raw binary image media (IMAGE_MEDIA) instead of a JSON schema.
 const routeContracts = {
  identity: {
   'get /api/users/me': ['user','profiles.read',null,{200:'Profile'}],
-  'put /api/users/me': ['user','profiles.write','UpdateProfile',{200:'Profile'}],
+  'put /api/users/me': ['user','profiles.write','UpdateProfile',{200:'Profile',415:'UnsupportedProfileMediaType'}],
+  'get /api/users/me/picture': ['user','profiles.read',null,{200:'image'}],
+  'put /api/users/me/picture': ['user','profiles.write','image',{200:'Profile'}],
   'post /api/auth/register': ['public','public',null,{410:'Problem'}],
   'post /api/auth/login': ['public','public',null,{410:'Problem'}],
   'get /api/users/{id}': ['public','public',null,{410:'Problem'}]
@@ -53,14 +56,47 @@ const routeContracts = {
   'put /users/{userId}/preferences': ['user','preferences.write','UpdatePreferences',{200:'Preferences'}]
  }
 };
+// Accepted picture media (SEC-02). Exact set: adding SVG, GIF or anything else fails.
+const IMAGE_MEDIA = ['image/png','image/jpeg','image/webp'];
+// Operations that are documented but not implemented yet. Only these may carry
+// x-status: proposed, and each must name the issue that implements it. None are
+// proposed now (#144 shipped the picture routes); list a future one here with its issue.
+const proposedOps = {};
+// Error outcomes a route must declare beyond the shared 401/403 rule.
+const requiredOutcomes = {
+ identity: {'get /api/users/me/picture':[404,503],'put /api/users/me/picture':[400,404,409,413,415,503]}
+};
+// Response headers a route must declare, with their exact example value (SEC-08).
+const requiredHeaders = {
+ identity: {'get /api/users/me/picture':{200:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}}}
+};
 function matchesSchema(s,name) {
  if(name.endsWith('[]'))return s?.type==='array'&&s.items?.$ref==='#/components/schemas/'+name.slice(0,-2);
  return s?.$ref==='#/components/schemas/'+name;
 }
-const allowed = new Set(['$ref','type','format','nullable','enum','required','additionalProperties','properties','items','minItems','maxItems','uniqueItems','minimum','maximum','minLength','maxLength','pattern','default','description']);
+const allowed = new Set(['$ref','type','format','nullable','enum','required','additionalProperties','properties','items','minItems','maxItems','uniqueItems','minimum','maximum','minLength','maxLength','pattern','default','description','x-status','x-implemented-by']);
 const has = (o,k) => Object.hasOwn(o,k);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail = (ok,message) => { if (!ok) throw new Error(message); };
+// Raw image content: exactly IMAGE_MEDIA, each a binary string with an example.
+// Kept apart from schema() so format: binary never becomes valid inside JSON schemas.
+function imageContent(content,label) {
+ fail(content&&typeof content==='object','Missing image content '+label);
+ assert.deepEqual(Object.keys(content).sort(),[...IMAGE_MEDIA].sort(),'Exact image media '+label);
+ for(const [m,media]of Object.entries(content)){
+  fail(Object.keys(media.schema||{}).length===2&&media.schema.type==='string'&&media.schema.format==='binary','Image media must be a binary string '+label+' '+m);
+  fail(has(media,'example')&&typeof media.example==='string','Missing image example '+label+' '+m);
+ }
+ return IMAGE_MEDIA.length;
+}
+// x-status/x-implemented-by: returns true for a correctly marked proposed item.
+function marker(o,label) {
+ if(has(o,'x-implemented-by'))fail(has(o,'x-status'),'x-implemented-by without x-status '+label);
+ if(!has(o,'x-status'))return false;
+ fail(o['x-status']==='proposed','Unsupported x-status '+label);
+ fail(typeof o['x-implemented-by']==='string'&&/^#\d+$/.test(o['x-implemented-by']),'Proposed item needs x-implemented-by issue '+label);
+ return true;
+}
 function resolve(d,s) {
  if (!s.$ref) return s;
  fail(/^#\/components\/schemas\/[^/]+$/.test(s.$ref),'Only local schema refs supported: '+s.$ref);
@@ -77,6 +113,8 @@ function schema(d,s,seen=new Set()) {
  if(s.type==='object') {
   fail(s.properties && s.additionalProperties===false,'Object must explicitly prohibit extra fields');
   for(const n of s.required||[])fail(has(s.properties,n),'Required property not declared '+n);
+  // A proposed property stays optional until its implementing issue removes the marker.
+  for(const [n,p]of Object.entries(s.properties))if(marker(p,'property '+n))fail(!(s.required||[]).includes(n),'Proposed property must not be required '+n);
   for(const p of Object.values(s.properties))schema(d,p,seen);
  }
  if(s.type==='array')schema(d,s.items,seen);
@@ -138,13 +176,26 @@ function validate(all){
     ? ['public','public',null,{200:'Health'}] : routeContracts[name]?.[method+' '+path];
    fail(contract,'Unexpected route contract '+name+' '+method+' '+path);
    const [actor,policy,request,outcomes] = contract;
-   fail(o['x-actor']===actor&&o['x-policy']===policy,'Normative actor/policy mismatch '+name+' '+method+' '+path);
-   if(request){
+   const key=method+' '+path;
+   fail(o['x-actor']===actor&&o['x-policy']===policy,'Normative actor/policy mismatch '+name+' '+key);
+   // Only listed operations may be proposed; a listed one must stay marked until its issue lands.
+   const proposedBy=proposedOps[name]?.[key];
+   fail(marker(o,'operation '+name+' '+key)===Boolean(proposedBy),'Proposed marker mismatch '+name+' '+key);
+   if(proposedBy)fail(o['x-implemented-by']===proposedBy,'Proposed operation must name '+proposedBy+' '+key);
+   for(const code of requiredOutcomes[name]?.[key]||[])fail(o.responses?.[code],'Missing required outcome '+code+' '+key);
+   for(const [code,headers]of Object.entries(requiredHeaders[name]?.[key]||{}))for(const [h,v]of Object.entries(headers)){
+    const header=o.responses?.[code]?.headers?.[h];
+    fail(header?.schema?.type==='string'&&header.example===v,'Missing required header '+h+': '+v+' on '+code+' '+key);
+   }
+   if(request==='image'){
+    fail(o.requestBody?.required===true,'Missing/incorrect normative request schema');imageContent(o.requestBody.content,key+':request');
+   }else if(request){
     fail(o.requestBody?.required===true&&matchesSchema(o.requestBody.content?.['application/json']?.schema,request),'Missing/incorrect normative request schema');
    }else fail(!o.requestBody,'Unexpected request body');
    for(const [code,body]of Object.entries(outcomes)){
     const response=o.responses?.[code];fail(response,'Missing normative outcome '+code);
     if(body===null)fail(!response.content,'Expected empty response body');
+    else if(body==='image')imageContent(response.content,key+':'+code);
     else fail(matchesSchema(response.content?.[Number(code)>=400?'application/problem+json':'application/json']?.schema,body),'Missing/incorrect normative response schema '+code);
    }
    for(const code of Object.keys(o.responses||{}))if(Number(code)<400)fail(has(outcomes,code),'Unexpected successful outcome '+code);
@@ -168,12 +219,14 @@ function validate(all){
    for(const [code,r]of Object.entries(o.responses)){
     fail(r.description,'Missing response description');
     if(Number(code)>=400)fail(r.content?.['application/problem+json'],'Missing error schema');
+    if(outcomes[code]==='image'){examples+=imageContent(r.content,key+':'+code);continue;}
     for(const media of Object.values(r.content||{})){
      schema(d,media.schema);fail(has(media,'example'),'Missing response example');value(d,media.schema,media.example,o.operationId+':'+code);examples++;
      if(o['x-actor']!=='machine')publicSafe(d,media.schema);
     }
    }
-   if(o.requestBody){
+   if(o.requestBody&&request==='image')examples+=imageContent(o.requestBody.content,key+':request');
+   else if(o.requestBody){
     const media=o.requestBody.content?.['application/json'];fail(media,'Missing JSON request');schema(d,media.schema);
     value(d,media.schema,media.example,o.operationId+':request');examples++;
     if(o['x-actor']==='user'){
@@ -185,7 +238,7 @@ function validate(all){
   assert.deepEqual(actual.sort(),[...expected[name]].sort(),'Operation inventory '+name);
   perService[name]=actual.length;
  }
- fail(operations===30,'Expected 30 operations');
+ fail(operations===32,'Expected 32 operations');
  const qs=all.questionbank.paths['/internal/question-sets'].post.responses[200].content['application/json'].example;
  fail(new Set(qs.map(q=>q.id)).size===5,'Snapshot needs distinct IDs');
  for(const q of qs)fail(q.options.filter(a=>a===q.correctAnswer).length===1,'Snapshot answer must match one option');
@@ -202,6 +255,7 @@ function validate(all){
 const documents=Object.fromEntries(names.map(n=>[n,JSON.parse(readFileSync(fileURLToPath(new URL('./openapi/'+n+'.yaml',import.meta.url)),'utf8'))]));
 const result=validate(documents);
 const probes=[
+ ['profile update media type outcome removed',d=>{delete d.identity.paths['/api/users/me'].put.responses[415];},/Missing normative outcome 415/],
  ['dangling ref',d=>{d.identity.paths['/api/users/me'].get.responses[200].content['application/json'].schema={$ref:'#/components/schemas/Missing'};}],
  ['missing security',d=>{delete d.gameplay.paths['/matches'].post.security;}],
  ['invalid example',d=>{d.statistics.paths['/api/results'].post.requestBody.content['application/json'].example.score=6;}],
@@ -213,7 +267,19 @@ const probes=[
  ['write scope changed to read',d=>{const o=d.identity.paths['/api/users/me'].put;o['x-policy']='profiles.read';o.security=[{oauth2:['profiles.read']}];}],
  ['machine scope in browser flow',d=>{d.statistics.components.securitySchemes.oauth2.flows.authorizationCode.scopes['results.write']='results.write';}],
  ['user scope in machine flow',d=>{d.lobby.components.securitySchemes.oauth2.flows.clientCredentials.scopes['lobbies.write']='lobbies.write';}],
- ['required machine scope removed',d=>{delete d.notification.components.securitySchemes.oauth2.flows.clientCredentials.scopes['events.write'];}]
+ ['required machine scope removed',d=>{delete d.notification.components.securitySchemes.oauth2.flows.clientCredentials.scopes['events.write'];}],
+ ['implemented picture operation marked proposed',d=>{Object.assign(d.identity.paths['/api/users/me/picture'].put,{'x-status':'proposed','x-implemented-by':'#144'});},/Proposed marker mismatch/],
+ ['implemented-by without status',d=>{d.identity.paths['/api/users/me/picture'].put['x-implemented-by']='#144';},/x-implemented-by without x-status/],
+ ['picture cache-control header removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[200].headers['Cache-Control'];},/Missing required header Cache-Control/],
+ ['picture nosniff header weakened',d=>{d.identity.paths['/api/users/me/picture'].get.responses[200].headers['X-Content-Type-Options'].example='sniff';},/Missing required header X-Content-Type-Options/],
+ ['picture read outage outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].get.responses[503];},/Missing required outcome 503/],
+ ['svg picture accepted',d=>{d.identity.paths['/api/users/me/picture'].put.requestBody.content['image/svg+xml']={schema:{type:'string',format:'binary'},example:'<svg/>'};}],
+ ['picture read made public',d=>{const o=d.identity.paths['/api/users/me/picture'].get;o['x-actor']='public';o['x-policy']='public';o.security=[];}],
+ ['picture size limit outcome removed',d=>{delete d.identity.paths['/api/users/me/picture'].put.responses[413];}],
+ ['implemented operation marked proposed',d=>{Object.assign(d.identity.paths['/api/users/me'].get,{'x-status':'proposed','x-implemented-by':'#144'});}],
+ ['required property marked proposed',d=>{Object.assign(d.identity.components.schemas.Profile.properties.picture,{'x-status':'proposed','x-implemented-by':'#144'});},/Proposed property must not be required/],
+ ['profile example without picture',d=>{delete d.identity.paths['/api/users/me'].get.responses[200].content['application/json'].example.picture;},/missing picture/]
 ];
-for(const [name,mutate]of probes){const copy=structuredClone(documents);mutate(copy);assert.throws(()=>validate(copy),undefined,'Failed corruption probe '+name);}
+// Optional third element: the failure reason the probe must produce.
+for(const [name,mutate,reason]of probes){const copy=structuredClone(documents);mutate(copy);assert.throws(()=>validate(copy),reason?{message:reason}:undefined,'Failed corruption probe '+name);}
 console.log(JSON.stringify({status:'PASS',...result,corruptionProbes:probes.length,limitation:'Limited used-keyword schema checks and contract invariants; not full OpenAPI certification or runtime API tests.'},null,2));

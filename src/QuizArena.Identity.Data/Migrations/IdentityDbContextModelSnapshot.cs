@@ -58,6 +58,52 @@ namespace QuizArena.Identity.Data.Migrations
 
                     b.ToTable("UserProfiles", (string)null);
                 });
+
+            modelBuilder.Entity("QuizArena.Identity.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProfileId");
+
+                    b.ToTable("ProfilePictures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProfilePictures_ContentLength", "DATALENGTH([Content]) BETWEEN 1 AND 2097152");
+
+                            t.HasCheckConstraint("CK_ProfilePictures_ContentType", "([ContentType] + N'|') COLLATE Latin1_General_BIN2 IN (N'image/jpeg|', N'image/png|', N'image/webp|')");
+
+                            t.HasCheckConstraint("CK_ProfilePictures_Version", "[Version] >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("QuizArena.Identity.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.HasOne("QuizArena.Identity.Domain.Entities.PlayerProfile", null)
+                        .WithOne()
+                        .HasForeignKey("QuizArena.Identity.Domain.Entities.ProfilePicture", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

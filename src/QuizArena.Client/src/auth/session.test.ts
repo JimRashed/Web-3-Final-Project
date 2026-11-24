@@ -169,4 +169,34 @@ describe('OIDC session', () => {
     expect(JSON.stringify(session.getSnapshot())).not.toContain('access-one');
     expect(local).not.toHaveBeenCalled();
   });
+  it('keeps only the match ID across sign-in and never stores or returns the access token', async () => {
+    const token = 'sentinel-access-token';
+    const previousUrl = window.location.href;
+    try {
+      window.sessionStorage.clear();
+      window.history.replaceState(null, '', '/matches?matchId=m-1');
+      const { session, adapter } = await sessionDouble(false);
+      adapter.token = token;
+      await session.login();
+      const stored = Array.from({ length: window.sessionStorage.length }, (_, index) => {
+        const key = window.sessionStorage.key(index) ?? '';
+        return [key, window.sessionStorage.getItem(key)];
+      });
+      expect(stored).toEqual([['quizarena.login.matchId', 'm-1']]);
+      expect(JSON.stringify(session.getSnapshot())).not.toContain(token);
+
+      window.history.replaceState(null, '', '/auth/callback');
+      const { session: callback, adapter: callbackAdapter } = await sessionDouble();
+      callbackAdapter.token = token;
+      const destination = new URL(callback.completeLoginRedirect(), window.location.origin);
+      expect([...destination.searchParams.keys()]).toEqual(['matchId']);
+      expect(destination.searchParams.get('matchId')).toBe('m-1');
+      expect(destination.href).not.toContain(token);
+      expect(JSON.stringify(callback.getSnapshot())).not.toContain(token);
+      expect(window.sessionStorage.length).toBe(0);
+    } finally {
+      window.history.replaceState(null, '', previousUrl);
+      window.sessionStorage.removeItem('quizarena.login.matchId');
+    }
+  });
 });

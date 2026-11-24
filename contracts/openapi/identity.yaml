@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "QuizArena identity API — proposed P02",
+    "title": "QuizArena identity API",
     "version": "1.0.0",
-    "description": "Proposed contract pending final team review. Existing application does not yet implement this service. See docs/milestone3/api-contracts.md. JSON-compatible YAML; no credentials in examples."
+    "description": "Version 1 operations are implemented by the Identity service. See docs/milestone3/api-contracts.md. Security decisions SEC-01..SEC-08 remain pending team approval (docs/milestone3/security-decisions.md). JSON-compatible YAML; no credentials in examples."
   },
   "servers": [
     {
@@ -49,7 +49,8 @@
                   "id": "26c94137-d660-4397-a731-050c2bb07002",
                   "issuer": "http://localhost:8080/realms/quizarena",
                   "subject": "player-a",
-                  "displayName": "Alex"
+                  "displayName": "Alex",
+                  "picture": null
                 }
               }
             }
@@ -181,7 +182,8 @@
                   "id": "26c94137-d660-4397-a731-050c2bb07002",
                   "issuer": "http://localhost:8080/realms/quizarena",
                   "subject": "player-a",
-                  "displayName": "Alex"
+                  "displayName": "Alex",
+                  "picture": null
                 }
               }
             }
@@ -246,6 +248,22 @@
               }
             }
           },
+          "415": {
+            "description": "Profile updates require application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsupportedProfileMediaType"
+                },
+                "example": {
+                  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.16",
+                  "title": "Unsupported Media Type",
+                  "status": 415,
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected failure; safe response",
             "content": {
@@ -290,6 +308,398 @@
               },
               "example": {
                 "displayName": "Alex"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me/picture": {
+      "get": {
+        "operationId": "getMyPicture",
+        "tags": [
+          "identity"
+        ],
+        "summary": "getMyPicture",
+        "description": "Implemented by #144 (SEC-01, SEC-08): returns the caller's own picture bytes, owner resolved only from the validated issuer/subject. Private: bearer GET only, no public or signed URLs. Content-Type is the stored validated type.",
+        "security": [
+          {
+            "oauth2": [
+              "profiles.read"
+            ]
+          }
+        ],
+        "x-policy": "profiles.read",
+        "x-actor": "user",
+        "x-audience": "quizarena-identity",
+        "x-ownership": "validated issuer/subject",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Picture bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "<binary image bytes>"
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "<binary image bytes>"
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "<binary image bytes>"
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "private, no-store",
+                "description": "Never cached by shared caches or stored"
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "nosniff",
+                "description": "Disables content sniffing"
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No profile or no picture for the caller",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "No profile or no picture for the caller",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Picture storage unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Picture storage unavailable",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceMyPicture",
+        "tags": [
+          "identity"
+        ],
+        "summary": "replaceMyPicture",
+        "description": "Implemented by #144 (SEC-01, SEC-02, SEC-06, SEC-07): replaces the caller's single picture atomically; under concurrency the first committer wins and the loser gets 409. Raw request body (not multipart) of at most 2,097,152 bytes (2 MiB); PNG, JPEG or WebP only and the magic bytes must match the Content-Type; SVG and GIF are rejected. Confirmed rejections and rollbacks (400, 401, 403, 404, 409, 413, 415, 503) keep the previous picture. Exception: a 500 titled 'Upload outcome unknown' means the commit could not be confirmed, so the replacement may have been stored; clients must reload the profile (GET /api/users/me) before retrying instead of assuming the previous picture remains.",
+        "security": [
+          {
+            "oauth2": [
+              "profiles.write"
+            ]
+          }
+        ],
+        "x-policy": "profiles.write",
+        "x-actor": "user",
+        "x-audience": "quizarena-identity",
+        "x-ownership": "validated issuer/subject",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Raw image bytes, at most 2,097,152 bytes (2 MiB). Magic bytes must match the Content-Type. SVG, GIF and other types are rejected with 415.",
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              },
+              "example": "<binary image bytes>"
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              },
+              "example": "<binary image bytes>"
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              },
+              "example": "<binary image bytes>"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                },
+                "example": {
+                  "id": "26c94137-d660-4397-a731-050c2bb07002",
+                  "issuer": "http://localhost:8080/realms/quizarena",
+                  "subject": "player-a",
+                  "displayName": "Alex",
+                  "picture": {
+                    "contentType": "image/png",
+                    "updatedAt": "2026-11-21T12:00:00Z",
+                    "version": 1
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty or malformed image (magic bytes match but the format header is truncated or invalid: PNG IHDR, JPEG SOFn, WebP RIFF/VP8 chunk), or Content-Type does not match the bytes; pixel dimensions are not checked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/400",
+                  "title": "Invalid input",
+                  "status": 400,
+                  "detail": "Empty or malformed image (magic bytes match but the format header is truncated or invalid: PNG IHDR, JPEG SOFn, WebP RIFF/VP8 chunk), or Content-Type does not match the bytes; pixel dimensions are not checked",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/401",
+                  "title": "Missing or invalid bearer token",
+                  "status": 401,
+                  "detail": "Missing or invalid bearer token",
+                  "traceId": "example-trace"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer",
+                "description": "Bearer authentication challenge"
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope, actor kind or ownership",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/403",
+                  "title": "Insufficient scope, actor kind or ownership",
+                  "status": 403,
+                  "detail": "Insufficient scope, actor kind or ownership",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No profile yet; save a display name first",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/404",
+                  "title": "Resource not found",
+                  "status": 404,
+                  "detail": "No profile yet; save a display name first",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A concurrent request committed first (rowversion check or first-upload primary-key insert race lost); the first committer wins, retry. Sequential requests each replace the picture",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/409",
+                  "title": "Conflicting duplicate or state",
+                  "status": 409,
+                  "detail": "A concurrent request committed first (rowversion check or first-upload primary-key insert race lost); the first committer wins, retry. Sequential requests each replace the picture",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Image exceeds 2,097,152 bytes",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/413",
+                  "title": "Payload too large",
+                  "status": 413,
+                  "detail": "Image exceeds 2,097,152 bytes",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Only image/png, image/jpeg and image/webp are accepted",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/415",
+                  "title": "Unsupported media type",
+                  "status": 415,
+                  "detail": "Only image/png, image/jpeg and image/webp are accepted",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure; safe response. When titled 'Upload outcome unknown' the commit could not be confirmed and the replacement may have been stored (not covered by the previous-picture guarantee): reload the profile before retrying.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/500",
+                  "title": "Unexpected failure; safe response",
+                  "status": 500,
+                  "detail": "Unexpected failure; safe response",
+                  "traceId": "example-trace"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Picture storage unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "https://example.invalid/problems/503",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Picture storage unavailable",
+                  "traceId": "example-trace"
+                }
               }
             }
           }
@@ -507,6 +917,36 @@
           }
         }
       },
+      "UnsupportedProfileMediaType": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              415
+            ]
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
       "Health": {
         "type": "object",
         "additionalProperties": false,
@@ -547,7 +987,8 @@
           "id",
           "issuer",
           "subject",
-          "displayName"
+          "displayName",
+          "picture"
         ],
         "properties": {
           "id": {
@@ -566,6 +1007,35 @@
             "minLength": 1,
             "maxLength": 80,
             "pattern": "\\S"
+          },
+          "picture": {
+            "type": "object",
+            "nullable": true,
+            "description": "Implemented by #144 (SEC-03): metadata of the caller's picture, or null when none (always present). Never contains a storage key, path or URL.",
+            "additionalProperties": false,
+            "required": [
+              "contentType",
+              "updatedAt",
+              "version"
+            ],
+            "properties": {
+              "contentType": {
+                "type": "string",
+                "enum": [
+                  "image/png",
+                  "image/jpeg",
+                  "image/webp"
+                ]
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
           }
         }
       },
