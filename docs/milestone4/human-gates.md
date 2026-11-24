@@ -1,10 +1,10 @@
 # Milestone 4 — human gate record
 
 Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3), parent
-[#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136). Candidate revision `68b7ecd` (first reconciled on `46f847b`).
+[#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136). Final revision `main` at `14ac63e` (earlier candidate `68b7ecd`, first reconciled on `46f847b`).
 
-This page records what the GitHub reviews API showed on 2026-11-23 for every PR merged into
-`feature/milestone-4-security-and-cross-device-profiles`. It was assembled by the Dispatcher pipeline: it is
+This page records what the GitHub reviews API showed on 2026-11-23 and 2026-11-24 for every PR merged into
+`feature/milestone-4-security-and-cross-device-profiles`, and for the milestone PR #166 into `main`. It was assembled by the Dispatcher pipeline: it is
 agent reconciliation, not an approval, and it does not replace any human signoff.
 
 ## The gate this milestone asks for
@@ -35,12 +35,15 @@ A `COMMENTED` or `CHANGES_REQUESTED` review is not an approval.
 | [#160](https://github.com/JimRashed/Web-3-Final-Project/pull/160) (#147) | SuSu-Lisu | CarterBeasse COMMENTED @ `652ea23` (05:22:27) | After (merged 05:04:57) | CI only; no journey run output |
 | [#163](https://github.com/JimRashed/Web-3-Final-Project/pull/163) (#147) | SuSu-Lisu | CarterBeasse COMMENTED @ `ae142e6` (05:29:22) | After (merged 05:29:19, 3 s earlier) | PR body reports 17/17 with 13 lines pasted; full run on the #147 issue |
 | [#165](https://github.com/JimRashed/Web-3-Final-Project/pull/165) (#145, evidence docs) | SuSu-Lisu | CarterBeasse CHANGES_REQUESTED @ `7bfa9f1` (05:28:47) | Before, outstanding at merge (merged 05:29:21, 34 s later) | Screenshots of a live run on `46f847b` |
+| [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167) (#162 follow-up) | CarterBeasse | JimRashed APPROVED @ `39cd133` (head, 23:24:11) | Before (merged 23:30:29) | Migration and store tests in the PR |
+| [#164](https://github.com/JimRashed/Web-3-Final-Project/pull/164) (#148, Phase A docs) | CarterBeasse | JimRashed COMMENTED @ `67e1ebe`; APPROVED @ `d56f5ff` (head, 23:23:43) | Before (merged 23:30:33) | Automated results on `68b7ecd` (docs) |
+| [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) (milestone → `main`) | SuSu-Lisu | CarterBeasse CHANGES_REQUESTED @ `68b7ecd` (11-23 12:36:23); JimRashed COMMENTED @ `68b7ecd` | Outstanding at merge (merged 11-24 00:26:12 at `6fa8b3e`) | CI; description's review record contradicts the reviews API |
 
 The test counts are what each PR body reported at the time. They are historical, not results for the candidate revision.
 
 ## Exceptions
 
-Seven of fifteen PRs met the independent-review gate on their merged commit. The others:
+Nine of eighteen PRs met the independent-review gate on their merged commit (including #164 and #167). The others:
 
 1. **#151**: merged by the author with CarterBeasse's CHANGES_REQUESTED (at `4c4ad3f`) outstanding and no
    approval. CarterBeasse's comment on the head commit came at 05:01:25, two minutes after the merge at 04:59:24.
@@ -54,7 +57,12 @@ Seven of fifteen PRs met the independent-review gate on their merged commit. The
 6. **#165**: merged by the author at 05:29:21 with CarterBeasse's CHANGES_REQUESTED of 05:28:47 outstanding
    and no approval ([review 6016941081](https://github.com/JimRashed/Web-3-Final-Project/pull/165#pullrequestreview-6016941081)).
 
-Eight PRs in total: #151, #157, #158, #159, #160, #161, #163 and #165.
+7. **#166** (milestone PR → `main`): merged by the author SuSu-Lisu on 2026-11-24 at 00:26:12 (head `6fa8b3e`,
+   merge `14ac63e`) with CarterBeasse's CHANGES_REQUESTED (at `68b7ecd`) outstanding, JimRashed COMMENTED and no
+   approval. Its "Review record" section was not corrected and contradicts the reviews API; CarterBeasse posted a
+   [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500).
+
+Nine PRs in total: #151, #157, #158, #159, #160, #161, #163, #165 and #166.
 
 Details and the open findings these reviews raised are in
 [requirements-traceability.md](requirements-traceability.md#review-compliance-exceptions).
@@ -72,20 +80,22 @@ Details and the open findings these reviews raised are in
 ## Threat model review
 
 [`docs/milestone3/threat-model.md`](../milestone3/threat-model.md) was reconciled against `46f847b` and then
-`68b7ecd` by this PR. That reconciliation is agent work. Independent human review of the threat model is still pending.
+`68b7ecd` by #164, and its reviewed base updated to `14ac63e` afterwards. That reconciliation is agent work. Independent human review of the threat model is still pending.
 
 ## What is still needed from humans
 
 - SuSu-Lisu's decision on the SEC-01 to SEC-12 decisions (approval or requested changes), recorded on #137 or #149.
-- A human review of this PR and of the threat-model reconciliation.
+- A human review of the threat-model reconciliation.
 - Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #160 (4),
-  #163 (1) and #165 (4).
-- A team decision on whether #157, #160, #161, #163 and #165 get a retro-review, and whether the four post-approval
-  commits on #159 need one.
+  #163 (1), #165 (4) and #166 (3).
+- A team decision on whether #157, #160, #161, #163, #165 and #166 get a retro-review, and whether the four
+  post-approval commits on #159 need one.
 - A team view on #145 and #147, which were closed at 05:29:25 and 05:29:23 with the gaps recorded in
   [requirements-traceability.md](requirements-traceability.md#issue-state).
-- A response to CarterBeasse's CHANGES_REQUESTED review (2026-11-23 12:36:23, at `68b7ecd`) on the draft
-  milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166): its description's review record contradicts the reviews API (it lists
-  #157, #158, #163, #164 and #165 as approved) and it overstates approved contracts, matrix enforcement,
-  rejected-upload behaviour and sign-out. The record on this page is the one taken from the reviews API.
-- The live runs listed in [validation-results.md](validation-results.md) (Phase B).
+- A response to CarterBeasse's CHANGES_REQUESTED review (2026-11-23 12:36:23, at `68b7ecd`) on milestone PR
+  [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166), which was merged with it outstanding: its description's review record contradicts the
+  reviews API (it lists #157, #158, #163, #164 and #165 as approved) and it overstates approved contracts, matrix
+  enforcement, rejected-upload behaviour and sign-out. The record on this page is the one taken from the reviews
+  API; see also the [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500).
+- A decision on the live checks listed as not run in [validation-results.md](validation-results.md#final-revision-main-at-14ac63e):
+  run them on `14ac63e`, or keep them recorded as not run.

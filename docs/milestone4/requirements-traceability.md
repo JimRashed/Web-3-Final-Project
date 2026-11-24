@@ -4,11 +4,14 @@ Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D
 [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) (SEC-D), tracker
 [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) (QA-SEC).
 
-- **Candidate revision:** `68b7ecd` on `feature/milestone-4-security-and-cross-device-profiles`
-  (merge of [PR #165](https://github.com/JimRashed/Web-3-Final-Project/pull/165)). The first reconciliation used `46f847b` (merge of PR #160); `46f847b` is kept
-  below where it marks the revision something was observed on.
+- **Final revision:** `main` at `14ac63e` (merge of milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166), head `6fa8b3e`;
+  includes [#164](https://github.com/JimRashed/Web-3-Final-Project/pull/164) and [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167)). Validation on it: [validation-results.md](validation-results.md#final-revision-main-at-14ac63e).
+- **Earlier candidate:** `68b7ecd` on `feature/milestone-4-security-and-cross-device-profiles`
+  (merge of [PR #165](https://github.com/JimRashed/Web-3-Final-Project/pull/165)). The first reconciliation used `46f847b` (merge of PR #160); both are kept
+  below where they mark the revision something was observed on.
 - **Data source:** `gh pr view` / `gh api .../reviews` on 2026-11-23, collected in the Dispatcher Prime brief
-  and refreshed for PRs #151, #160, #163 and #165 and issues #145 and #147 the same day. Hand-built; `scripts/traceability/build-traceability.py`
+  and refreshed for PRs #151, #160, #163 and #165 and issues #145 and #147 the same day, then on 2026-11-24 for
+  PRs #164, #166 and #167 and issues #132 to #141 and #148. Hand-built; `scripts/traceability/build-traceability.py`
   is specific to Milestone 3.
 - **Issue links:** GitHub's `closingIssuesReferences` is empty for these PRs because the base branch is not
   the default branch. The issue for each PR comes from the closing reference in its PR body.
@@ -17,7 +20,7 @@ Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D
 
 ## Issue → PR → commit → review
 
-Times are UTC on 2026-11-22 or 2026-11-23. "Teammate approval before merge" means an `APPROVED` review from
+Times are UTC on 2026-11-22 to 2026-11-24. "Teammate approval before merge" means an `APPROVED` review from
 someone other than the author, submitted before the merge.
 
 | Issue | PR | Author | Merged by / at | Head → merge | Reviews (state @ commit) | Teammate approval before merge | Unreplied threads |
@@ -37,6 +40,9 @@ someone other than the author, submitted before the merge.
 | part of [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | [#160](https://github.com/JimRashed/Web-3-Final-Project/pull/160) | SuSu-Lisu | SuSu-Lisu, 11-23 05:04:57 | `652ea23` → `46f847b` | CarterBeasse COMMENTED @ `652ea23` (05:22:27, after merge) | No | 4 |
 | part of [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | [#163](https://github.com/JimRashed/Web-3-Final-Project/pull/163) | SuSu-Lisu | SuSu-Lisu, 11-23 05:29:19 | `ae142e6` → `94bc2e3` | CarterBeasse COMMENTED @ `ae142e6` (05:29:22, 3 s after merge) | No | 1 |
 | part of [#145](https://github.com/JimRashed/Web-3-Final-Project/issues/145) (evidence docs) | [#165](https://github.com/JimRashed/Web-3-Final-Project/pull/165) | SuSu-Lisu | SuSu-Lisu, 11-23 05:29:21 | `7bfa9f1` → `68b7ecd` | CarterBeasse CHANGES_REQUESTED @ `7bfa9f1` (05:28:47, 34 s before merge) | No | 4 |
+| [#143](https://github.com/JimRashed/Web-3-Final-Project/issues/143) follow-up | [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167) | CarterBeasse | CarterBeasse, 11-23 23:30:29 | `39cd133` → `777c0bd` | JimRashed APPROVED @ head (23:24:11) | Yes | 0 |
+| part of [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (Phase A docs) | [#164](https://github.com/JimRashed/Web-3-Final-Project/pull/164) | CarterBeasse | CarterBeasse, 11-23 23:30:33 | `d56f5ff` → `6fa8b3e` | JimRashed COMMENTED @ `67e1ebe`, APPROVED @ head (23:23:43) | Yes | 0 |
+| milestone PR (→ `main`) | [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) | SuSu-Lisu | SuSu-Lisu, 11-24 00:26:12 | `6fa8b3e` → `14ac63e` | CarterBeasse CHANGES_REQUESTED @ `68b7ecd` (11-23 12:36:23), JimRashed COMMENTED @ `68b7ecd` | No | 3 |
 
 All review threads show `resolved=false`: the team signals resolution by replying in the thread, not by
 pressing "Resolve". Unreplied counts are threads with no reply from the PR author.
@@ -55,12 +61,14 @@ Only what the review record shows. "Unreplied" means the PR author has not repli
 | [#154](https://github.com/JimRashed/Web-3-Final-Project/pull/154) | JimRashed COMMENTED twice; SuSu-Lisu APPROVED at head. | Approved; follow-up delivered in [#162](https://github.com/JimRashed/Web-3-Final-Project/pull/162) (CHECK constraints). |
 | [#158](https://github.com/JimRashed/Web-3-Final-Project/pull/158) | CarterBeasse CHANGES_REQUESTED at 02:31, 11 minutes after the merge: security block on protected operations unchecked, controller binding / `[AllowAnonymous]` unchecked, provider-only note and CI link missing. | 2 threads unreplied; items open on `68b7ecd`. |
 | [#159](https://github.com/JimRashed/Web-3-Final-Project/pull/159) | JimRashed and SuSu-Lisu COMMENTED; SuSu-Lisu APPROVED at `9d82b99`. | Four later commits (`82f0d14`, `4c6907a`, `4b9def6`, `63213ec`, review fixes) were pushed after that approval and merged without a new approval. Low findings remain (see below). |
-| [#162](https://github.com/JimRashed/Web-3-Final-Project/pull/162) | Low | `CK_ProfilePictures_ContentType` (`[ContentType] COLLATE Latin1_General_BIN2 IN (...)`) still accepts `N'image/png '`: SQL Server ignores trailing spaces in equality comparisons, so the padded value passes the constraint. The domain's ordinal comparison then rejects the stored row as corrupt on read. | Fix in review: [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167) (exact match via sentinel, new migration). |
+| [#162](https://github.com/JimRashed/Web-3-Final-Project/pull/162) | Low | `CK_ProfilePictures_ContentType` (`[ContentType] COLLATE Latin1_General_BIN2 IN (...)`) still accepts `N'image/png '`: SQL Server ignores trailing spaces in equality comparisons, so the padded value passes the constraint. The domain's ordinal comparison then rejects the stored row as corrupt on read. | **Fixed** by [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167) (exact match via sentinel, new migration `TightenProfilePictureContentTypeCheck`; merge `777c0bd`, approved by JimRashed at head). Applying the migration to a running database was not run. |
 | [#151](https://github.com/JimRashed/Web-3-Final-Project/pull/151) | CarterBeasse CHANGES_REQUESTED at `4c4ad3f`, COMMENTED at `1ff2345`, and COMMENTED at head `a83b7a0` at 05:01:25, two minutes after the merge at 04:59:24. | 5 threads unreplied; findings open on `68b7ecd`. |
 | [#160](https://github.com/JimRashed/Web-3-Final-Project/pull/160) | Post-merge review by CarterBeasse at 05:22:27 ([review 6016902334](https://github.com/JimRashed/Web-3-Final-Project/pull/160#pullrequestreview-6016902334)): three High, two Medium and four smaller findings. | 4 threads unreplied. Finding 1 (no profiles) and the `digest(undefined)` abort fixed by [#163](https://github.com/JimRashed/Web-3-Final-Project/pull/163); run evidence pasted on [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) (see [validation-results.md](validation-results.md#147-cross-device-journey)). Findings 2, 4, 5 and the remaining smaller items open on `68b7ecd`. |
 | [#163](https://github.com/JimRashed/Web-3-Final-Project/pull/163) | CarterBeasse COMMENTED at 05:29:22, 3 seconds after the merge ([review 6016944462](https://github.com/JimRashed/Web-3-Final-Project/pull/163#pullrequestreview-6016944462)): confirms finding 1 fixed; SEC-09 sign-out, B reference check, mismatch `[400, 415]`, 200-or-404 check, A unchanged after the third-account upload, image `Content-Type`, token-capture race still open; new: every run renames both accounts. | 1 thread unreplied; items open on `68b7ecd`. |
 | [#165](https://github.com/JimRashed/Web-3-Final-Project/pull/165) | CarterBeasse CHANGES_REQUESTED at 05:28:47, 34 seconds before the merge ([review 6016941081](https://github.com/JimRashed/Web-3-Final-Project/pull/165#pullrequestreview-6016941081)): the evidence README overstates "a rejected upload keeps the picture" (shown only for the local pre-check), says "four live steps" where three states were captured, sign-out and private-access claims are not evidenced by the screenshots, open #151 findings are not mentioned. | 4 threads unreplied; items open on `68b7ecd`. |
-| [#157](https://github.com/JimRashed/Web-3-Final-Project/pull/157), [#161](https://github.com/JimRashed/Web-3-Final-Project/pull/161), [#162](https://github.com/JimRashed/Web-3-Final-Project/pull/162) | No review threads. | — |
+| [#164](https://github.com/JimRashed/Web-3-Final-Project/pull/164) | JimRashed COMMENTED at `67e1ebe` (2 threads), then APPROVED at head `d56f5ff`. | Approved; both threads have author replies. |
+| [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) | CarterBeasse CHANGES_REQUESTED at `68b7ecd`: the description's review record contradicts the reviews API and overstates contracts, matrix enforcement, rejected-upload behaviour and sign-out. JimRashed COMMENTED (3 threads). | Merged with the request outstanding; the "Review record" section was not corrected. CarterBeasse posted a [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500) after the merge. 3 threads unreplied. |
+| [#157](https://github.com/JimRashed/Web-3-Final-Project/pull/157), [#161](https://github.com/JimRashed/Web-3-Final-Project/pull/161), [#162](https://github.com/JimRashed/Web-3-Final-Project/pull/162), [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167) | No review threads. | — |
 
 ## Review-compliance exceptions
 
@@ -81,10 +89,18 @@ Facts only: who merged, when, and the review state at that moment.
 6. **#165** (#145 evidence docs) was merged by its author SuSu-Lisu at 05:29:21 with CarterBeasse's
    CHANGES_REQUESTED, submitted at 05:28:47, outstanding and no approval. 4 threads are unreplied.
 
-In total eight PRs are exceptions: #151, #157, #158, #159, #160, #161, #163 and #165.
+7. **#166** (milestone PR → `main`) was merged by its author SuSu-Lisu on 2026-11-24 at 00:26:12, at head
+   `6fa8b3e` (merge `14ac63e`), with CarterBeasse's CHANGES_REQUESTED (at `68b7ecd`) outstanding,
+   JimRashed's review COMMENTED and no approval. Its "Review record" section was not corrected and contradicts
+   the reviews API; CarterBeasse posted a [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500).
+   3 threads are unreplied.
+
+In total nine PRs are exceptions: #151, #157, #158, #159, #160, #161, #163, #165 and #166. #164 and #167 met
+the gate.
 
 ## Open findings on `68b7ecd`
 
+Still open on the final revision `14ac63e` unless marked fixed: the only code change between them is #167.
 None of these is fixed by this PR (docs only). Proposed follow-ups are suggestions; Carter or the Dispatcher
 decide whether to open issues.
 
@@ -111,10 +127,12 @@ decide whether to open issues.
 | Issue | State | Evidence comment linked | Waits for |
 |---|---|---|---|
 | [#137](https://github.com/JimRashed/Web-3-Final-Project/issues/137), [#142](https://github.com/JimRashed/Web-3-Final-Project/issues/142), [#143](https://github.com/JimRashed/Web-3-Final-Project/issues/143), [#144](https://github.com/JimRashed/Web-3-Final-Project/issues/144), [#146](https://github.com/JimRashed/Web-3-Final-Project/issues/146) | Closed | Yes | — |
-| [#133](https://github.com/JimRashed/Web-3-Final-Project/issues/133), [#134](https://github.com/JimRashed/Web-3-Final-Project/issues/134) (parents), [#138](https://github.com/JimRashed/Web-3-Final-Project/issues/138), [#139](https://github.com/JimRashed/Web-3-Final-Project/issues/139), [#140](https://github.com/JimRashed/Web-3-Final-Project/issues/140), [#141](https://github.com/JimRashed/Web-3-Final-Project/issues/141) | Closed | No | Evidence comment proposed; drafts in [submission.md](submission.md#proposed-evidence-comments). |
+| [#133](https://github.com/JimRashed/Web-3-Final-Project/issues/133), [#134](https://github.com/JimRashed/Web-3-Final-Project/issues/134) (parents), [#138](https://github.com/JimRashed/Web-3-Final-Project/issues/138), [#139](https://github.com/JimRashed/Web-3-Final-Project/issues/139), [#140](https://github.com/JimRashed/Web-3-Final-Project/issues/140), [#141](https://github.com/JimRashed/Web-3-Final-Project/issues/141) | Closed | Yes, posted afterwards by CarterBeasse: [#133](https://github.com/JimRashed/Web-3-Final-Project/issues/133#issuecomment-7116436261), [#134](https://github.com/JimRashed/Web-3-Final-Project/issues/134#issuecomment-7116436684), [#138](https://github.com/JimRashed/Web-3-Final-Project/issues/138#issuecomment-7116437060), [#139](https://github.com/JimRashed/Web-3-Final-Project/issues/139#issuecomment-7116437405), [#140](https://github.com/JimRashed/Web-3-Final-Project/issues/140#issuecomment-7116437864), [#141](https://github.com/JimRashed/Web-3-Final-Project/issues/141#issuecomment-7116438288) | — |
 | [#145](https://github.com/JimRashed/Web-3-Final-Project/issues/145) | Closed 11-23 05:29:25 by SuSu-Lisu | [Yes, with gaps](https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934) | Closing comment links the #165 screenshots (display, refused file, signed out; "no picture" covered by tests). Recorded gaps: #165 merged with changes requested; README claims above; #151 findings open. |
 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | Closed 11-23 05:29:23 by SuSu-Lisu | [Yes, with gaps](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) | Closing comment pastes a 17/17 PASS live run on `46f847b` plus #163. Recorded gaps: SEC-09 two-device sign-out not covered; #160/#163 findings above open; #163 merged without review. |
-| [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) (SEC-C) | Open | — | Children #143, #144, #145 closed; can now be considered for closure with the recorded gaps. |
-| [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) (SEC-D) | Open | — | #146 and #147 closed; waits for #148. |
-| [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3) | Open | — | Phase B results in [validation-results.md](validation-results.md). |
-| [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) (tracker) | Open | — | All of the above. |
+| [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) (SEC-C) | Closed 11-23 23:00:29 by CarterBeasse | [Yes](https://github.com/JimRashed/Web-3-Final-Project/issues/135#issuecomment-7116442844) | — |
+| [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) (SEC-D) | Closed 11-24 00:18:40 by SuSu-Lisu | [Yes](https://github.com/JimRashed/Web-3-Final-Project/issues/136#issuecomment-7117932854) | The closing comment lists #148 as accepted; #148 was still open at that time. |
+| [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3) | Open | — | Items in [submission.md](submission.md#what-is-left-to-close-148). |
+| [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) (tracker) | Open (JimRashed) | — | #148. |
+
+The GitHub milestone "Security and Cross-Device Profiles" stays open until CarterBeasse says otherwise.

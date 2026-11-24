@@ -1,12 +1,43 @@
 # Milestone 4 validation results
 
 Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) (SEC-D3). The commands and expected
-outcomes are fixed. The automated checks (build, format, tests, contracts, client) have been run on the
-candidate; the live journeys, the #145 browser check and SEC-09 stay `pending` until someone runs them with the
-stack (Phase B of [the plan](../../specs/issue-148-plan.md)). Evidence observed on the earlier revision `46f847b`
-(#145 screenshots, #147 journey run) is recorded in its own column and is not a result for the candidate.
+outcomes are fixed. The automated checks (build, format, tests, contracts, client) have been run on the final
+revision, `main` at `14ac63e` (see [Final revision](#final-revision-main-at-14ac63e)). The live journeys, the
+#145 browser check, SEC-09 and applying the `TightenProfilePictureContentTypeCheck` migration to a running
+database were **not run** on it. The earlier candidate `68b7ecd` results below are kept as history; for
+`14ac63e` the final-revision table supersedes them. Evidence observed on `46f847b` (#145 screenshots, #147
+journey run) is recorded in its own column and is not a result for either revision.
 
-## Candidate revision
+## Final revision (main at 14ac63e)
+
+| Field | Value |
+|---|---|
+| Commit | `14ac63ef58a003170b7abd8c4d1092a087038323` on `main` (merge of milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166); includes [#164](https://github.com/JimRashed/Web-3-Final-Project/pull/164) and [#167](https://github.com/JimRashed/Web-3-Final-Project/pull/167)) |
+| Date run | 2026-11-24, 01:05:18Z to 01:22:12Z (UTC) |
+| Runner | Dispatcher validate stage (agent), automated same-revision run on a clean worktree at the exact SHA |
+| Restore, build, format | `dotnet restore` exit 0; `dotnet build -warnaserror` exit 0, 0 warnings, 0 errors; `dotnet format --verify-no-changes` clean |
+| Contracts | `node contracts/validate-contracts.mjs` PASS: 32 operations, 201 examples, 24 probes |
+| Client | `npm ci` exit 0 (9 moderate audit advisories; not a gate); typecheck 0; lint 0; Vitest 25/25 files, 318/318 tests; build 0 |
+| CI | [run 45297141502](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45297141502) on `14ac63e`: success (read with `gh run view`) |
+| Not run | Docker was not running: `journey:api`, `journey:ui`, `journey:picture`, the #145 browser check, SEC-09 two-device sign-out, and applying `TightenProfilePictureContentTypeCheck` to a running database |
+
+`dotnet test`, one project at a time, all exit 0. `QuizArena.TestSupport` has no tests.
+**Total: 1,962 passed, 0 failed, 0 skipped.**
+
+| Project | Passed | Project | Passed |
+|---|---|---|---|
+| ArchitectureTests | 28 | Gameplay.IntegrationTests | 187 |
+| Gameplay.UnitTests | 81 | Identity.IntegrationTests | 365 |
+| Identity.UnitTests | 127 | Lobby.IntegrationTests | 302 |
+| Lobby.UnitTests | 174 | Notification.IntegrationTests | 154 |
+| Notification.UnitTests | 29 | QuestionBank.IntegrationTests | 173 |
+| QuestionBank.UnitTests | 70 | Statistics.IntegrationTests | 223 |
+| Statistics.UnitTests | 49 | | |
+
+## Earlier candidate revision (68b7ecd)
+
+The sections from here to [CI](#ci) record the run on the earlier candidate. They are history, not results
+for `14ac63e`.
 
 | Field | Value |
 |---|---|
@@ -15,10 +46,10 @@ stack (Phase B of [the plan](../../specs/issue-148-plan.md)). Evidence observed 
 | Date run (automated checks) | 2026-11-23, 12:33:15Z to 13:34:37Z (UTC) |
 | Runner (automated checks) | Dispatcher validate stage (agent), on a throwaway worktree checked out at the exact candidate SHA |
 | OS, tools | Windows 11 10.0.26200; .NET SDK 10.0.401; Node v22.20.0, npm 10.9.3; SQL Server LocalDB `MSSQLLocalDB` 17.0.4025.3 for the integration projects |
-| Edge version, live runs | pending |
+| Edge version, live runs | Not run |
 
-If the branch moves past `68b7ecd` before the runs, update the commit here and rerun everything; results
-from different revisions are not combined.
+Results from different revisions are not combined: the `68b7ecd` numbers below and the `14ac63e` numbers
+above are separate runs.
 
 ## Build and static checks
 
@@ -98,6 +129,7 @@ are manual evidence.
 | `46f847b` | [run 45115561119](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45115561119) | success (read with `gh run view` on 2026-11-23; head SHA `46f847b`) |
 | `68b7ecd` | [run 45118703355](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45118703355) | success (`pull_request` event for #166; read with `gh run view` on 2026-11-23) |
 | `68b7ecd` | [run 45118087469](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45118087469) | success (read with `gh run list` on 2026-11-23; head SHA `68b7ecd`). Run 45118083732 on `94bc2e3` was cancelled when `68b7ecd` superseded it |
+| `14ac63e` (`main`) | [run 45297141502](https://github.com/JimRashed/Web-3-Final-Project/actions/runs/45297141502) | success (read with `gh run view`; head SHA `14ac63e`) |
 
 ## Live end-to-end journeys
 
@@ -111,9 +143,9 @@ cd tests/e2e; npm ci; npm run journey:api; npm run journey:ui; npm run journey:p
 
 | # | Command | Expected | Result |
 |---|---|---|---|
-| 22 | `npm run journey:api` | PASS | pending |
-| 23 | `npm run journey:ui` | PASS | pending |
-| 24 | `npm run journey:picture` | PASS on a fresh stack (see [#147](#147-cross-device-journey)) | pending on `68b7ecd`; 17/17 PASS recorded on `46f847b` + #163 |
+| 22 | `npm run journey:api` | PASS | Not run on `68b7ecd` or `14ac63e` |
+| 23 | `npm run journey:ui` | PASS | Not run on `68b7ecd` or `14ac63e` |
+| 24 | `npm run journey:picture` | PASS on a fresh stack (see [#147](#147-cross-device-journey)) | Not run on `68b7ecd` or `14ac63e`; 17/17 PASS recorded on `46f847b` + #163 |
 
 ## #145 manual check
 
@@ -124,14 +156,14 @@ Steps from SuSu-Lisu's [#145 comment](https://github.com/JimRashed/Web-3-Final-P
 That is a different revision from the candidate, and PR #165 merged with changes requested
 ([review 6016941081](https://github.com/JimRashed/Web-3-Final-Project/pull/165#pullrequestreview-6016941081)).
 
-| Step | Action | Expected | Observed on `46f847b` (#165) | Result on `68b7ecd` |
+| Step | Action | Expected | Observed on `46f847b` (#165) | Result on `68b7ecd` and `14ac63e` |
 |---|---|---|---|---|
-| 1 | `./scripts/start-milestone3.ps1`, open `http://localhost:5173`, sign in | Signed in, profile reachable | Signed in as `player-b` | pending |
-| 2 | Profile → Choose picture → a PNG; reload | Thumbnail shown and survives a reload | [145-display.png](evidence/145-display.png): picture rendered, "Picture saved."; reload not shown | pending |
-| 3 | Replace it with a JPEG | Old thumbnail replaced; `GET /api/users/me/picture` returns the new bytes with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff` | Not evidenced by the screenshots. The headers were observed by the API journey (#147 run below), not in the browser | pending |
-| 4 | Sign out | Panel disappears; nothing image-related remains in the page | [145-signed-out.png](evidence/145-signed-out.png): panel gone, anonymous page; "nothing remains" not evidenced beyond the view | pending |
-| — | Refused file (error state) | Validation message; previous picture still shown | [145-error.png](evidence/145-error.png): local pre-check refuses `not-an-image.txt`; a server-side rejection is not shown | pending |
-| — | Missing state (no picture) | Empty state | Not captured; covered by `ProfilePage.test.tsx` and the API journey's 404 ([evidence README](evidence/145-README.md)) | pending |
+| 1 | `./scripts/start-milestone3.ps1`, open `http://localhost:5173`, sign in | Signed in, profile reachable | Signed in as `player-b` | Not run |
+| 2 | Profile → Choose picture → a PNG; reload | Thumbnail shown and survives a reload | [145-display.png](evidence/145-display.png): picture rendered, "Picture saved."; reload not shown | Not run |
+| 3 | Replace it with a JPEG | Old thumbnail replaced; `GET /api/users/me/picture` returns the new bytes with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff` | Not evidenced by the screenshots. The headers were observed by the API journey (#147 run below), not in the browser | Not run |
+| 4 | Sign out | Panel disappears; nothing image-related remains in the page | [145-signed-out.png](evidence/145-signed-out.png): panel gone, anonymous page; "nothing remains" not evidenced beyond the view | Not run |
+| — | Refused file (error state) | Validation message; previous picture still shown | [145-error.png](evidence/145-error.png): local pre-check refuses `not-an-image.txt`; a server-side rejection is not shown | Not run |
+| — | Missing state (no picture) | Empty state | Not captured; covered by `ProfilePage.test.tsx` and the API journey's 404 ([evidence README](evidence/145-README.md)) | Not run |
 
 ## #147 cross-device journey
 
@@ -164,20 +196,20 @@ still accepts 415 for the mismatch case (the run printed 400), accepts 200 for a
 `version`/`updatedAt` after the third-account upload or the image `Content-Type`, can race on token capture, and
 renames both demo accounts on every run.
 
-| Check | Expected | Observed (`46f847b` + #163) | Result on `68b7ecd` |
+| Check | Expected | Observed (`46f847b` + #163) | Result on `68b7ecd` and `14ac63e` |
 |---|---|---|---|
-| `npm run journey:picture` on a fresh stack | PASS output pasted with the commit it ran on | 17/17 PASS; SHA and database state not stated | pending |
-| A and B sign in separately; tokens differ | Independent sessions | PASS | pending |
-| A uploads; B reads `GET /api/users/me` then the picture | B sees A's `picture.version` and `contentType`, identical bytes | Bytes PASS; profile metadata on B not checked | pending |
-| A replaces; B reads again | B sees the new version and bytes | PASS (version 1 → 2 seen on A; B sees the replacement) | pending |
-| Rejected uploads (wrong type, mismatched magic, 2 MiB + 1) | 415, 400, 413; previous picture unchanged | PASS (415, 400, 413; previous picture kept) | pending |
-| SEC-09: A signs out | A's local state and picture cleared; B's next profile and picture reads still succeed | **Not covered** | pending (automated or manual, see below) |
+| `npm run journey:picture` on a fresh stack | PASS output pasted with the commit it ran on | 17/17 PASS; SHA and database state not stated | Not run |
+| A and B sign in separately; tokens differ | Independent sessions | PASS | Not run |
+| A uploads; B reads `GET /api/users/me` then the picture | B sees A's `picture.version` and `contentType`, identical bytes | Bytes PASS; profile metadata on B not checked | Not run |
+| A replaces; B reads again | B sees the new version and bytes | PASS (version 1 → 2 seen on A; B sees the replacement) | Not run |
+| Rejected uploads (wrong type, mismatched magic, 2 MiB + 1) | 415, 400, 413; previous picture unchanged | PASS (415, 400, 413; previous picture kept) | Not run |
+| SEC-09: A signs out | A's local state and picture cleared; B's next profile and picture reads still succeed | **Not covered** | Not run (automated or manual, see below) |
 
 **SEC-09 manual steps (only if not automated; proposed, to be confirmed by the #147 owner).** Sign in as the
 same player in two separate Edge windows (one normal, one InPrivate) as A and B. On A, sign out from the app
 and complete the Keycloak logout redirect. Expected: A shows the signed-out view with no profile or picture
 and needs a new sign-in; B, without signing in again, reloads Profile and still shows the current picture.
-Result: pending.
+Result: not run on `68b7ecd` or `14ac63e`.
 
 ## Historical per-PR numbers
 

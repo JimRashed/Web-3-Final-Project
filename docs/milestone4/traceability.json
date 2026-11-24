@@ -4,8 +4,8 @@
   "branch": "feature/milestone-4-security-and-cross-device-profiles",
   "candidateRevision": "68b7ecd",
   "generated": {
-    "date": "2026-11-23",
-    "method": "hand-built from the Dispatcher Prime brief (gh pr view / reviews API), refreshed for PRs #151, #160, #163, #165 and issues #145, #147",
+    "date": "2026-11-24",
+    "method": "hand-built from the Dispatcher Prime brief (gh pr view / reviews API), refreshed for PRs #151, #160, #163, #165 and issues #145, #147; refreshed 2026-11-24 for PRs #164, #166, #167 and issues #132-#141, #148 after the milestone merged to main",
     "note": "agent reconciliation, not an approval"
   },
   "pullRequests": [
@@ -367,6 +367,56 @@
       ],
       "approvedBeforeMerge": "no",
       "unrepliedThreads": 4
+    },
+    {
+      "number": 164,
+      "issues": [
+        148
+      ],
+      "issueRelation": "part of (Phase A docs)",
+      "author": "CarterBeasse",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-23T23:30:33Z",
+      "head": "d56f5ff",
+      "merge": "6fa8b3e",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "COMMENTED",
+          "commit": "67e1ebe",
+          "submittedAt": "2026-11-23T14:35:06Z"
+        },
+        {
+          "reviewer": "JimRashed",
+          "state": "APPROVED",
+          "commit": "d56f5ff",
+          "submittedAt": "2026-11-23T23:23:43Z"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
+    },
+    {
+      "number": 167,
+      "issues": [
+        143
+      ],
+      "issueRelation": "follow-up to PR #162",
+      "author": "CarterBeasse",
+      "mergedBy": "CarterBeasse",
+      "mergedAt": "2026-11-23T23:30:29Z",
+      "head": "39cd133",
+      "merge": "777c0bd",
+      "reviews": [
+        {
+          "reviewer": "JimRashed",
+          "state": "APPROVED",
+          "commit": "39cd133",
+          "submittedAt": "2026-11-23T23:24:11Z"
+        }
+      ],
+      "approvedBeforeMerge": "yes",
+      "unrepliedThreads": 0
     }
   ],
   "exceptions": [
@@ -409,6 +459,11 @@
       "pr": 165,
       "kind": "merged-with-changes-requested",
       "detail": "#145 evidence docs merged by author at 05:29:21 with CarterBeasse CHANGES_REQUESTED at 05:28:47 (34 s before merge) outstanding and no approval; 4 threads unreplied."
+    },
+    {
+      "pr": 166,
+      "kind": "merged-with-changes-requested",
+      "detail": "Milestone PR (feature/milestone-4 -> main) merged by its author SuSu-Lisu at 2026-11-24T00:26:12Z at head 6fa8b3e (merge 14ac63e) with CarterBeasse CHANGES_REQUESTED (at 68b7ecd) outstanding and JimRashed COMMENTED; no approval. Its Review record section was not corrected and contradicts the reviews API; CarterBeasse posted a correcting comment: https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500. 3 threads unreplied."
     }
   ],
   "openFindings": [
@@ -493,9 +548,9 @@
     {
       "source": "PR #162",
       "severity": "low",
-      "status": "fix in review (PR #167)",
+      "status": "fixed (PR #167, merge 777c0bd)",
       "summary": "CK_ProfilePictures_ContentType (BIN2 IN) still accepts N'image/png ' because SQL Server ignores trailing spaces in equality comparisons; the domain's ordinal comparison then rejects the stored row as corrupt on read.",
-      "followUp": "PR #167 makes the check exact with a sentinel and a new migration."
+      "followUp": "PR #167 makes the check exact with a sentinel and a new migration (TightenProfilePictureContentTypeCheck); approved by JimRashed at head 39cd133. Applying the migration to a running database was not run."
     },
     {
       "source": "PR #153 / PR #154",
@@ -551,50 +606,44 @@
     {
       "number": 133,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/133#issuecomment-7116436261"
     },
     {
       "number": 134,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/134#issuecomment-7116436684"
     },
     {
       "number": 138,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/138#issuecomment-7116437060"
     },
     {
       "number": 139,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/139#issuecomment-7116437405"
     },
     {
       "number": 140,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/140#issuecomment-7116437864"
     },
     {
       "number": 141,
       "state": "closed",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "evidence comment"
-      ]
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/141#issuecomment-7116438288"
     },
     {
       "number": 145,
@@ -631,26 +680,33 @@
     },
     {
       "number": 135,
-      "state": "open",
-      "evidenceLinked": false,
-      "waitsFor": [
-        "closure decision (children closed, gaps recorded)"
-      ]
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "closedAt": "2026-11-23T23:00:29Z",
+      "closedBy": "CarterBeasse",
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/135#issuecomment-7116442844"
     },
     {
       "number": 136,
-      "state": "open",
-      "evidenceLinked": false,
-      "waitsFor": [
-        148
-      ]
+      "state": "closed",
+      "evidenceLinked": true,
+      "waitsFor": [],
+      "closedAt": "2026-11-24T00:18:40Z",
+      "closedBy": "SuSu-Lisu",
+      "evidence": "https://github.com/JimRashed/Web-3-Final-Project/issues/136#issuecomment-7117932854",
+      "note": "Closing comment lists #148 as accepted while #148 was still open."
     },
     {
       "number": 148,
       "state": "open",
       "evidenceLinked": false,
       "waitsFor": [
-        "live journeys, #145 browser check and SEC-09 evidence on 68b7ecd"
+        "decision on live checks on 14ac63e (run, or record as not run)",
+        "board update and screenshot (JimRashed or SuSu-Lisu)",
+        "SuSu-Lisu security-decision approval",
+        "replies on unreplied threads",
+        "retro-review decision"
       ]
     },
     {
@@ -658,19 +714,21 @@
       "state": "open",
       "evidenceLinked": false,
       "waitsFor": [
-        135,
-        136
+        148
       ]
     }
   ],
   "firstReconciledRevision": "46f847b",
   "milestonePullRequest": {
     "number": 166,
-    "draft": true,
+    "draft": false,
     "author": "SuSu-Lisu",
     "base": "main",
-    "head": "68b7ecd",
+    "head": "6fa8b3e",
+    "merge": "14ac63e",
     "createdAt": "2026-11-23T05:35:08Z",
+    "mergedBy": "SuSu-Lisu",
+    "mergedAt": "2026-11-24T00:26:12Z",
     "reviews": [
       {
         "reviewer": "CarterBeasse",
@@ -679,9 +737,18 @@
         "submittedAt": "2026-11-23T12:36:23Z",
         "id": 6021800957,
         "summary": "Description review record contradicts the reviews API (lists #157, #158, #163, #164, #165 as approved); overstates approved contracts, matrix enforcement, rejected-upload behaviour and sign-out."
+      },
+      {
+        "reviewer": "JimRashed",
+        "state": "COMMENTED",
+        "commit": "68b7ecd",
+        "submittedAt": "2026-11-23T14:35:09Z"
       }
     ],
-    "note": "Phase B updates this PR description from submission.md; not merged without Carter's explicit go."
+    "approvedBeforeMerge": "no",
+    "unrepliedThreads": 3,
+    "correctingComment": "https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500",
+    "note": "Merged with CHANGES_REQUESTED outstanding; the description's Review record was not corrected and contradicts the reviews API. GitHub milestone stays open until CarterBeasse says otherwise."
   },
   "validation": {
     "revision": "68b7ecde2c534c97478c3ba3b21e8160b97e870d",
@@ -745,6 +812,68 @@
       "journey:picture on 68b7ecd",
       "#145 browser check",
       "SEC-09 two-device sign-out"
-    ]
+    ],
+    "supersededFor14ac63e": true
+  },
+  "finalRevision": "14ac63e",
+  "finalBranch": "main",
+  "finalValidation": {
+    "revision": "14ac63ef58a003170b7abd8c4d1092a087038323",
+    "branch": "main",
+    "date": "2026-11-24",
+    "window": "01:05:18Z-01:22:12Z",
+    "runner": "Dispatcher validate stage (agent), clean worktree at the exact SHA",
+    "automated": {
+      "restore": "exit 0",
+      "build": "exit 0, 0 warnings, 0 errors (-warnaserror)",
+      "format": "clean",
+      "dotnetTest": {
+        "total": {
+          "passed": 1962,
+          "failed": 0,
+          "skipped": 0
+        },
+        "projects": {
+          "ArchitectureTests": 28,
+          "Gameplay.UnitTests": 81,
+          "Identity.UnitTests": 127,
+          "Lobby.UnitTests": 174,
+          "Notification.UnitTests": 29,
+          "QuestionBank.UnitTests": 70,
+          "Statistics.UnitTests": 49,
+          "Gameplay.IntegrationTests": 187,
+          "Identity.IntegrationTests": 365,
+          "Lobby.IntegrationTests": 302,
+          "Notification.IntegrationTests": 154,
+          "QuestionBank.IntegrationTests": 173,
+          "Statistics.IntegrationTests": 223
+        },
+        "testSupport": "no tests"
+      },
+      "contracts": "PASS: 32 operations, 201 examples, 24 probes",
+      "client": {
+        "npmCi": "exit 0 (9 moderate audit advisories, not a gate)",
+        "typecheck": "exit 0",
+        "lint": "exit 0",
+        "vitest": "25/25 files, 318/318 tests",
+        "build": "exit 0"
+      }
+    },
+    "ci": [
+      {
+        "run": 45297141502,
+        "commit": "14ac63e",
+        "conclusion": "success"
+      }
+    ],
+    "notRun": [
+      "journey:api",
+      "journey:ui",
+      "journey:picture",
+      "#145 browser check",
+      "SEC-09 two-device sign-out",
+      "applying TightenProfilePictureContentTypeCheck to a running database"
+    ],
+    "notRunReason": "Docker was not running"
   }
 }
