@@ -47,23 +47,25 @@ GitHub milestone stays open until CarterBeasse says otherwise.
 | Order | Issue | Owner | Evidence required | State |
 |---|---|---|---|---|
 | 1 | [#145](https://github.com/JimRashed/Web-3-Final-Project/issues/145) | SuSu-Lisu | Screenshots ([validation-results.md](validation-results.md#145-manual-check)); response to #151 findings | **Closed** 05:29:25, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934) links #165 screenshots. Gaps: #165 merged with changes requested; headers, reload and sign-out cleanup not evidenced; #151 findings open |
-| 2 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | SuSu-Lisu | Fix PR for the #160 findings, `journey:picture` PASS and SEC-09 sign-out evidence ([validation-results.md](validation-results.md#147-cross-device-journey)) | **Closed** 05:29:23, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) pastes 17/17 PASS on `46f847b` + #163. Gaps: SEC-09 two-device sign-out not covered; other #160/#163 findings open |
+| 2 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | SuSu-Lisu | Fix PR for the #160 findings, `journey:picture` PASS and SEC-09 sign-out evidence ([validation-results.md](validation-results.md#147-cross-device-journey)) | **Closed** 05:29:23, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) pastes 17/17 PASS on `46f847b` + #163. Gaps: SEC-09 two-device sign-out not covered by that run (verified live on `14ac63e` on 2026-11-24, [live run](validation-results.md#live-run-main-at-14ac63e)); other #160/#163 script findings open |
 | 3 | [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) | CarterBeasse | #143, #144, #145 closed with links | **Closed** 11-23 23:00:29 by CarterBeasse, [evidence comment](https://github.com/JimRashed/Web-3-Final-Project/issues/135#issuecomment-7116442844) |
 | 4 | [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) | SuSu-Lisu | #146, #147, #148 closed with links | **Closed** 11-24 00:18:40 by SuSu-Lisu, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/136#issuecomment-7117932854) lists #148 as accepted while #148 was still open |
-| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Results on the final revision `14ac63e` recorded; the items [below](#what-is-left-to-close-148) settled | Open (last before the tracker) |
+| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Results on the final revision `14ac63e` recorded; the items [below](#what-is-left-to-close-148) settled | Open (last before the tracker); can close once PR #168 merges and the items below are settled |
 | 6 | [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) | JimRashed | All SEC parents closed; milestone evidence complete | Open; waits for #148 |
 | — | #133, #134, #138, #139, #140, #141 | — | Evidence comments | **Posted** by CarterBeasse: [#133](https://github.com/JimRashed/Web-3-Final-Project/issues/133#issuecomment-7116436261), [#134](https://github.com/JimRashed/Web-3-Final-Project/issues/134#issuecomment-7116436684), [#138](https://github.com/JimRashed/Web-3-Final-Project/issues/138#issuecomment-7116437060), [#139](https://github.com/JimRashed/Web-3-Final-Project/issues/139#issuecomment-7116437405), [#140](https://github.com/JimRashed/Web-3-Final-Project/issues/140#issuecomment-7116437864), [#141](https://github.com/JimRashed/Web-3-Final-Project/issues/141#issuecomment-7116438288) |
 
 ### What is left to close #148
 
-- **Live checks:** decide whether to run `journey:api`, `journey:ui`, `journey:picture`, the #145 browser
-  check, SEC-09 two-device sign-out and the `TightenProfilePictureContentTypeCheck` migration against a running
-  database on `14ac63e`, or to keep them recorded as not run ([validation-results.md](validation-results.md#final-revision-main-at-14ac63e)).
+The live checks on `14ac63e` are done: `journey:api` 10/10, `journey:ui` 11/11, `journey:picture` 17/17,
+#145 browser check and SEC-09 two-device sign-out 23/23, migration applied
+([validation-results.md](validation-results.md#live-run-main-at-14ac63e)). Remaining:
+
 - **Board:** JimRashed or SuSu-Lisu update the [board](#board) fields and take the screenshot.
 - **Security decisions:** SuSu-Lisu's approval of SEC-01 to SEC-12 is still pending ([human-gates.md](human-gates.md#security-decisions-approval-state)).
 - **Unreplied threads:** #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #160 (4), #163 (1), #165 (4), #166 (3).
 - **Retro-review:** a team decision on #157, #160, #161, #163, #165, #166 and the post-approval commits on #159
   ([human-gates.md](human-gates.md#what-is-still-needed-from-humans)).
+- **Threat model:** a human review of the reconciled [threat model](../milestone3/threat-model.md).
 
 ## Milestone PR
 

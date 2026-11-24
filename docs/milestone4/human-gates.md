@@ -85,7 +85,7 @@ Details and the open findings these reviews raised are in
 ## What is still needed from humans
 
 - SuSu-Lisu's decision on the SEC-01 to SEC-12 decisions (approval or requested changes), recorded on #137 or #149.
-- A human review of the threat-model reconciliation.
+- A human review of the threat-model reconciliation (now including the live verification on `14ac63e`).
 - Replies from PR authors on the unreplied threads: #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #160 (4),
   #163 (1), #165 (4) and #166 (3).
 - A team decision on whether #157, #160, #161, #163, #165 and #166 get a retro-review, and whether the four
@@ -97,5 +97,8 @@ Details and the open findings these reviews raised are in
   reviews API (it lists #157, #158, #163, #164 and #165 as approved) and it overstates approved contracts, matrix
   enforcement, rejected-upload behaviour and sign-out. The record on this page is the one taken from the reviews
   API; see also the [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500).
-- A decision on the live checks listed as not run in [validation-results.md](validation-results.md#final-revision-main-at-14ac63e):
-  run them on `14ac63e`, or keep them recorded as not run.
+- The board update and screenshot (JimRashed or SuSu-Lisu).
+
+The live checks on `14ac63e` (journeys, #145 browser check, SEC-09 two-device sign-out, migration) were run
+on 2026-11-24 with the repository owner's authorization and are recorded in
+[validation-results.md](validation-results.md#live-run-main-at-14ac63e); they are no longer an open item.

@@ -478,15 +478,15 @@
       "source": "PR #160 review 6016902334; PR #163 review 6016944462",
       "severity": "high",
       "summary": "SEC-09 sign-out across devices neither automated nor documented as manual Keycloak steps.",
-      "followUp": "Automate A-only sign-out or run documented manual steps; #147 closed without it.",
-      "status": "open"
+      "followUp": "Two-device sign-out run live on 14ac63e: 23/23 PASS (A signed out, 0 picture GETs by A afterwards, A Keycloak SSO session ended, unauthenticated GET 401; B still signed in and refetched the picture). Residual: A's previously issued access token was still accepted (200) after sign-out, ~291 s before expiry (documented SEC-09 token-lifetime risk). The journey script still does not automate it. Evidence: docs/milestone4/validation-results.md#live-run-main-at-14ac63e",
+      "status": "verified live on 14ac63e (2026-11-24)"
     },
     {
       "source": "PR #160 review 6016902334",
       "severity": "high",
       "summary": "No run evidence when #160 merged; a 17/17 PASS run on 46f847b plus #163 is pasted on #147 without exact head SHA or database state.",
-      "followUp": "Rerun on 68b7ecd with SHA and database state recorded.",
-      "status": "partly addressed"
+      "followUp": "Live run on a clean worktree of main at 14ac63e with users provisioned by start-milestone3.ps1 -ProvisionUsers: journey:api 10/10, journey:ui 11/11, journey:picture 17/17 PASS. The script-level findings below stay open. Evidence: docs/milestone4/validation-results.md#live-run-main-at-14ac63e",
+      "status": "resolved on 14ac63e (2026-11-24)"
     },
     {
       "source": "PR #160 review 6016902334",
@@ -550,7 +550,7 @@
       "severity": "low",
       "status": "fixed (PR #167, merge 777c0bd)",
       "summary": "CK_ProfilePictures_ContentType (BIN2 IN) still accepts N'image/png ' because SQL Server ignores trailing spaces in equality comparisons; the domain's ordinal comparison then rejects the stored row as corrupt on read.",
-      "followUp": "PR #167 makes the check exact with a sentinel and a new migration (TightenProfilePictureContentTypeCheck); approved by JimRashed at head 39cd133. Applying the migration to a running database was not run."
+      "followUp": "PR #167 makes the check exact with a sentinel and a new migration (TightenProfilePictureContentTypeCheck); approved by JimRashed at head 39cd133. Applied to a running database on 14ac63e on 2026-11-24 (dotnet ef migrations list: none pending)."
     },
     {
       "source": "PR #153 / PR #154",
@@ -569,7 +569,7 @@
       "severity": "medium",
       "status": "open",
       "summary": "Evidence README overstates rejected-upload-keeps-picture (local pre-check only); says four live steps vs three states captured; sign-out and private-access claims not evidenced; open #151 findings unmentioned.",
-      "followUp": "Correct the README; show headers and sign-out in a rerun of the #145 check."
+      "followUp": "Correct the README; show headers and sign-out in a rerun of the #145 check. Headers (private, no-store; nosniff), reload, JPEG replace with object-URL revocation and sign-out were shown in the live browser check on 14ac63e (docs/milestone4/validation-results.md#live-run-main-at-14ac63e); the README correction itself is still open."
     }
   ],
   "issues": [
@@ -673,7 +673,7 @@
         "stack": "scripts/start-milestone3.ps1 (Keycloak, six APIs, client)"
       },
       "gaps": [
-        "SEC-09 two-device sign-out not covered",
+        "SEC-09 two-device sign-out not covered by the #147 run (verified live on 14ac63e on 2026-11-24, see validation-results.md)",
         "PR #160/#163 review findings open",
         "PR #163 merged without review"
       ]
@@ -702,12 +702,13 @@
       "state": "open",
       "evidenceLinked": false,
       "waitsFor": [
-        "decision on live checks on 14ac63e (run, or record as not run)",
         "board update and screenshot (JimRashed or SuSu-Lisu)",
         "SuSu-Lisu security-decision approval",
         "replies on unreplied threads",
-        "retro-review decision"
-      ]
+        "retro-review decision",
+        "threat-model human review"
+      ],
+      "note": "Live checks run on 14ac63e on 2026-11-24 and recorded; #148 can close once PR #168 merges and the remaining items are settled."
     },
     {
       "number": 132,
@@ -866,14 +867,19 @@
         "conclusion": "success"
       }
     ],
-    "notRun": [
-      "journey:api",
-      "journey:ui",
-      "journey:picture",
-      "#145 browser check",
-      "SEC-09 two-device sign-out",
-      "applying TightenProfilePictureContentTypeCheck to a running database"
-    ],
-    "notRunReason": "Docker was not running"
+    "live": {
+      "date": "2026-11-24",
+      "revision": "14ac63ef58a003170b7abd8c4d1092a087038323",
+      "environment": "clean detached worktree of main, Windows 11, Docker 29.1.5; authorized by the repository owner",
+      "start": "scripts/start-milestone3.ps1 -ProvisionUsers reached Ready; all service health checks ok",
+      "migrations": "Identity: AddProfilePictures, AddProfilePictureCheckConstraints, TightenProfilePictureContentTypeCheck applied; none pending",
+      "journeyApi": "10/10 PASS (04:54:18Z rerun; first run 3/8 after the laptop entered Modern Standby 03:55:18Z-04:52:35Z and tokens expired, environmental)",
+      "journeyUi": "11/11 PASS (04:52:48Z)",
+      "journeyPicture": "17/17 PASS (04:53:08Z)",
+      "browserCheck145AndSec09": "23/23 PASS (04:56:35Z, headless Edge, two independent contexts for player-a)",
+      "residual": "A's previously issued access token still accepted (200) after sign-out with ~291 s to expiry (SEC-09 token-lifetime residual)",
+      "evidence": "docs/milestone4/validation-results.md#live-run-main-at-14ac63e",
+      "stopped": "stop-milestone3.ps1 and stop-milestone3.ps1 -Keycloak; no listeners left"
+    }
   }
 }
