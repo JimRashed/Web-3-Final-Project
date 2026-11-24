@@ -2,17 +2,16 @@
 
 Issue [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148), parent
 [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136), tracker
-[#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132). Candidate revision `68b7ecd` (first reconciled on `46f847b`).
+[#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132). Final revision `main` at `14ac63e` (earlier candidate `68b7ecd`, first reconciled on `46f847b`).
 
-This is the evidence index for the milestone PR (`feature/milestone-4-security-and-cross-device-profiles` →
-`main`). Phase A (this file) collects the links; Phase B adds the live results and the board screenshot and updates
-the description of the existing draft milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) (opened by SuSu-Lisu on 2026-11-23,
-head `68b7ecd`) from this file. The milestone PR is not merged without Carter's explicit go.
-
-CarterBeasse submitted CHANGES_REQUESTED on #166 at 12:36:23 on 2026-11-23: its description's review record
-contradicts the reviews API (it lists #157, #158, #163, #164 and #165 as approved) and it overstates approved
-contracts, matrix enforcement, rejected-upload behaviour and sign-out. The facts to use instead are in
-[human-gates.md](human-gates.md) and [requirements-traceability.md](requirements-traceability.md).
+This is the evidence index for Milestone 4. The milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166)
+(`feature/milestone-4-security-and-cross-device-profiles` → `main`, opened by SuSu-Lisu) was merged by
+SuSu-Lisu on 2026-11-24 at 00:26:12, at head `6fa8b3e` (merge `14ac63e`), with CarterBeasse's
+CHANGES_REQUESTED of 2026-11-23 12:36:23 (at `68b7ecd`) outstanding and JimRashed's review COMMENTED. Its
+description's review record contradicts the reviews API (it lists #157, #158, #163, #164 and #165 as approved)
+and it overstates approved contracts, matrix enforcement, rejected-upload behaviour and sign-out; it was not
+corrected before the merge. CarterBeasse posted a [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500).
+The facts to use are in [human-gates.md](human-gates.md) and [requirements-traceability.md](requirements-traceability.md).
 
 ## Evidence links
 
@@ -35,68 +34,50 @@ with the Owner, Status and dependency fields visible, filtered to the SEC issues
 
 On 2026-11-23 (before #145 and #147 closed at 05:29) the board showed #132, #135, #136 and #148 in Backlog and
 #145 and #147 In progress, which no longer matches the work. CarterBeasse cannot edit board fields, so JimRashed or SuSu-Lisu should update them
-before the screenshot. Screenshot: pending (Phase B).
+before the screenshot. Screenshot: not taken yet.
 
 The #148 issue body still names JimRashed as assignee; the handover to CarterBeasse is recorded in the issue
 comments.
 
 ## Closure checklist
 
-Close in this order. Each item closes only with the named evidence linked in a comment. #145 and #147 were
-closed by SuSu-Lisu on 2026-11-23 with evidence linked and gaps recorded, so #135 and #136 can now be
-considered; #148 closes last before the tracker.
+Each item closes only with the named evidence linked in a comment. #148 closes last before the tracker. The
+GitHub milestone stays open until CarterBeasse says otherwise.
 
 | Order | Issue | Owner | Evidence required | State |
 |---|---|---|---|---|
 | 1 | [#145](https://github.com/JimRashed/Web-3-Final-Project/issues/145) | SuSu-Lisu | Screenshots ([validation-results.md](validation-results.md#145-manual-check)); response to #151 findings | **Closed** 05:29:25, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/145#issuecomment-7092450934) links #165 screenshots. Gaps: #165 merged with changes requested; headers, reload and sign-out cleanup not evidenced; #151 findings open |
-| 2 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | SuSu-Lisu | Fix PR for the #160 findings, `journey:picture` PASS and SEC-09 sign-out evidence ([validation-results.md](validation-results.md#147-cross-device-journey)) | **Closed** 05:29:23, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) pastes 17/17 PASS on `46f847b` + #163. Gaps: SEC-09 two-device sign-out not covered; other #160/#163 findings open |
-| 3 | [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) | CarterBeasse | #143, #144, #145 closed with links | Open; children closed, can be considered (gaps above) |
-| 4 | [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) | SuSu-Lisu | #146, #147, #148 closed with links | Open; #146 and #147 closed, waits for #148 |
-| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Phase B results filled in on `68b7ecd`; this bundle linked from the description of draft milestone PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) | Open (last before the tracker) |
-| 6 | [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) | JimRashed | All SEC parents closed; milestone PR evidence complete | Open |
-| — | #133, #134, #138, #139, #140, #141 | — | Already closed; evidence comments not yet posted (drafts [below](#proposed-evidence-comments)) | Drafted, not posted |
+| 2 | [#147](https://github.com/JimRashed/Web-3-Final-Project/issues/147) | SuSu-Lisu | Fix PR for the #160 findings, `journey:picture` PASS and SEC-09 sign-out evidence ([validation-results.md](validation-results.md#147-cross-device-journey)) | **Closed** 05:29:23, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/147#issuecomment-7092450545) pastes 17/17 PASS on `46f847b` + #163. Gaps: SEC-09 two-device sign-out not covered by that run (verified live on `14ac63e` on 2026-11-24, [live run](validation-results.md#live-run-main-at-14ac63e)); other #160/#163 script findings open |
+| 3 | [#135](https://github.com/JimRashed/Web-3-Final-Project/issues/135) | CarterBeasse | #143, #144, #145 closed with links | **Closed** 11-23 23:00:29 by CarterBeasse, [evidence comment](https://github.com/JimRashed/Web-3-Final-Project/issues/135#issuecomment-7116442844) |
+| 4 | [#136](https://github.com/JimRashed/Web-3-Final-Project/issues/136) | SuSu-Lisu | #146, #147, #148 closed with links | **Closed** 11-24 00:18:40 by SuSu-Lisu, [comment](https://github.com/JimRashed/Web-3-Final-Project/issues/136#issuecomment-7117932854) lists #148 as accepted while #148 was still open |
+| 5 | [#148](https://github.com/JimRashed/Web-3-Final-Project/issues/148) | CarterBeasse | Results on the final revision `14ac63e` recorded; the items [below](#what-is-left-to-close-148) settled | Open (last before the tracker); can close once PR #168 merges and the items below are settled |
+| 6 | [#132](https://github.com/JimRashed/Web-3-Final-Project/issues/132) | JimRashed | All SEC parents closed; milestone evidence complete | Open; waits for #148 |
+| — | #133, #134, #138, #139, #140, #141 | — | Evidence comments | **Posted** by CarterBeasse: [#133](https://github.com/JimRashed/Web-3-Final-Project/issues/133#issuecomment-7116436261), [#134](https://github.com/JimRashed/Web-3-Final-Project/issues/134#issuecomment-7116436684), [#138](https://github.com/JimRashed/Web-3-Final-Project/issues/138#issuecomment-7116437060), [#139](https://github.com/JimRashed/Web-3-Final-Project/issues/139#issuecomment-7116437405), [#140](https://github.com/JimRashed/Web-3-Final-Project/issues/140#issuecomment-7116437864), [#141](https://github.com/JimRashed/Web-3-Final-Project/issues/141#issuecomment-7116438288) |
 
-## Milestone PR body (draft)
+### What is left to close #148
 
-Follows the Milestone 3 convention from [PR #114](https://github.com/JimRashed/Web-3-Final-Project/pull/114).
-Phase B fills the `pending` parts and replaces the description of draft PR [#166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) with it.
+The live checks on `14ac63e` are done: `journey:api` 10/10, `journey:ui` 11/11, `journey:picture` 17/17,
+#145 browser check and SEC-09 two-device sign-out 23/23, migration applied
+([validation-results.md](validation-results.md#live-run-main-at-14ac63e)). Remaining:
 
-```markdown
-## Milestone 4 — Security and Cross-Device Profiles
+- **Board:** JimRashed or SuSu-Lisu update the [board](#board) fields and take the screenshot.
+- **Security decisions:** SuSu-Lisu's approval of SEC-01 to SEC-12 is still pending ([human-gates.md](human-gates.md#security-decisions-approval-state)).
+- **Unreplied threads:** #152 (2), #155 (2), #156 (4), #158 (2), #151 (5), #160 (4), #163 (1), #165 (4), #166 (3).
+- **Retro-review:** a team decision on #157, #160, #161, #163, #165, #166 and the post-approval commits on #159
+  ([human-gates.md](human-gates.md#what-is-still-needed-from-humans)).
+- **Threat model:** a human review of the reconciled [threat model](../milestone3/threat-model.md).
 
-## Change summary
-- SEC-A: security decisions, configuration and secrets, threat model (#137, #138, #139; PRs #149, #153, #156)
-- SEC-B: token validation, scope/actor/ownership policies, CI security matrix (#140, #141, #142; PRs #152, #155, #158)
-- SEC-C: private picture persistence, owner-only picture API, React profile picture UI (#143, #144, #145; PRs #154, #162, #159, #151, #165)
-- SEC-D: Gameplay service-to-service verification, cross-device journey, evidence (#146, #147, #148; PRs #157, #160, #163, this bundle)
-Evidence index: docs/milestone4/submission.md
+## Milestone PR
 
-## Validation results
-Candidate revision: 68b7ecd. See docs/milestone4/validation-results.md.
-CI on 68b7ecd: runs 45118087469 and 45118703355, success.
-Automated checks on 68b7ecd (2026-11-23): build -warnaserror and format clean; dotnet test 1,953 passed / 0 failed
-across 13 projects; contract validator PASS; client typecheck, lint, build pass; Vitest 318/318 on rerun
-(first attempt hit worker-start timeouts, 0 test failures).
-Recorded on 46f847b: journey:picture 17/17 PASS (with #163, issue #147); #145 screenshots (PR #165).
-SEC-09 two-device sign-out: not covered. Same-revision live journeys and #145 browser check on 68b7ecd: pending.
-
-## Human review signoff
-Per-PR review record and exceptions: docs/milestone4/human-gates.md.
-Security decisions: JimRashed approved PR #149 (96fd09a, f2c5b0c); SuSu-Lisu pending.
-Threat model independent review: pending.
-
-## Notes for the reviewer
-- Open findings on the candidate (PR #151, #158, #159, #160, #163, #165 reviews): docs/milestone4/requirements-traceability.md
-- Eight PRs merged without a teammate approval on the merged commit: docs/milestone4/human-gates.md
-- Board screenshot: pending.
-- Not to be merged without Carter's explicit go.
-```
+[PR #166](https://github.com/JimRashed/Web-3-Final-Project/pull/166) is merged, so the earlier step of replacing its description from this file no
+longer applies, and the draft body that was here has been removed. Its description was not corrected before
+the merge; the [correcting comment](https://github.com/JimRashed/Web-3-Final-Project/pull/166#issuecomment-7118738500) and this bundle are the record.
 
 ## Proposed evidence comments
 
-Drafts for the six issues that were closed without an evidence comment. The Dispatcher or the owner posts
-them after this PR is reviewed; this PR does not write to GitHub. Test counts are as reported in the PR body
-at the time.
+Drafted for the six issues that were closed without an evidence comment. CarterBeasse has since posted
+evidence comments on all six (links in the [closure checklist](#closure-checklist)); the drafts are kept as
+written. Test counts are as reported in the PR body at the time.
 
 ### #133 — SEC-A (parent)
 
